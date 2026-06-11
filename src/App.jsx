@@ -10,7 +10,7 @@ import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from '.
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, deleteEntry } from './lib/api';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES } from './lib/constants';
 import { toISODate, weekStart, weekEnd, startOfMonth, endOfMonth } from './lib/dates';
-import { canReview, canAssignVehicle, canAdmin, canEditEntry } from './lib/permissions';
+import { canReview, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
 import FilterBar from './components/FilterBar';
 import WeekView from './components/WeekView';
 import MonthView from './components/MonthView';
@@ -65,6 +65,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [duplicating, setDuplicating] = useState(null); // entry gốc khi nhân bản
   const [prefill, setPrefill] = useState(null);
   const [viewing, setViewing] = useState(null); // entry đang xem chi tiết
 
@@ -91,8 +92,10 @@ export default function App() {
 
   const refresh = useCallback(() => { loadEntries(); }, [loadEntries]);
 
-  const onAdd = (pf) => { setEditing(null); setPrefill(pf || null); setFormOpen(true); };
-  const onEdit = (entry) => { setEditing(entry); setPrefill(null); setFormOpen(true); };
+  const onAdd = (pf) => { setEditing(null); setDuplicating(null); setPrefill(pf || null); setFormOpen(true); };
+  const onEdit = (entry) => { setEditing(entry); setDuplicating(null); setPrefill(null); setFormOpen(true); };
+  const onDuplicate = (entry) => { setEditing(null); setDuplicating(entry); setPrefill(null); setFormOpen(true); };
+  const canDup = (entry) => canCreateFor(profile, leaders.find((l) => l.id === entry.leader_id));
   const onDelete = async (entry) => {
     if (!window.confirm(`Xóa mục lịch "${entry.content}"?`)) return;
     const { error } = await deleteEntry(entry.id);
@@ -204,13 +207,13 @@ export default function App() {
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
 
         {tab === 'week' && (
-          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} filters={filters} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onView={setViewing} />
+          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} filters={filters} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'month' && (
           <MonthView profile={profile} anchor={anchor} entries={entries} leaders={leaders} filters={filters} onPickDay={(d) => { setAnchor(d); setTab('day'); }} />
         )}
         {tab === 'day' && (
-          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} onEdit={onEdit} onDelete={onDelete} onView={setViewing} />
+          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'approve' && canReview(profile) && (
           <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} onChanged={refresh} />
@@ -254,8 +257,9 @@ export default function App() {
           entries={entries}
           groups={pGroups}
           editing={editing}
+          duplicating={duplicating}
           prefill={prefill}
-          onClose={() => { setFormOpen(false); setEditing(null); setPrefill(null); }}
+          onClose={() => { setFormOpen(false); setEditing(null); setDuplicating(null); setPrefill(null); }}
           onSaved={refresh}
         />
       )}
@@ -266,8 +270,10 @@ export default function App() {
           leaders={leaders}
           vehicles={vehicles}
           canEdit={canEditEntry(profile, viewing, leaders.find((l) => l.id === viewing.leader_id))}
+          canDuplicate={canDup(viewing)}
           onEdit={onEdit}
           onDelete={onDelete}
+          onDuplicate={onDuplicate}
           onClose={() => setViewing(null)}
         />
       )}

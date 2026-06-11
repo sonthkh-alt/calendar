@@ -1,4 +1,4 @@
-import { MapPin, Users, Clock, Car, Pencil, Trash2, MessageSquareText, UserRound } from 'lucide-react';
+import { MapPin, Users, Clock, Car, Pencil, Trash2, MessageSquareText, UserRound, Copy } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { STATUS, SESSIONS } from '../lib/constants';
 import { fmtTime } from '../lib/dates';
@@ -9,7 +9,7 @@ import { fmtTime } from '../lib/dates';
  * `vehicle` do cha truyền vào: xe đã gán, hoặc xe riêng của lãnh đạo (PCT /
  * Phó Trưởng Đoàn) nếu chưa gán. Bấm vào ô để mở chi tiết đầy đủ.
  */
-export default function EntryCard({ entry, leader, vehicle, canEdit, onEdit, onDelete, onView, compact }) {
+export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, onEdit, onDelete, onDuplicate, onView, compact }) {
   const s = STATUS[entry.status] || STATUS.cho_duyet;
   const timeLabel = entry.session === 'gio'
     ? `${fmtTime(entry.start_time)}${entry.end_time ? ' - ' + fmtTime(entry.end_time) : ''}`
@@ -28,10 +28,17 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, onEdit, onD
         <p className={`text-[12px] font-semibold leading-snug text-slate-800 ${entry.status === 'tu_choi' ? 'line-through' : ''}`}>
           {entry.content}
         </p>
-        {canEdit && (
+        {(canEdit || canDuplicate) && (
           <span className="hidden group-hover:flex items-center gap-0.5 shrink-0 no-print">
-            <button title="Sửa" onClick={(e) => { e.stopPropagation(); onEdit?.(entry); }} className="p-0.5 rounded hover:bg-white/80 text-slate-500 hover:text-sky-700"><Pencil className="w-3 h-3" /></button>
-            <button title="Xóa" onClick={(e) => { e.stopPropagation(); onDelete?.(entry); }} className="p-0.5 rounded hover:bg-white/80 text-slate-500 hover:text-rose-700"><Trash2 className="w-3 h-3" /></button>
+            {canDuplicate && (
+              <button title="Nhân bản (tạo mục mới giống mục này)" onClick={(e) => { e.stopPropagation(); onDuplicate?.(entry); }} className="p-0.5 rounded hover:bg-white/80 text-slate-500 hover:text-emerald-700"><Copy className="w-3 h-3" /></button>
+            )}
+            {canEdit && (
+              <>
+                <button title="Sửa" onClick={(e) => { e.stopPropagation(); onEdit?.(entry); }} className="p-0.5 rounded hover:bg-white/80 text-slate-500 hover:text-sky-700"><Pencil className="w-3 h-3" /></button>
+                <button title="Xóa" onClick={(e) => { e.stopPropagation(); onDelete?.(entry); }} className="p-0.5 rounded hover:bg-white/80 text-slate-500 hover:text-rose-700"><Trash2 className="w-3 h-3" /></button>
+              </>
+            )}
           </span>
         )}
       </div>

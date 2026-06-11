@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2 } from 'lucide-react';
+import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { SESSIONS, UNIT_GROUP_LABELS } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO } from '../lib/dates';
@@ -10,7 +10,7 @@ import { fmtTime, fmtDMY, dayName, parseISO } from '../lib/dates';
  * cho cả Lãnh đạo HĐND và Đoàn ĐBQH) được GỘP: thành phần nối lại với nhau.
  * props: entry, entries, leaders, vehicles, canEdit, onEdit, onDelete, onClose
  */
-export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit, onEdit, onDelete, onClose }) {
+export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit, canDuplicate, onEdit, onDelete, onDuplicate, onClose }) {
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
 
@@ -134,6 +134,11 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit
           <div className="flex items-center justify-between pt-2 border-t border-slate-100">
             <StatusBadge status={entry.status} />
             <div className="flex items-center gap-2">
+              {canDuplicate && (
+                <button onClick={() => { onClose?.(); onDuplicate?.(entry); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700" title="Tạo mục lịch mới giống mục này để sửa một vài chi tiết">
+                  <Copy className="w-3.5 h-3.5" /> Nhân bản
+                </button>
+              )}
               {canEdit && (
                 <>
                   <button onClick={() => { onClose?.(); onEdit?.(entry); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-sky-600 hover:bg-sky-700">

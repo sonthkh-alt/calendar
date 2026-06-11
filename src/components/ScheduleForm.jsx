@@ -6,14 +6,16 @@ import { createEntries, updateEntry } from '../lib/api';
 import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
 
 /**
- * Modal thêm / sửa mục lịch. Bắt buộc đủ 4 mục: Nội dung, Thời gian, Địa điểm, Thành phần.
+ * Modal thêm / sửa / nhân bản mục lịch.
  * props:
  *  - profile, leaders, entries (để cảnh báo trùng), groups (nhóm thành phần tick nhanh)
  *  - editing: entry đang sửa (null = thêm mới)
- *  - prefill: { date, session, leaderId } khi click ô trống
+ *  - duplicating: entry gốc để NHÂN BẢN (điền sẵn mọi trường, lưu thành mục MỚI)
+ *  - prefill: { date, session, leaderId, leaderIds } khi click ô trống
  *  - onClose, onSaved
  */
-export default function ScheduleForm({ profile, leaders, entries, groups: pGroups, editing, prefill, onClose, onSaved }) {
+export default function ScheduleForm({ profile, leaders, entries, groups: pGroups, editing, duplicating, prefill, onClose, onSaved }) {
+  const src = editing || duplicating; // nguồn dữ liệu điền sẵn
   // Danh sách được chọn: theo quyền. Mở từ ô của một cột (prefill.leaderIds)
   // thì nhóm lãnh đạo của cột đó được ĐƯA LÊN ĐẦU, các nhóm khác vẫn chọn được.
   const allowed = useMemo(
@@ -22,15 +24,15 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   );
 
   const [leaderIds, setLeaderIds] = useState(
-    editing ? [editing.leader_id] : prefill?.leaderId ? [prefill.leaderId] : []
+    src ? [src.leader_id] : prefill?.leaderId ? [prefill.leaderId] : []
   );
-  const [date, setDate] = useState(editing?.date || (prefill?.date ? toISODate(prefill.date) : toISODate(new Date())));
-  const [session, setSession] = useState(editing?.session || prefill?.session || 'sang');
-  const [startTime, setStartTime] = useState(editing?.start_time?.slice(0, 5) || '08:00');
-  const [endTime, setEndTime] = useState(editing?.end_time?.slice(0, 5) || '11:30');
-  const [content, setContent] = useState(editing?.content || '');
-  const [location, setLocation] = useState(editing?.location || '');
-  const [participants, setParticipants] = useState(editing?.participants || '');
+  const [date, setDate] = useState(src?.date || (prefill?.date ? toISODate(prefill.date) : toISODate(new Date())));
+  const [session, setSession] = useState(src?.session || prefill?.session || 'sang');
+  const [startTime, setStartTime] = useState(src?.start_time?.slice(0, 5) || '08:00');
+  const [endTime, setEndTime] = useState(src?.end_time?.slice(0, 5) || '11:30');
+  const [content, setContent] = useState(src?.content || '');
+  const [location, setLocation] = useState(src?.location || '');
+  const [participants, setParticipants] = useState(src?.participants || '');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
@@ -135,7 +137,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl max-h-full overflow-y-auto animate-fadeUp">
         <div className="sticky top-0 bg-gradient-to-r from-red-800 to-red-700 text-white px-5 py-3.5 rounded-t-2xl flex items-center justify-between">
-          <h2 className="font-bold flex items-center gap-2"><CalendarPlus className="w-5 h-5" /> {editing ? 'Sửa mục lịch công tác' : 'Thêm lịch công tác'}</h2>
+          <h2 className="font-bold flex items-center gap-2"><CalendarPlus className="w-5 h-5" /> {editing ? 'Sửa mục lịch công tác' : duplicating ? 'Nhân bản lịch công tác' : 'Thêm lịch công tác'}</h2>
           <button onClick={onClose} className="p-1 rounded hover:bg-white/20"><X className="w-5 h-5" /></button>
         </div>
 

@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Nhân bản lịch + 5 tài khoản nội bộ tự động
+- Nút Nhân bản (Copy) trên ô lịch + modal chi tiết: mở form điền sẵn, lưu thành mục MỚI
+- supabase/migrations/2026-06-12-tao-tai-khoan.sql: 5 user (hainq/lamlt/thttdn/hctcqt/ban
+  @thanhhoa.gov.vn, mật khẩu 1-5, pw_set=true, role gán sẵn; "ban" theo dõi cả 4 Ban)
+- Workflow chạy thêm supabase/migrations/*.sql (idempotent) + đếm tài khoản trong notice
+
 ## 2026-06-12 — Ô lịch đủ 6 mục + lái xe riêng tự động
 - EntryCard (cả Đầy đủ và Gọn): Nội dung, Lãnh đạo, Thời gian, Địa điểm, TP, Lái xe (thiếu -> "—")
 - Lịch PCT / Phó Trưởng Đoàn chưa gán xe -> tự hiện lái xe + biển số xe riêng của đồng chí đó

@@ -13,6 +13,7 @@ on:
     branches: [main]
     paths:
       - 'supabase/schema.sql'
+      - 'supabase/migrations/**'
       - '.github/workflows/db-migrate.yml'
   workflow_dispatch: {}
 
@@ -35,16 +36,24 @@ jobs:
           # Bao loi ra annotation (da loai bo phan mat khau) de chan doan tu xa
           HOST_PART="${DB_URL#*@}"
           echo "::notice::Ket noi toi may chu: ${HOST_PART%%/*}"
-          set +e
-          ERR=$(psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/schema.sql 2>&1)
-          CODE=$?
-          set -e
-          if [ $CODE -ne 0 ]; then
-            SAFE=$(printf '%s' "$ERR" | tail -4 | tr '\n' ' | ' | sed -E 's#postgres(ql)?://[^ ]+#<URL-da-an>#g')
-            echo "::error::PSQL LOI (exit $CODE): $SAFE"
-            exit 1
-          fi
-          echo "Da ap dung schema.sql thanh cong."
+          run_sql() {
+            set +e
+            ERR=$(psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$1" 2>&1)
+            CODE=$?
+            set -e
+            if [ $CODE -ne 0 ]; then
+              SAFE=$(printf '%s' "$ERR" | tail -4 | tr '\n' ' | ' | sed -E 's#postgres(ql)?://[^ ]+#<URL-da-an>#g')
+              echo "::error::PSQL LOI ($1, exit $CODE): $SAFE"
+              exit 1
+            fi
+            echo "Da ap dung: $1"
+          }
+          run_sql supabase/schema.sql
+          # Chay cac migration bo sung theo thu tu ten file (phai idempotent)
+          for f in supabase/migrations/*.sql; do
+            [ -e "$f" ] || continue
+            run_sql "$f"
+          done
 
       - name: Kiem tra sau cap nhat (liet ke bang)
         env:
@@ -52,4 +61,5 @@ jobs:
         run: |
           DB_URL=$(printf '%s' "$DB_URL" | tr -d '[:space:]')
           TABLES=$(psql "$DB_URL" -t -A -c "select string_agg(table_name, ', ') from information_schema.tables where table_schema='public';")
-          echo "::notice::Cac bang hien co: $TABLES"
+          USERS=$(psql "$DB_URL" -t -A -c "select count(*) from auth.users;")
+          echo "::notice::Cac bang hien co: $TABLES | So tai khoan dang nhap: $USERS"

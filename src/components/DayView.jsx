@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
 import { Sun, Sunset } from 'lucide-react';
 import EntryCard from './EntryCard';
-import { canEditEntry, canSeeEntry } from '../lib/permissions';
+import { canEditEntry, canSeeEntry, canCreateFor } from '../lib/permissions';
 import { toISODate } from '../lib/dates';
 
 /**
  * Lịch ngày: 2 khối Sáng / Chiều, EntryCard đầy đủ thông tin.
  * props: profile, anchor, entries, leaders, vehicles, filters, onEdit, onDelete
  */
-export default function DayView({ profile, anchor, entries, leaders, vehicles, filters, onEdit, onDelete, onView }) {
+export default function DayView({ profile, anchor, entries, leaders, vehicles, filters, onEdit, onDelete, onDuplicate, onView }) {
   const dISO = toISODate(anchor);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
@@ -50,8 +50,10 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
               leader={l}
               vehicle={(e.vehicle_id ? vehicleById[e.vehicle_id] : null) || dedicatedByLeader[e.leader_id] || null}
               canEdit={canEditEntry(profile, e, l)}
+              canDuplicate={canCreateFor(profile, l)}
               onEdit={onEdit}
               onDelete={onDelete}
+              onDuplicate={onDuplicate}
               onView={onView}
             />
           );
