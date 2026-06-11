@@ -1,15 +1,21 @@
 // Kiểm chứng logic gộp Thành phần theo nhóm (chạy: node scripts/test-compact.mjs)
 const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
+// Dữ liệu nhóm THẬT của người dùng (theo ảnh chụp tab Quản trị 12/6)
 const groups = [
-  { name: 'Thường trực HĐND tỉnh', members: 'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh' },
-  { name: 'Lãnh đạo Đoàn ĐBQH tỉnh', members: 'Đ/c Lương Thị Hoa, Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh; Đ/c Bùi Văn Dũng, ĐBQH chuyên trách' },
+  { name: 'Thường trực HĐND tỉnh', members: 'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh; Đ/c Lương Tiến Thành, Trưởng Ban DT; Đ/c Nguyễn Quốc Hải, Trưởng Ban PC; Đ/c Hoàng Anh Tuấn, Tỉnh ủy viên, Trưởng Ban KTNS; Đ/c Ngô Thị Hồng Hảo, Tỉnh ủy viên, Trưởng Ban VHXH' },
+  { name: 'Đoàn ĐBQH tỉnh', members: 'Đ/c Lương Thị Hoa, Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh; Đ/c Bùi Văn Dũng, ĐBQH chuyên trách' },
+  { name: 'Trưởng các Ban HĐND tỉnh', members: 'Đ/c Lương Tiến Thành, Trưởng Ban DT; Đ/c Hoàng Anh Tuấn, Tỉnh ủy viên, Trưởng Ban KTNS; Đ/c Ngô Thị Hồng Hảo, Tỉnh ủy viên, Trưởng Ban VHXH; Đ/c Nguyễn Quốc Hải, Trưởng Ban PC' },
+  { name: 'Lãnh đạo các Ban HĐND tỉnh', members: 'Đ/c Hoàng Anh Tuấn, Tỉnh ủy viên, Trưởng Ban KTNS; Đ/c Ngô Thị Hồng Hảo, Tỉnh ủy viên, Trưởng Ban VHXH; Đ/c Đỗ Ngọc Duy, PTB KTNS; Đ/c Lê Thị Hương, PTB PC; Đ/c Nguyễn Quốc Hải, Trưởng Ban PC; Đ/c Lương Tiến Thành, Trưởng Ban DT; Đ/c Cầm Bá Chái, PTB DT; Đ/c Nguyễn Tuấn Tưởng, PTB VHXH' },
+  { name: 'Lãnh đạo Văn phòng', members: 'Đ/c Trần Mạnh Long, Chánh Văn phòng; Đ/c Hà Ngọc Sơn, Phó Chánh Văn phòng; Đ/c Lê Văn Mạnh, Phó Chánh Văn phòng' },
 ];
 
 function compactParticipants(parts) {
   let segs = parts.join('; ').split(';').map((s) => s.trim()).filter(Boolean);
   const segName = (s) => norm(s.split(',')[0]);
-  for (const g of groups) {
+  const ordered = [...groups].sort((a, b) =>
+    (b.members || '').split(';').length - (a.members || '').split(';').length);
+  for (const g of ordered) {
     if (!g.members || !g.name) continue;
     const memberNames = g.members.split(';').map((x) => norm(x.split(',')[0])).filter(Boolean);
     if (!memberNames.length) continue;
@@ -30,17 +36,24 @@ function compactParticipants(parts) {
 }
 
 const cases = [
-  // 1. Nguyên văn đầy đủ chức vụ + cán bộ tham dự kèm theo
-  [['Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh. Cán bộ tham dự: các đ/c Trưởng các Ban; CVP'],
-   'Thường trực HĐND tỉnh + giữ phần cán bộ tham dự'],
-  // 2. Chỉ tên, KHÔNG chức vụ, khác thứ tự, khác hoa thường
-  [['đ/c nguyễn quang hải; Đ/C LÊ TIẾN LAM'], 'chỉ còn tên nhóm'],
-  // 3. Gộp 2 nhóm (2 mục merge từ 2 entry)
-  [['Đ/c Lê Tiến Lam, UV BTV; Đ/c Nguyễn Quang Hải, TUV', 'Đ/c Lương Thị Hoa, Phó Trưởng Đoàn; Đ/c Bùi Văn Dũng, ĐBQH chuyên trách'], '2 tên nhóm'],
-  // 4. Chỉ 1 thành viên -> KHÔNG gộp
-  [['Đ/c Lê Tiến Lam, Ủy viên BTV Tỉnh ủy'], 'giữ nguyên (thiếu đ/c Hải)'],
-  // 5. Đã ghi sẵn tên nhóm
-  [['Thường trực HĐND tỉnh và lãnh đạo các Ban'], 'giữ nguyên, không lặp'],
+  // 1. Đủ 6 thành viên Thường trực (nhập bằng tick nhóm) + cán bộ tham dự
+  [['Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh; Đ/c Lương Tiến Thành, Trưởng Ban DT; Đ/c Nguyễn Quốc Hải, Trưởng Ban PC; Đ/c Hoàng Anh Tuấn, Tỉnh ủy viên, Trưởng Ban KTNS; Đ/c Ngô Thị Hồng Hảo, Tỉnh ủy viên, Trưởng Ban VHXH. Cán bộ tham dự: Đ/c Sơn, PCVP'],
+   '-> Thường trực HĐND tỉnh; Cán bộ tham dự: Đ/c Sơn, PCVP'],
+  // 2. Chỉ 4 Trưởng Ban -> phải ra "Trưởng các Ban HĐND tỉnh" (không nhầm Thường trực)
+  [['Đ/c Lương Tiến Thành, Trưởng Ban DT; Đ/c Hoàng Anh Tuấn, Trưởng Ban KTNS; Đ/c Ngô Thị Hồng Hảo, Trưởng Ban VHXH; Đ/c Nguyễn Quốc Hải, Trưởng Ban PC'],
+   '-> Trưởng các Ban HĐND tỉnh'],
+  // 3. Đủ 8 lãnh đạo Ban -> phải ra nhóm LỚN "Lãnh đạo các Ban", không tách thành Trưởng+lẻ
+  [['Đ/c Hoàng Anh Tuấn, Trưởng Ban KTNS; Đ/c Ngô Thị Hồng Hảo, Trưởng Ban VHXH; Đ/c Đỗ Ngọc Duy, PTB KTNS; Đ/c Lê Thị Hương, PTB PC; Đ/c Nguyễn Quốc Hải, Trưởng Ban PC; Đ/c Lương Tiến Thành, Trưởng Ban DT; Đ/c Cầm Bá Chái, PTB DT; Đ/c Nguyễn Tuấn Tưởng, PTB VHXH'],
+   '-> Lãnh đạo các Ban HĐND tỉnh'],
+  // 4. Chỉ 2 PCT -> KHÔNG đủ 6 người của nhóm Thường trực -> giữ nguyên 2 tên
+  [['Đ/c Lê Tiến Lam, PCT Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, PCT HĐND tỉnh'],
+   '-> giữ nguyên 2 tên (nhóm Thường trực cần đủ 6 người)'],
+  // 5. Thường trực (6 người) + Đoàn ĐBQH (2 người) cùng dự
+  [['Đ/c Lê Tiến Lam, UV BTV; Đ/c Nguyễn Quang Hải, TUV; Đ/c Lương Tiến Thành, TB DT; Đ/c Nguyễn Quốc Hải, TB PC; Đ/c Hoàng Anh Tuấn, TB KTNS; Đ/c Ngô Thị Hồng Hảo, TB VHXH', 'Đ/c Lương Thị Hoa, Phó Trưởng Đoàn; Đ/c Bùi Văn Dũng, ĐBQH chuyên trách'],
+   '-> Thường trực HĐND tỉnh; Đoàn ĐBQH tỉnh'],
+  // 6. Lãnh đạo Văn phòng đủ 3 đ/c
+  [['Đ/c Trần Mạnh Long, Chánh Văn phòng; Đ/c Hà Ngọc Sơn, PCVP; Đ/c Lê Văn Mạnh, PCVP'],
+   '-> Lãnh đạo Văn phòng'],
 ];
 
 let ok = 0;

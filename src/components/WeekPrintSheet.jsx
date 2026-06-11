@@ -56,7 +56,10 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
   const compactParticipants = (m) => {
     let segs = m._parts.join('; ').split(';').map((s) => s.trim()).filter(Boolean);
     const segName = (s) => norm(s.split(',')[0]);
-    for (const g of groups || []) {
+    // Nhóm NHIỀU thành viên xét trước (các nhóm lồng nhau: Lãnh đạo các Ban ⊃ Trưởng các Ban...)
+    const ordered = [...(groups || [])].sort((a, b) =>
+      (b.members || '').split(';').length - (a.members || '').split(';').length);
+    for (const g of ordered) {
       if (!g.members || !g.name) continue;
       const memberNames = g.members.split(';').map((x) => norm(x.split(',')[0])).filter(Boolean);
       if (!memberNames.length) continue;
