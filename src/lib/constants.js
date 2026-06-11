@@ -45,6 +45,16 @@ export const PCT_GROUP_LABEL = 'Lãnh đạo HĐND tỉnh';
 export const DOAN_GROUP_LABEL = 'Đoàn ĐBQH tỉnh';
 export const UNIT_GROUP_LABELS = { pct: PCT_GROUP_LABEL, doan: DOAN_GROUP_LABEL };
 
+// Địa điểm gợi ý khi nhập lịch (vẫn gõ tự do được)
+export const COMMON_LOCATIONS = [
+  'Trụ sở Tỉnh ủy',
+  'Trụ sở UBND tỉnh',
+  'Trụ sở Đoàn ĐBQH và HĐND tỉnh',
+  'UBND phường Hạc Thành',
+  'Trụ sở Tiếp công dân tỉnh',
+  'Hội trường 25B',
+];
+
 // Loại xe
 export const VEHICLE_TYPES = {
   rieng: 'Xe riêng (phục vụ lãnh đạo)',

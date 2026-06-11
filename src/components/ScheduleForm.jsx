@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { X, Save, AlertTriangle, CalendarPlus } from 'lucide-react';
-import { SESSIONS } from '../lib/constants';
+import { SESSIONS, COMMON_LOCATIONS } from '../lib/constants';
 import { canCreateFor, initialStatus } from '../lib/permissions';
 import { createEntries, updateEntry } from '../lib/api';
 import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
@@ -14,14 +14,11 @@ import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
  *  - onClose, onSaved
  */
 export default function ScheduleForm({ profile, leaders, entries, groups: pGroups, editing, prefill, onClose, onSaved }) {
-  // Danh sách được chọn: theo quyền; nếu mở từ ô của một cột cụ thể (prefill.leaderIds)
-  // thì CHỈ hiện nhóm lãnh đạo của cột đó
+  // Danh sách được chọn: theo quyền. Mở từ ô của một cột (prefill.leaderIds)
+  // thì nhóm lãnh đạo của cột đó được ĐƯA LÊN ĐẦU, các nhóm khác vẫn chọn được.
   const allowed = useMemo(
-    () => (leaders || []).filter((l) =>
-      l.active && canCreateFor(profile, l) &&
-      (!prefill?.leaderIds || prefill.leaderIds.includes(l.id))
-    ),
-    [leaders, profile, prefill]
+    () => (leaders || []).filter((l) => l.active && canCreateFor(profile, l)),
+    [leaders, profile]
   );
 
   const [leaderIds, setLeaderIds] = useState(
@@ -76,7 +73,6 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     e.preventDefault();
     if (!content.trim()) { setErr('Vui lòng nhập Nội dung công việc.'); return; }
     if (!location.trim()) { setErr('Vui lòng nhập Địa điểm.'); return; }
-    if (!participants.trim()) { setErr('Vui lòng nhập Thành phần (ai dự) — có thể tick nhanh các nhóm bên dưới.'); return; }
     if (!editing && leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); return; }
     setSaving(true); setErr('');
 
@@ -121,8 +117,16 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     if (banUnits.length) out.push({ label: 'Các Ban của HĐND tỉnh', items: banUnits });
     const vp = allowed.filter((l) => l.leader_type === 'vanphong');
     if (vp.length) out.push({ label: 'Văn phòng', items: vp });
+    // Nhóm chứa lãnh đạo của ô được bấm "+" -> đưa lên đầu danh sách
+    if (prefill?.leaderIds?.length) {
+      out.sort((a, b) => {
+        const ap = a.items.some((i) => prefill.leaderIds.includes(i.id)) ? 0 : 1;
+        const bp = b.items.some((i) => prefill.leaderIds.includes(i.id)) ? 0 : 1;
+        return ap - bp;
+      });
+    }
     return out;
-  }, [allowed]);
+  }, [allowed, prefill]);
 
   const input = 'w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 transition';
 
@@ -192,10 +196,13 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
           </div>
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm <span className="text-rose-600">*</span></label>
-            <input type="text" required value={location} onChange={(e) => setLocation(e.target.value)} placeholder="VD: UBND huyện Thọ Xuân" className={`${input} mt-1.5`} />
+            <input type="text" required list="goi-y-dia-diem" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chọn gợi ý hoặc gõ tự do — VD: UBND huyện Thọ Xuân" className={`${input} mt-1.5`} />
+            <datalist id="goi-y-dia-diem">
+              {COMMON_LOCATIONS.map((loc) => <option key={loc} value={loc} />)}
+            </datalist>
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Thành phần <span className="text-rose-600">*</span></label>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Thành phần</label>
             {(pGroups || []).length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {pGroups.map((g) => (
@@ -206,7 +213,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
                 ))}
               </div>
             )}
-            <textarea rows={3} required value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="Tick nhóm ở trên hoặc gõ trực tiếp: Đ/c..., chức vụ; Đ/c..., chức vụ" className={`${input} mt-1.5 resize-y`} />
+            <textarea rows={3} value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="Tick nhóm ở trên hoặc gõ trực tiếp: Đ/c..., chức vụ; Đ/c..., chức vụ (có thể bỏ trống)" className={`${input} mt-1.5 resize-y`} />
           </div>
 
           {/* Cảnh báo trùng lịch (mềm — không chặn) */}
