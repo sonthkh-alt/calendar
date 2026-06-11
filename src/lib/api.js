@@ -24,6 +24,21 @@ export async function fetchProfiles() {
   return supabase.from('profiles').select('*').order('email');
 }
 
+export async function fetchParticipantGroups() {
+  if (!supabase) return NO_DB;
+  return supabase.from('participant_groups').select('*').order('sort_order');
+}
+
+export async function upsertParticipantGroup(row) {
+  if (!supabase) return NO_DB;
+  return supabase.from('participant_groups').upsert(row).select();
+}
+
+export async function deleteParticipantGroup(id) {
+  if (!supabase) return NO_DB;
+  return supabase.from('participant_groups').delete().eq('id', id);
+}
+
 // ===== Mục lịch =====
 // Lấy lịch trong khoảng ngày [fromISO, toISO] (yyyy-MM-dd)
 export async function fetchEntries(fromISO, toISO) {

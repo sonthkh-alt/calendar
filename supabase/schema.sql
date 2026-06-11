@@ -75,6 +75,15 @@ create table if not exists vehicles (
   active boolean default true
 );
 
+-- 4b) Nhóm thành phần dự họp — quản trị tạo sẵn để tick nhanh khi nhập lịch
+--     (vd: "Thường trực HĐND tỉnh" gồm danh sách các đ/c PCT...)
+create table if not exists participant_groups (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,                 -- tên nhóm hiển thị trên ô tick
+  members text not null,              -- chuỗi thành phần sẽ chèn vào ô Thành phần
+  sort_order int default 0
+);
+
 -- 5) Mục lịch công tác
 create table if not exists schedule_entries (
   id uuid primary key default gen_random_uuid(),
@@ -108,7 +117,7 @@ create index if not exists idx_entries_vehicle_date on schedule_entries(vehicle_
 -- 6) RLS: chỉ người ĐÃ ĐĂNG NHẬP mới đọc/ghi; phân quyền chi tiết do app xử lý.
 do $$ declare t text;
 begin
-  foreach t in array array['bans','leaders','profiles','vehicles','schedule_entries'] loop
+  foreach t in array array['bans','leaders','profiles','vehicles','schedule_entries','participant_groups'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "%s_auth_all" on %I', t, t);
     execute format(

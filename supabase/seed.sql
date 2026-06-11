@@ -8,6 +8,7 @@
 -- Xóa theo thứ tự phụ thuộc khóa ngoại
 delete from schedule_entries;
 delete from vehicles;
+delete from participant_groups;
 update profiles set leader_id = null, ban_ids = '{}';
 delete from leaders;
 delete from bans;
@@ -45,16 +46,29 @@ insert into vehicles (id, plate, driver_name, driver_phone, vehicle_type, assign
   ('33333333-3333-3333-3333-333333333303', '36A-003.03', 'Lái xe 3', '0912000003', 'dung_chung', null, true),
   ('33333333-3333-3333-3333-333333333304', '36A-004.04', 'Lái xe 4', '0912000004', 'dung_chung', null, true);
 
+-- 3b) Nhóm thành phần dự họp — tick nhanh khi nhập lịch (sửa ở tab Quản trị)
+insert into participant_groups (name, members, sort_order) values
+  ('Thường trực HĐND tỉnh',
+   'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh', 1),
+  ('Lãnh đạo Đoàn ĐBQH tỉnh',
+   'Đ/c Lương Thị Hoa, Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh; Đ/c Bùi Văn Dũng, ĐBQH chuyên trách', 2),
+  ('Trưởng các Ban HĐND tỉnh',
+   'Các đ/c Trưởng Ban: KT-NS, Pháp chế, VH-XH, Dân tộc', 3),
+  ('Lãnh đạo các Ban HĐND tỉnh',
+   'Lãnh đạo các Ban: KT-NS, Pháp chế, VH-XH, Dân tộc', 4),
+  ('Lãnh đạo Văn phòng',
+   'Đ/c Trần Mạnh Long, Tỉnh ủy viên, Chánh Văn phòng; các đ/c Phó Chánh Văn phòng', 5);
+
 -- 4) LỊCH TUẦN 24 NĂM 2026 (08/6 - 14/6/2026) — theo văn bản đã ban hành
 insert into schedule_entries (leader_id, date, session, start_time, end_time, content, location, participants, status) values
 
   -- ===== Thứ 2, 08/6 — Cả ngày =====
   ('22222222-2222-2222-2222-222222222201', '2026-06-08', 'ca_ngay', null, null,
    'Thường trực HĐND tỉnh và lãnh đạo Đoàn ĐBQH tỉnh làm việc tại cơ quan',
-   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', null, 'da_duyet'),
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', 'Thường trực HĐND tỉnh', 'da_duyet'),
   ('22222222-2222-2222-2222-222222222203', '2026-06-08', 'ca_ngay', null, null,
    'Thường trực HĐND tỉnh và lãnh đạo Đoàn ĐBQH tỉnh làm việc tại cơ quan',
-   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', null, 'da_duyet'),
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', 'Lãnh đạo Đoàn ĐBQH tỉnh', 'da_duyet'),
 
   -- ===== Thứ 3, 09/6 =====
   -- 8h00: Hội nghị BCH Đảng bộ tỉnh lần thứ 7 (cả lãnh đạo HĐND và Đoàn ĐBQH)
@@ -110,8 +124,8 @@ insert into schedule_entries (leader_id, date, session, start_time, end_time, co
 
   -- ===== Thứ 7, 13/6 & Chủ nhật, 14/6 — Trực lãnh đạo Văn phòng =====
   ('22222222-2222-2222-2222-222222222250', '2026-06-13', 'ca_ngay', null, null,
-   'Trực lãnh đạo Văn phòng: Đ/c Trần Mạnh Long, Tỉnh ủy viên, Chánh Văn phòng',
-   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', null, 'da_duyet'),
+   'Trực lãnh đạo Văn phòng',
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', 'Đ/c Trần Mạnh Long, Tỉnh ủy viên, Chánh Văn phòng', 'da_duyet'),
   ('22222222-2222-2222-2222-222222222250', '2026-06-14', 'ca_ngay', null, null,
-   'Trực lãnh đạo Văn phòng: Đ/c Hà Ngọc Sơn, Phó Chánh Văn phòng',
-   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', null, 'da_duyet');
+   'Trực lãnh đạo Văn phòng',
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', 'Đ/c Hà Ngọc Sơn, Phó Chánh Văn phòng', 'da_duyet');

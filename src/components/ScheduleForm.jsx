@@ -6,14 +6,14 @@ import { createEntries, updateEntry } from '../lib/api';
 import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
 
 /**
- * Modal thêm / sửa mục lịch.
+ * Modal thêm / sửa mục lịch. Bắt buộc đủ 4 mục: Nội dung, Thời gian, Địa điểm, Thành phần.
  * props:
- *  - profile, leaders, bans, entries (để cảnh báo trùng)
+ *  - profile, leaders, entries (để cảnh báo trùng), groups (nhóm thành phần tick nhanh)
  *  - editing: entry đang sửa (null = thêm mới)
  *  - prefill: { date, session, leaderId } khi click ô trống
  *  - onClose, onSaved
  */
-export default function ScheduleForm({ profile, leaders, entries, editing, prefill, onClose, onSaved }) {
+export default function ScheduleForm({ profile, leaders, entries, groups: pGroups, editing, prefill, onClose, onSaved }) {
   const allowed = useMemo(
     () => (leaders || []).filter((l) => l.active && canCreateFor(profile, l)),
     [leaders, profile]
@@ -50,9 +50,28 @@ export default function ScheduleForm({ profile, leaders, entries, editing, prefi
   const toggleLeader = (id) =>
     setLeaderIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
+  // Tick nhóm thành phần: chèn/gỡ chuỗi thành viên của nhóm vào ô Thành phần
+  const groupChecked = (g) => participants.includes(g.members);
+  const toggleGroup = (g) => {
+    setParticipants((prev) => {
+      if (prev.includes(g.members)) {
+        return prev
+          .replace(g.members, '')
+          .replace(/;\s*;/g, ';')
+          .replace(/^\s*;\s*|\s*;\s*$/g, '')
+          .trim();
+      }
+      const base = prev.trim();
+      if (!base) return g.members;
+      return base.replace(/;?\s*$/, '') + '; ' + g.members;
+    });
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     if (!content.trim()) { setErr('Vui lòng nhập Nội dung công việc.'); return; }
+    if (!location.trim()) { setErr('Vui lòng nhập Địa điểm.'); return; }
+    if (!participants.trim()) { setErr('Vui lòng nhập Thành phần (ai dự) — có thể tick nhanh các nhóm bên dưới.'); return; }
     if (!editing && leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); return; }
     setSaving(true); setErr('');
 
@@ -167,12 +186,22 @@ export default function ScheduleForm({ profile, leaders, entries, editing, prefi
             <textarea required rows={2} value={content} onChange={(e) => setContent(e.target.value)} placeholder="VD: Giám sát chuyên đề về đầu tư công tại huyện..." className={`${input} mt-1.5 resize-y`} />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm</label>
-            <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="VD: UBND huyện Thọ Xuân" className={`${input} mt-1.5`} />
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm <span className="text-rose-600">*</span></label>
+            <input type="text" required value={location} onChange={(e) => setLocation(e.target.value)} placeholder="VD: UBND huyện Thọ Xuân" className={`${input} mt-1.5`} />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Thành phần</label>
-            <textarea rows={2} value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="VD: Lãnh đạo Ban, đại diện Sở Tài chính..." className={`${input} mt-1.5 resize-y`} />
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Thành phần <span className="text-rose-600">*</span></label>
+            {(pGroups || []).length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {pGroups.map((g) => (
+                  <label key={g.id} title={g.members} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${groupChecked(g) ? 'bg-red-50 border-red-300 text-red-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-red-200'}`}>
+                    <input type="checkbox" checked={groupChecked(g)} onChange={() => toggleGroup(g)} className="accent-red-700" />
+                    {g.name}
+                  </label>
+                ))}
+              </div>
+            )}
+            <textarea rows={3} required value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="Tick nhóm ở trên hoặc gõ trực tiếp: Đ/c..., chức vụ; Đ/c..., chức vụ" className={`${input} mt-1.5 resize-y`} />
           </div>
 
           {/* Cảnh báo trùng lịch (mềm — không chặn) */}

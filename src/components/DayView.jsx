@@ -8,7 +8,7 @@ import { toISODate } from '../lib/dates';
  * Lịch ngày: 2 khối Sáng / Chiều, EntryCard đầy đủ thông tin.
  * props: profile, anchor, entries, leaders, vehicles, filters, onEdit, onDelete
  */
-export default function DayView({ profile, anchor, entries, leaders, vehicles, filters, onEdit, onDelete }) {
+export default function DayView({ profile, anchor, entries, leaders, vehicles, filters, onEdit, onDelete, onView }) {
   const dISO = toISODate(anchor);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
@@ -48,6 +48,7 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
               canEdit={canEditEntry(profile, e, l)}
               onEdit={onEdit}
               onDelete={onDelete}
+              onView={onView}
             />
           );
         })}

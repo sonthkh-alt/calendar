@@ -12,7 +12,7 @@ import { UNIT_NAME, PCT_GROUP_LABEL, DOAN_GROUP_LABEL } from '../lib/constants';
  * - Chế độ "Đầy đủ": bảng ngày × (Sáng/Chiều) × cột đơn vị.
  * - Chế độ "Gọn": mỗi ngày 1 khối (hợp mobile).
  */
-export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, filters, onAdd, onEdit, onDelete }) {
+export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, filters, onAdd, onEdit, onDelete, onView }) {
   const [mode, setMode] = useState('full'); // full | compact
   const days = useMemo(() => weekDays(anchor), [anchor]);
 
@@ -72,6 +72,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
         canEdit={canEditEntry(profile, e, leader)}
         onEdit={onEdit}
         onDelete={onDelete}
+        onView={onView}
         compact={mode === 'full'}
       />
     );

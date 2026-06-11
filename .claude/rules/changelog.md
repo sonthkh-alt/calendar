@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Hiển thị đủ 4 mục + modal chi tiết + nhóm thành phần
+- EntryCard luôn hiện đủ: Nội dung, Thời gian, Địa điểm, TP (— nếu trống); bấm vào ô → EntryDetail
+- EntryDetail: hiện đầy đủ không cắt chữ; GỘP thành phần của các mục trùng nội dung+ngày+giờ
+- ScheduleForm: Địa điểm + Thành phần thành bắt buộc; ô tick "nhóm thành phần" chèn nhanh
+- Bảng mới participant_groups (schema + seed 5 nhóm mẫu) + tab Quản trị "Nhóm thành phần"
+
 ## 2026-06-12 — Tài khoản khách (chỉ xem) trên trang đăng nhập
 - Ô vàng + nút "Vào xem ngay": user@thanhhoa.gov.vn / password (pattern HDNDKPI)
 - Là tài khoản Supabase THẬT (role nguoi_xem) vì RLS yêu cầu đăng nhập — tạo 1 lần

@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarRange, CalendarDays, CalendarClock, ClipboardCheck, Car, Settings,
-  LogOut, KeyRound, Loader2, Users, UserSquare2,
+  LogOut, KeyRound, Loader2, Users, UserSquare2, ListChecks,
 } from 'lucide-react';
 import Login from './Login';
 import SetPassword from './SetPassword';
 import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
-import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, deleteEntry } from './lib/api';
+import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, deleteEntry } from './lib/api';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES } from './lib/constants';
 import { toISODate, weekStart, weekEnd, startOfMonth, endOfMonth } from './lib/dates';
-import { canReview, canAssignVehicle, canAdmin } from './lib/permissions';
+import { canReview, canAssignVehicle, canAdmin, canEditEntry } from './lib/permissions';
 import FilterBar from './components/FilterBar';
 import WeekView from './components/WeekView';
 import MonthView from './components/MonthView';
@@ -20,7 +20,9 @@ import VehicleBoard from './components/VehicleBoard';
 import AdminUsers from './components/AdminUsers';
 import AdminLeaders from './components/AdminLeaders';
 import AdminVehicles from './components/AdminVehicles';
+import AdminGroups from './components/AdminGroups';
 import ScheduleForm from './components/ScheduleForm';
+import EntryDetail from './components/EntryDetail';
 
 export default function App() {
   // ===== Phiên đăng nhập =====
@@ -57,11 +59,13 @@ export default function App() {
   const [bans, setBans] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [pGroups, setPGroups] = useState([]);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [prefill, setPrefill] = useState(null);
+  const [viewing, setViewing] = useState(null); // entry đang xem chi tiết
 
   // Khoảng nạp dữ liệu: phủ lưới tháng chứa anchor (luôn chứa tuần & ngày đang xem)
   const range = useMemo(() => ({
@@ -70,8 +74,8 @@ export default function App() {
   }), [anchor]);
 
   const loadCatalogs = useCallback(async () => {
-    const [b, l, v] = await Promise.all([fetchBans(), fetchLeaders(), fetchVehicles()]);
-    setBans(b.data || []); setLeaders(l.data || []); setVehicles(v.data || []);
+    const [b, l, v, g] = await Promise.all([fetchBans(), fetchLeaders(), fetchVehicles(), fetchParticipantGroups()]);
+    setBans(b.data || []); setLeaders(l.data || []); setVehicles(v.data || []); setPGroups(g.data || []);
   }, []);
 
   const loadEntries = useCallback(async () => {
@@ -199,13 +203,13 @@ export default function App() {
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
 
         {tab === 'week' && (
-          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} filters={filters} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} />
+          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} filters={filters} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onView={setViewing} />
         )}
         {tab === 'month' && (
           <MonthView profile={profile} anchor={anchor} entries={entries} leaders={leaders} filters={filters} onPickDay={(d) => { setAnchor(d); setTab('day'); }} />
         )}
         {tab === 'day' && (
-          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} onEdit={onEdit} onDelete={onDelete} />
+          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} onEdit={onEdit} onDelete={onDelete} onView={setViewing} />
         )}
         {tab === 'approve' && canReview(profile) && (
           <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} onChanged={refresh} />
@@ -220,6 +224,7 @@ export default function App() {
                 { key: 'users', label: 'Tài khoản', icon: Users },
                 { key: 'leaders', label: 'Lãnh đạo', icon: UserSquare2 },
                 { key: 'vehicles', label: 'Xe công vụ', icon: Car },
+                { key: 'groups', label: 'Nhóm thành phần', icon: ListChecks },
               ].map((t) => (
                 <button key={t.key} onClick={() => setAdminTab(t.key)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold transition ${adminTab === t.key ? 'bg-red-700 text-white shadow' : 'bg-white/90 border border-slate-200 text-slate-600 hover:bg-red-50'}`}>
                   <t.icon className="w-3.5 h-3.5" /> {t.label}
@@ -229,6 +234,7 @@ export default function App() {
             {adminTab === 'users' && <AdminUsers bans={bans} leaders={leaders} />}
             {adminTab === 'leaders' && <AdminLeaders leaders={leaders} bans={bans} onChanged={loadCatalogs} />}
             {adminTab === 'vehicles' && <AdminVehicles vehicles={vehicles} leaders={leaders} onChanged={loadCatalogs} />}
+            {adminTab === 'groups' && <AdminGroups groups={pGroups} onChanged={loadCatalogs} />}
           </div>
         )}
       </main>
@@ -243,10 +249,23 @@ export default function App() {
           profile={profile}
           leaders={leaders}
           entries={entries}
+          groups={pGroups}
           editing={editing}
           prefill={prefill}
           onClose={() => { setFormOpen(false); setEditing(null); setPrefill(null); }}
           onSaved={refresh}
+        />
+      )}
+      {viewing && (
+        <EntryDetail
+          entry={viewing}
+          entries={entries}
+          leaders={leaders}
+          vehicles={vehicles}
+          canEdit={canEditEntry(profile, viewing, leaders.find((l) => l.id === viewing.leader_id))}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onClose={() => setViewing(null)}
         />
       )}
       {showChangePw && <SetPassword mode="change" onClose={() => setShowChangePw(false)} onDone={() => setTimeout(() => setShowChangePw(false), 1200)} />}
