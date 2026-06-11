@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Printer, Plus, LayoutGrid, Rows3 } from 'lucide-react';
 import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
@@ -14,8 +14,11 @@ import { printPage } from '../lib/print';
  * - Chế độ "Đầy đủ": bảng ngày × (Sáng/Chiều) × cột đơn vị.
  * - Chế độ "Gọn": mỗi ngày 1 khối (hợp mobile).
  */
-export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, onAdd, onEdit, onDelete, onDuplicate, onView }) {
-  const [mode, setMode] = useState('full'); // full | compact
+export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDuplicate, onView }) {
+  const [mode, setMode] = useState(isMobile ? 'compact' : 'full'); // full | compact
+  // Điện thoại: luôn dùng chế độ Gọn (khối từng ngày, kéo dọc) cho dễ xem
+  useEffect(() => { if (isMobile) setMode('compact'); }, [isMobile]);
+  const effMode = isMobile ? 'compact' : mode;
   const days = useMemo(() => weekDays(anchor), [anchor]);
 
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
@@ -144,10 +147,14 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
       <div className="print:hidden">
       {/* Thanh công cụ */}
       <div className="no-print flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1 bg-white/90 border border-slate-200 rounded-lg p-0.5">
-          <button onClick={() => setMode('full')} className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] font-semibold transition ${mode === 'full' ? 'bg-red-700 text-white' : 'text-slate-600 hover:bg-red-50'}`}><LayoutGrid className="w-3.5 h-3.5" /> Đầy đủ</button>
-          <button onClick={() => setMode('compact')} className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] font-semibold transition ${mode === 'compact' ? 'bg-red-700 text-white' : 'text-slate-600 hover:bg-red-50'}`}><Rows3 className="w-3.5 h-3.5" /> Gọn</button>
-        </div>
+        {isMobile ? (
+          <div className="flex items-center gap-1 text-[12px] font-semibold text-slate-500"><Rows3 className="w-3.5 h-3.5" /> Chế độ điện thoại</div>
+        ) : (
+          <div className="flex items-center gap-1 bg-white/90 border border-slate-200 rounded-lg p-0.5">
+            <button onClick={() => setMode('full')} className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] font-semibold transition ${mode === 'full' ? 'bg-red-700 text-white' : 'text-slate-600 hover:bg-red-50'}`}><LayoutGrid className="w-3.5 h-3.5" /> Đầy đủ</button>
+            <button onClick={() => setMode('compact')} className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] font-semibold transition ${mode === 'compact' ? 'bg-red-700 text-white' : 'text-slate-600 hover:bg-red-50'}`}><Rows3 className="w-3.5 h-3.5" /> Gọn</button>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           {(leaders || []).some((l) => canCreateFor(profile, l)) && (
             <button onClick={() => onAdd?.({})} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-r from-red-700 to-red-600 hover:from-red-800 hover:to-red-700 shadow">
@@ -160,7 +167,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
         </div>
       </div>
 
-      {mode === 'full' ? (
+      {effMode === 'full' ? (
         /* ===== CHẾ ĐỘ ĐẦY ĐỦ: bảng ngày × buổi × đơn vị ===== */
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full border-collapse min-w-[860px]">
@@ -235,7 +242,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                   <p className="text-[13px] font-bold text-red-800">{dayName(d)} <span className="text-slate-500 font-medium">{fmtDMY(d)}</span></p>
                   {isToday && <span className="text-[10px] font-bold text-amber-700 bg-amber-200 rounded px-1.5 py-0.5">HÔM NAY</span>}
                 </div>
-                <div className="p-2.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                <div className={`p-2.5 grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
                   {dayEntries.length === 0 && <p className="text-[12px] text-slate-400 italic col-span-full">Không có lịch.</p>}
                   {mergeEntries(dayEntries).map(renderMergedCard)}
                 </div>

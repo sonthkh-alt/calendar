@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Khung hình theo thiết bị (Tự động/Máy tính/Điện thoại)
+- DeviceSelect.jsx: dropdown ở header chọn 'auto'|'desktop'|'mobile', lưu localStorage
+- App.jsx: matchMedia('(max-width:767px)') -> isMobile (ép thủ công hoặc auto+màn hẹp);
+  phoneFrame = ép 'mobile' trên màn rộng -> bọc <main> trong khung điện thoại (ring bezel)
+- WeekView: nhận isMobile -> ép chế độ Gọn (khối từng ngày, kéo dọc), lưới grid-cols-1,
+  ẩn nút Đầy đủ/Gọn, thay bằng nhãn "Chế độ điện thoại"
+
 ## 2026-06-12 — Đường nét lịch tuần đậm/nhạt tách khối ngày + lọc theo nhóm cột
 - WeekView (chế độ Đầy đủ): đường DỌC giữa cột nhạt (slate-200), đường ngang giữa
   Sáng/Chiều rất nhạt (slate-100), đường ngang giữa các NGÀY ĐẬM 2px (slate-300,

@@ -23,6 +23,7 @@ import AdminGroups from './components/AdminGroups';
 import AdminBackup from './components/AdminBackup';
 import ScheduleForm from './components/ScheduleForm';
 import EntryDetail from './components/EntryDetail';
+import DeviceSelect from './components/DeviceSelect';
 
 export default function App() {
   // ===== Phiên đăng nhập =====
@@ -67,6 +68,26 @@ export default function App() {
   const [duplicating, setDuplicating] = useState(null); // entry gốc khi nhân bản
   const [prefill, setPrefill] = useState(null);
   const [viewing, setViewing] = useState(null); // entry đang xem chi tiết
+
+  // ===== Khung hình theo thiết bị =====
+  // deviceMode: 'auto' (theo màn hình) | 'desktop' | 'mobile'. Lưu localStorage.
+  const [deviceMode, setDeviceMode] = useState(() => {
+    try { return localStorage.getItem('deviceMode') || 'auto'; } catch { return 'auto'; }
+  });
+  const [viewportNarrow, setViewportNarrow] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const on = (e) => setViewportNarrow(e.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  useEffect(() => { try { localStorage.setItem('deviceMode', deviceMode); } catch { /* bỏ qua */ } }, [deviceMode]);
+  // Có hiển thị như điện thoại không (ép thủ công, hoặc auto + màn hẹp)
+  const isMobile = deviceMode === 'mobile' || (deviceMode === 'auto' && viewportNarrow);
+  // Mô phỏng khung điện thoại trên màn rộng (chọn "Điện thoại" khi đang dùng máy tính)
+  const phoneFrame = deviceMode === 'mobile' && !viewportNarrow;
 
   // Khoảng nạp dữ liệu: CẢ NĂM chứa anchor — phục vụ cảnh báo trùng địa điểm
   // trong toàn năm (khối lượng dữ liệu văn phòng nhỏ nên vẫn nhẹ)
@@ -194,6 +215,7 @@ export default function App() {
             <h1 className="text-[17px] font-extrabold leading-tight aurora-text uppercase tracking-wide">{APP_NAME}</h1>
             <p className="text-[12px] text-red-100/90 truncate">{UNIT_NAME}</p>
           </div>
+          <div className="shrink-0"><DeviceSelect value={deviceMode} onChange={setDeviceMode} /></div>
           <div className="hidden sm:flex items-center gap-2 shrink-0">
             <div className="text-right">
               <p className="text-[13px] font-bold leading-tight">{profile.full_name || profile.email}</p>
@@ -224,7 +246,9 @@ export default function App() {
       </header>
 
       {/* ===== Nội dung ===== */}
-      <main className="max-w-[1400px] mx-auto px-4 py-4">
+      <main className={phoneFrame
+        ? 'max-w-[430px] mx-auto my-5 px-3 py-4 bg-slate-50 rounded-[28px] shadow-2xl ring-[6px] ring-slate-800/85'
+        : 'max-w-[1400px] mx-auto px-4 py-4'}>
         {['week', 'month', 'day'].includes(tab) && (
           <FilterBar view={tab} anchor={anchor} onAnchor={setAnchor} bans={bans} leaders={leaders} filters={filters} onFilters={setFilters} />
         )}
@@ -235,7 +259,7 @@ export default function App() {
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
 
         {tab === 'week' && (
-          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} filters={filters} dupMap={dupMap} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onView={setViewing} />
+          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} filters={filters} dupMap={dupMap} isMobile={isMobile} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'month' && (
           <MonthView profile={profile} anchor={anchor} entries={entries} leaders={leaders} filters={filters} onPickDay={(d) => { setAnchor(d); setTab('day'); }} />
