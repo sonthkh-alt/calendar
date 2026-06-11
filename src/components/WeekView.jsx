@@ -177,22 +177,29 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
               {days.map((d) => {
                 const dISO = toISODate(d);
                 const isToday = dISO === toISODate(new Date());
-                return ['sang', 'chieu'].map((sess, si) => (
+                return ['sang', 'chieu'].map((sess, si) => {
+                  // Đường ngăn: dọc giữa cột = nhạt; ngang giữa Sáng/Chiều = rất nhạt;
+                  // ngang giữa các NGÀY (đáy dòng Chiều) = ĐẬM 2px để tách khối ngày.
+                  const vB = 'border-r border-r-slate-200';
+                  const hB = si === 0
+                    ? 'border-b border-b-slate-100'
+                    : `border-b-2 ${isToday ? 'border-b-amber-300' : 'border-b-slate-300'}`;
+                  return (
                   <tr key={dISO + sess} className={isToday ? 'bg-amber-50/60' : si === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                     {si === 0 && (
-                      <td rowSpan={2} className={`border border-slate-200 px-2 py-2 text-center align-middle ${isToday ? 'bg-amber-100/70' : 'bg-slate-50'}`}>
+                      <td rowSpan={2} className={`${vB} border-b-2 px-2 py-2 text-center align-middle ${isToday ? 'bg-amber-100/70 border-b-amber-300' : 'bg-slate-50 border-b-slate-300'}`}>
                         <p className="text-[12px] font-bold text-red-800">{dayName(d)}</p>
                         <p className="text-[12px] text-slate-600">{fmtDM(d)}</p>
                         {isToday && <span className="no-print inline-block mt-1 text-[9px] font-bold text-amber-700 bg-amber-200 rounded px-1">HÔM NAY</span>}
                       </td>
                     )}
-                    <td className="border border-slate-200 px-1 py-1.5 text-center text-[11px] font-semibold text-slate-500">{sess === 'sang' ? 'Sáng' : 'Chiều'}</td>
+                    <td className={`${vB} ${hB} px-1 py-1.5 text-center text-[11px] font-semibold text-slate-500`}>{sess === 'sang' ? 'Sáng' : 'Chiều'}</td>
                     {units.map((u) => {
                       const list = cellEntries(u, dISO, sess);
                       // Được thêm nếu có quyền với ít nhất một đối tượng của cột
                       const addable = u.leaderIds.filter((id) => canCreateFor(profile, leaderById[id]));
                       return (
-                        <td key={u.key} className="border border-slate-200 px-1 py-1 align-top" style={{ minWidth: 150 }}>
+                        <td key={u.key} className={`${vB} ${hB} px-1 py-1 align-top`} style={{ minWidth: 150 }}>
                           <div className="space-y-1">
                             {list.map(renderCard)}
                             {addable.length > 0 && (
@@ -207,7 +214,8 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                       );
                     })}
                   </tr>
-                ));
+                  );
+                });
               })}
             </tbody>
           </table>

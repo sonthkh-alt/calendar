@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Đường nét lịch tuần đậm/nhạt tách khối ngày + lọc theo nhóm cột
+- WeekView (chế độ Đầy đủ): đường DỌC giữa cột nhạt (slate-200), đường ngang giữa
+  Sáng/Chiều rất nhạt (slate-100), đường ngang giữa các NGÀY ĐẬM 2px (slate-300,
+  ngày hôm nay = amber-300) -> mỗi ngày thành 1 khối nổi bật
+- FilterBar "đơn vị": thêm Lãnh đạo HĐND tỉnh / Đoàn ĐBQH / Lãnh đạo Văn phòng
+  (giá trị 'grp:<leader_type>'); constants.leaderInUnit() dùng chung cho Week/Day/Month
+
 ## 2026-06-12 — Sửa lỗi GỐC không gộp tên nhóm khi in: lệch tiền tố kính ngữ
 - Triệu chứng: in ra vẫn liệt kê đủ tên dù đã định nghĩa nhóm. Nguyên nhân: `present`
   so khớp bằng `norm(s).includes(memberName)` — đòi cả tiền tố; nhóm lưu "Đ/c X" mà
