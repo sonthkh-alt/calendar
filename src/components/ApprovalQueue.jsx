@@ -9,7 +9,7 @@ import { fmtTime, parseISO, fmtDMY, dayName, weekStart, weekEnd, toISODate } fro
  * Hiển thị mục 'cho_duyet' trong khoảng đang xem, nhóm theo Ban.
  * Hành động: Duyệt / Điều chỉnh (sửa + ghi chú) / Từ chối (ghi chú bắt buộc).
  */
-export default function ApprovalQueue({ profile, anchor, entries, leaders, bans, dupLocIds, onChanged }) {
+export default function ApprovalQueue({ profile, anchor, entries, leaders, bans, dupMap, onChanged }) {
   const [busy, setBusy] = useState(null); // id đang xử lý
   const [adjusting, setAdjusting] = useState(null); // entry đang điều chỉnh
   const [rejecting, setRejecting] = useState(null); // entry đang từ chối
@@ -113,10 +113,10 @@ export default function ApprovalQueue({ profile, anchor, entries, leaders, bans,
               const l = leaderById[e.leader_id];
               const timeLabel = e.session === 'gio' ? `${fmtTime(e.start_time)} - ${fmtTime(e.end_time)}` : SESSIONS[e.session];
               return (
-                <div key={e.id} className={`p-4 ${dupLocIds?.has(e.id) ? 'bg-violet-50 border-l-4 border-violet-500' : ''}`}>
-                  {dupLocIds?.has(e.id) && (
-                    <p className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-violet-600 rounded-md px-2 py-1 mb-2">
-                      ⚠ TRÙNG ĐỊA ĐIỂM TRONG TUẦN — có lịch khác của các Ban cũng tới "{e.location}", cân nhắc gộp đoàn / điều phối chung xe
+                <div key={e.id} className={`p-4 ${dupMap?.has(e.id) ? 'bg-violet-50 border-l-4 border-violet-500' : ''}`}>
+                  {dupMap?.has(e.id) && (
+                    <p className="inline-flex items-start gap-1.5 text-[11px] font-bold text-white bg-violet-600 rounded-md px-2 py-1 mb-2">
+                      ⚠ TRÙNG ĐỊA ĐIỂM "{e.location}" với: {dupMap.get(e.id).map((o) => `${fmtDMY(parseISO(o.date))} (${o.name})`).join('; ')} — cân nhắc gộp đoàn / điều phối chung xe
                     </p>
                   )}
                   <div className="flex flex-wrap items-start justify-between gap-3">

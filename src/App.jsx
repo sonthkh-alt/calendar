@@ -9,7 +9,6 @@ import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, deleteEntry } from './lib/api';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS } from './lib/constants';
-import { toISODate, weekStart, weekEnd, startOfMonth, endOfMonth, parseISO } from './lib/dates';
 import { canReview, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
 import FilterBar from './components/FilterBar';
 import WeekView from './components/WeekView';
@@ -69,10 +68,11 @@ export default function App() {
   const [prefill, setPrefill] = useState(null);
   const [viewing, setViewing] = useState(null); // entry đang xem chi tiết
 
-  // Khoảng nạp dữ liệu: phủ lưới tháng chứa anchor (luôn chứa tuần & ngày đang xem)
+  // Khoảng nạp dữ liệu: CẢ NĂM chứa anchor — phục vụ cảnh báo trùng địa điểm
+  // trong toàn năm (khối lượng dữ liệu văn phòng nhỏ nên vẫn nhẹ)
   const range = useMemo(() => ({
-    from: toISODate(weekStart(startOfMonth(anchor))),
-    to: toISODate(weekEnd(endOfMonth(anchor))),
+    from: `${anchor.getFullYear()}-01-01`,
+    to: `${anchor.getFullYear()}-12-31`,
   }), [anchor]);
 
   const loadCatalogs = useCallback(async () => {
@@ -105,23 +105,32 @@ export default function App() {
 
   const pendingCount = useMemo(() => entries.filter((e) => e.status === 'cho_duyet').length, [entries]);
 
-  // CẢNH BÁO TRÙNG ĐỊA ĐIỂM: trong cùng một tuần, có >= 2 lịch của các Ban đề xuất
-  // tới cùng một địa điểm (bỏ qua các địa điểm mặc định của hệ thống) -> đánh dấu
-  // nổi bật để người duyệt cân nhắc gộp đoàn / điều phối chung xe.
-  const dupLocIds = useMemo(() => {
+  // CẢNH BÁO TRÙNG ĐỊA ĐIỂM trong CẢ NĂM: >= 2 lịch của các Ban tới cùng một
+  // địa điểm (bỏ qua địa điểm mặc định) -> dupMap: id -> danh sách mục trùng
+  // kèm ngày tháng + đơn vị, để người duyệt biết chi tiết và cân nhắc gộp đoàn.
+  const dupMap = useMemo(() => {
     const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
     const commonSet = new Set(COMMON_LOCATIONS.map(norm));
-    const leaderTypeById = Object.fromEntries(leaders.map((l) => [l.id, l.leader_type]));
+    const leaderById = Object.fromEntries(leaders.map((l) => [l.id, l]));
     const groups = {};
     for (const e of entries) {
       if (e.status === 'tu_choi' || !e.location) continue;
-      if (leaderTypeById[e.leader_id] !== 'ban') continue;
+      if (leaderById[e.leader_id]?.leader_type !== 'ban') continue;
       const loc = norm(e.location);
       if (commonSet.has(loc)) continue;
-      const key = `${toISODate(weekStart(parseISO(e.date)))}|${loc}`;
-      (groups[key] ||= []).push(e.id);
+      (groups[loc] ||= []).push(e);
     }
-    return new Set(Object.values(groups).filter((g) => g.length >= 2).flat());
+    const map = new Map();
+    for (const g of Object.values(groups)) {
+      if (g.length < 2) continue;
+      for (const e of g) {
+        map.set(e.id, g.filter((x) => x.id !== e.id).map((x) => ({
+          date: x.date,
+          name: leaderById[x.leader_id]?.full_name || '',
+        })));
+      }
+    }
+    return map;
   }, [entries, leaders]);
 
   // ===== Các cổng vào =====
@@ -226,16 +235,16 @@ export default function App() {
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
 
         {tab === 'week' && (
-          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} filters={filters} dupLocIds={dupLocIds} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onView={setViewing} />
+          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} filters={filters} dupMap={dupMap} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'month' && (
           <MonthView profile={profile} anchor={anchor} entries={entries} leaders={leaders} filters={filters} onPickDay={(d) => { setAnchor(d); setTab('day'); }} />
         )}
         {tab === 'day' && (
-          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} dupLocIds={dupLocIds} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onView={setViewing} />
+          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} dupMap={dupMap} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'approve' && canReview(profile) && (
-          <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupLocIds={dupLocIds} onChanged={refresh} />
+          <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupMap={dupMap} onChanged={refresh} />
         )}
         {tab === 'vehicles' && canAssignVehicle(profile) && (
           <VehicleBoard profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} onChanged={refresh} />
@@ -290,7 +299,7 @@ export default function App() {
           vehicles={vehicles}
           canEdit={canEditEntry(profile, viewing, leaders.find((l) => l.id === viewing.leader_id))}
           canDuplicate={canDup(viewing)}
-          dupWarn={dupLocIds.has(viewing.id)}
+          dupOthers={dupMap.get(viewing.id)}
           onEdit={onEdit}
           onDelete={onDelete}
           onDuplicate={onDuplicate}

@@ -19,7 +19,7 @@
 | cb_ban | CRUD lịch lãnh đạo thuộc ban_ids; chỉ sửa khi cho_duyet/tu_choi |
 | cb_tonghop | CRUD lịch PCT → khởi tạo da_duyet (hiện ngay) |
 | van_phong_xe | gán xe cho lịch đã duyệt / lịch PCT |
-| nguoi_xem | chỉ xem lịch da_duyet/da_dieu_chinh |
+| nguoi_xem | xem tất cả lịch (kể cả chờ duyệt/từ chối — phân biệt bằng màu), không sửa |
 
 ## Trạng thái & luồng
 - `cho_duyet` (amber) → PCT xử lý → `da_duyet` (emerald) | `da_dieu_chinh` (sky, ghi chú bắt buộc) | `tu_choi` (rose, lý do bắt buộc)

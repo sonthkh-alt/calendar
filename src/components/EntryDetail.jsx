@@ -10,7 +10,7 @@ import { fmtTime, fmtDMY, dayName, parseISO } from '../lib/dates';
  * cho cả Lãnh đạo HĐND và Đoàn ĐBQH) được GỘP: thành phần nối lại với nhau.
  * props: entry, entries, leaders, vehicles, canEdit, onEdit, onDelete, onClose
  */
-export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit, canDuplicate, dupWarn, onEdit, onDelete, onDuplicate, onClose }) {
+export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit, canDuplicate, dupOthers, onEdit, onDelete, onDuplicate, onClose }) {
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
 
@@ -67,10 +67,16 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit
         </div>
 
         <div className="p-5 space-y-4">
-          {dupWarn && (
-            <p className="flex items-start gap-2 text-[13px] font-bold text-violet-900 bg-violet-50 border border-violet-300 rounded-xl p-3">
-              ⚠️ Trong tuần này có lịch khác của các Ban cũng tới địa điểm "{entry.location}" — đề nghị cân nhắc gộp đoàn hoặc điều phối chung xe.
-            </p>
+          {dupOthers?.length > 0 && (
+            <div className="text-[13px] text-violet-900 bg-violet-50 border border-violet-300 rounded-xl p-3">
+              <p className="font-bold">⚠️ Trùng địa điểm "{entry.location}" với các lịch khác của các Ban trong năm:</p>
+              <ul className="mt-1 list-disc list-inside space-y-0.5">
+                {dupOthers.map((o, i) => (
+                  <li key={i}>{dayName(parseISO(o.date))}, ngày {fmtDMY(parseISO(o.date))} — {o.name}</li>
+                ))}
+              </ul>
+              <p className="mt-1 italic">Đề nghị cân nhắc gộp đoàn hoặc điều phối chung xe.</p>
+            </div>
           )}
           {/* Nội dung */}
           <div>

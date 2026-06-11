@@ -56,12 +56,8 @@ export function canCreateAny(profile, leaders) {
 }
 
 // Người này có nhìn thấy mục lịch không?
-// - Lịch đã duyệt/điều chỉnh: ai cũng thấy.
-// - Chờ duyệt/từ chối: người nhập (theo Ban), PCT, quản trị thấy.
-export function canSeeEntry(profile, entry, leader) {
-  if (!entry) return false;
-  if (entry.status === 'da_duyet' || entry.status === 'da_dieu_chinh') return true;
-  if (!profile) return false;
-  if (profile.role === 'quan_tri' || profile.role === 'pct') return true;
-  return canCreateFor(profile, leader);
+// Mọi người đã đăng nhập (kể cả Người xem) thấy TẤT CẢ lịch, gồm cả mục
+// chưa phê duyệt / từ chối — trạng thái được phân biệt bằng màu huy hiệu.
+export function canSeeEntry(_profile, entry) {
+  return !!entry;
 }

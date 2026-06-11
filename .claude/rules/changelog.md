@@ -1,5 +1,10 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Trùng địa điểm quét CẢ NĂM + chi tiết ngày; mở quyền xem
+- App nạp entries cả năm (anchor year); dupMap: id -> [{date, name}] các mục trùng
+- Hiển thị rõ "TRÙNG ĐỊA ĐIỂM với: 15/06 (Ban X); ..." ở ô lịch / chi tiết / Chờ duyệt
+- canSeeEntry: mọi vai trò (kể cả nguoi_xem) thấy cả lịch chưa duyệt
+
 ## 2026-06-12 — Cảnh báo trùng địa điểm trong tuần (màu tím)
 - >= 2 lịch của các Ban cùng tuần + cùng địa điểm (chuẩn hóa chữ thường, bỏ địa điểm
   trong COMMON_LOCATIONS) -> dupLocIds (App.jsx) -> tô tím nổi bật: viền+nền+huy hiệu

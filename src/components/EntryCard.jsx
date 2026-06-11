@@ -1,7 +1,7 @@
 import { MapPin, Users, Clock, Car, Pencil, Trash2, MessageSquareText, UserRound, Copy, AlertTriangle } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { STATUS, SESSIONS } from '../lib/constants';
-import { fmtTime } from '../lib/dates';
+import { fmtTime, fmtDM, parseISO } from '../lib/dates';
 
 /**
  * Ô hiển thị 1 mục lịch — LUÔN đủ 6 mục (thiếu thì để trống "—"):
@@ -9,7 +9,11 @@ import { fmtTime } from '../lib/dates';
  * `vehicle` do cha truyền vào: xe đã gán, hoặc xe riêng của lãnh đạo (PCT /
  * Phó Trưởng Đoàn) nếu chưa gán. Bấm vào ô để mở chi tiết đầy đủ.
  */
-export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, dupWarn, onEdit, onDelete, onDuplicate, onView, compact }) {
+export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, dupOthers, onEdit, onDelete, onDuplicate, onView, compact }) {
+  const dupWarn = dupOthers?.length > 0;
+  const dupDetail = dupWarn
+    ? dupOthers.map((o) => `${fmtDM(parseISO(o.date))} (${o.name})`).join(', ')
+    : '';
   const s = STATUS[entry.status] || STATUS.cho_duyet;
   const timeLabel = entry.session === 'gio'
     ? `${fmtTime(entry.start_time)}${entry.end_time ? ' - ' + fmtTime(entry.end_time) : ''}`
@@ -26,8 +30,9 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
         ${dupWarn ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-300 shadow-md shadow-violet-200' : `${s.border} ${s.bg} ${onView ? 'hover:ring-2 hover:ring-red-200' : ''}`}`}
     >
       {dupWarn && (
-        <p className="flex items-center gap-1 text-[10px] font-bold text-white bg-violet-600 rounded px-1.5 py-0.5 mb-1 -mx-0.5">
-          <AlertTriangle className="w-3 h-3 shrink-0" /> TRÙNG ĐỊA ĐIỂM TRONG TUẦN — cân nhắc gộp đoàn
+        <p className="flex items-start gap-1 text-[10px] font-bold text-white bg-violet-600 rounded px-1.5 py-0.5 mb-1 -mx-0.5" title={`Trùng địa điểm với: ${dupDetail} — cân nhắc gộp đoàn`}>
+          <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+          <span className={compact ? 'line-clamp-2' : ''}>TRÙNG ĐỊA ĐIỂM với: {dupDetail}</span>
         </p>
       )}
       <div className="flex items-start justify-between gap-1">
