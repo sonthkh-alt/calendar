@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Bản in: gộp cột Thành phần + sửa lỗi nhận diện nhóm
+- Gộp Đơn vị/Lãnh đạo + Thành phần thành 1 cột "Thành phần" (5 cột)
+- compactParticipants: THAY đoạn thành viên khớp nhóm bằng tên nhóm, GIỮ phần sau
+  dấu chấm (Cán bộ tham dự...); sửa bug chức vụ "PCT Thường trực HĐND tỉnh" chứa
+  tên nhóm gây bỏ qua gộp; kiểm chứng bằng scripts/test-compact.mjs (5 ca đạt)
+
 ## 2026-06-12 — Tick lãnh đạo khi soạn nhóm + tinh gọn bản in
 - AdminGroups: LeaderTicks — tick lãnh đạo/đơn vị để chèn "tên, chức vụ" vào members
 - WeekPrintSheet: BỎ cột Lái xe; cột Đơn vị/Lãnh đạo ghi GỌN bằng tên Nhóm thành phần

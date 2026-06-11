@@ -45,24 +45,37 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
     return e.session === 'sang' ? 'Sáng' : e.session === 'chieu' ? 'Chiều' : 'Cả ngày';
   };
 
-  // Đơn vị/Lãnh đạo: ưu tiên ghi GỌN bằng tên Nhóm thành phần.
-  // So khớp MỀM: chuẩn hóa chữ thường/khoảng trắng; nhóm được nhận khi
-  // (a) Thành phần nhắc thẳng tên nhóm, hoặc (b) TÊN của TẤT CẢ thành viên
-  // trong nhóm đều xuất hiện trong Thành phần (không cần đúng nguyên văn chức vụ).
+  // THÀNH PHẦN GỌN (cột gộp Đơn vị/Lãnh đạo + Thành phần):
+  // - Nếu danh sách chứa đủ TÊN mọi thành viên của một Nhóm thành phần
+  //   -> các mục đó được THAY bằng tên nhóm; phần còn lại (cán bộ tham dự,
+  //   đơn vị ngoài...) giữ nguyên.
+  // - So khớp mềm: chữ thường, bỏ thừa khoảng trắng, chỉ cần khớp phần TÊN
+  //   trước dấu phẩy (không phụ thuộc chức vụ, thứ tự).
+  // - Thành phần trống -> ghi tên lãnh đạo/đơn vị của mục lịch.
   const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
-  const unitLabel = (m) => {
-    const partText = norm(m._parts.join('; '));
-    const matched = (groups || []).filter((g) => {
-      if (!g.members) return false;
-      if (g.name && partText.includes(norm(g.name))) return true;
-      const members = g.members.split(';').map(norm).filter(Boolean);
-      if (!members.length) return false;
-      return members.every((mem) => {
-        const namePart = mem.split(',')[0].trim(); // 'đ/c lê tiến lam'
-        return partText.includes(mem) || (namePart && partText.includes(namePart));
+  const compactParticipants = (m) => {
+    let segs = m._parts.join('; ').split(';').map((s) => s.trim()).filter(Boolean);
+    const segName = (s) => norm(s.split(',')[0]);
+    for (const g of groups || []) {
+      if (!g.members || !g.name) continue;
+      const memberNames = g.members.split(';').map((x) => norm(x.split(',')[0])).filter(Boolean);
+      if (!memberNames.length) continue;
+      const present = memberNames.every((n) => segs.some((s) => norm(s).includes(n)));
+      if (!present) continue;
+      let inserted = false;
+      segs = segs.flatMap((s) => {
+        const isMember = memberNames.some((n) => segName(s) === n || segName(s).startsWith(n));
+        if (!isMember) return [s];
+        // Giữ phần thông tin thêm sau dấu chấm (vd "... Cán bộ tham dự: ...")
+        const dot = s.indexOf('. ');
+        const tail = dot > -1 ? [s.slice(dot + 1).trim()] : [];
+        if (!inserted) { inserted = true; return [g.name, ...tail]; }
+        return tail;
       });
-    });
-    if (matched.length) return matched.map((g) => g.name).join('; ');
+      if (!inserted) segs.unshift(g.name);
+    }
+    const text = [...new Set(segs)].join('; ');
+    if (text) return text;
     return [...new Set(m._leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean))].join('; ');
   };
 
@@ -83,12 +96,11 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
 
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11.5, lineHeight: 1.4 }}>
         <colgroup>
-          <col style={{ width: '8%' }} />
           <col style={{ width: '9%' }} />
-          <col style={{ width: '30%' }} />
-          <col style={{ width: '14%' }} />
+          <col style={{ width: '10%' }} />
+          <col style={{ width: '33%' }} />
           <col style={{ width: '15%' }} />
-          <col style={{ width: '24%' }} />
+          <col style={{ width: '33%' }} />
         </colgroup>
         <thead>
           <tr>
@@ -96,7 +108,6 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
             <th style={th}>Thời gian</th>
             <th style={th}>Nội dung công việc</th>
             <th style={th}>Địa điểm</th>
-            <th style={th}>Đơn vị / Lãnh đạo</th>
             <th style={th}>Thành phần</th>
           </tr>
         </thead>
@@ -113,7 +124,7 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
               return (
                 <tr key={dISO}>
                   {dayCell}
-                  <td style={td} colSpan={5}>&nbsp;</td>
+                  <td style={td} colSpan={4}>&nbsp;</td>
                 </tr>
               );
             }
@@ -127,8 +138,7 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
                   {m.status === 'da_dieu_chinh' && m.review_note && <i> ({m.review_note})</i>}
                 </td>
                 <td style={td}>{m.location || ''}</td>
-                <td style={td}>{unitLabel(m)}</td>
-                <td style={td}>{m._parts.join('; ')}</td>
+                <td style={td}>{compactParticipants(m)}</td>
               </tr>
             ));
           })}
