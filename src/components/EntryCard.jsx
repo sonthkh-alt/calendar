@@ -34,8 +34,8 @@ export default function EntryCard({ entry, leader, vehicle, showLeader, canEdit,
       <div className="mt-1 space-y-0.5 text-[11px] text-slate-600">
         <p className="flex items-center gap-1"><Clock className="w-3 h-3 shrink-0 text-slate-400" /> {timeLabel}</p>
         {entry.location && <p className="flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0 text-slate-400" /> {entry.location}</p>}
-        {!compact && entry.participants && (
-          <p className="flex items-start gap-1"><Users className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" /> <span className="line-clamp-2">{entry.participants}</span></p>
+        {entry.participants && (
+          <p className="flex items-start gap-1"><Users className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" /> <span className={compact ? 'line-clamp-3' : ''}><b className="font-semibold">TP:</b> {entry.participants}</span></p>
         )}
         {vehicle && (
           <p className="flex items-center gap-1 font-medium text-slate-700"><Car className="w-3 h-3 shrink-0 text-slate-500" /> {vehicle.plate}{vehicle.driver_name ? ` · ${vehicle.driver_name}` : ''}</p>
