@@ -1,0 +1,129 @@
+# BÀN GIAO — Tiếp tục dự án trên máy khác
+
+> File này để **mai lên cơ quan, mở PC khác là dùng tiếp được ngay**.
+> Mở thư mục dự án bằng Claude Code rồi bảo: *"đọc BAN-GIAO.md và tiếp tục"*.
+> (CLAUDE.md đã tự nạp mỗi phiên; file này bổ sung phần "khôi phục môi trường".)
+
+Cập nhật lần cuối: 12/06/2026 — commit mới nhất trên `main`: **khung hình theo thiết bị**.
+
+---
+
+## 0. Dự án là gì (30 giây)
+Website **Lịch công tác tuần** — Văn phòng Đoàn ĐBQH và HĐND tỉnh Thanh Hóa.
+React 18 + Vite 5 + Tailwind 3 + Supabase (Postgres + Auth). UI tiếng Việt.
+Đang **chạy thật**, không còn là bản nháp.
+
+| Hạ tầng | Địa chỉ |
+|---|---|
+| Web (chạy thật) | https://calendar-beta-lac.vercel.app |
+| Mã nguồn (GitHub) | https://github.com/sonthkh-alt/calendar — branch `main` |
+| CSDL (Supabase) | project `psyudpexkrbtazxhkdjl`, vùng `aws-1-ap-northeast-2` (Seoul) |
+| Triển khai | Vercel — **tự deploy mỗi khi push lên `main`** (~1–2 phút) |
+
+---
+
+## 1. Lấy mã nguồn trên PC cơ quan
+**Cách A — OneDrive (dễ nhất):** PC cơ quan đăng nhập **cùng tài khoản OneDrive**
+(thư mục `...\OneDrive\App\GoogleAnti\Calendar` sẽ tự đồng bộ về). Chỉ cần mở thư mục.
+
+**Cách B — Git clone (máy lạ / không có OneDrive):**
+```powershell
+git clone https://github.com/sonthkh-alt/calendar.git
+cd calendar
+```
+
+> Dù dùng cách nào, sau khi sửa xong **luôn `git push` lên `main`** để Vercel deploy
+> và để máy còn lại đồng bộ (xem mục 5).
+
+---
+
+## 2. Cài đặt & chạy thử
+Cần **Node.js 18+**.
+```powershell
+npm install
+npm run dev      # http://localhost:5173
+```
+
+### ⚠️ Phải tạo file `.env` (KHÔNG có trên GitHub/đồng bộ)
+`.env` bị `.gitignore` nên **không** nằm trên GitHub. Tạo file `.env` ở thư mục gốc:
+```
+VITE_SUPABASE_URL=<điền>
+VITE_SUPABASE_ANON_KEY=<điền>
+```
+Lấy 2 giá trị này từ một trong hai nơi:
+- **Supabase Dashboard** → Settings → API (Project URL + anon/public key), hoặc
+- **Vercel** → Project `calendar` → Settings → Environment Variables (đã lưu sẵn ở đó).
+
+> Lưu ý: `npm run build` **không có `.env`** sẽ ra bundle rỗng (supabase=null) — bình thường,
+> không phải lỗi. Khi deploy, Vercel tự nạp biến môi trường nên web vẫn chạy.
+
+Trước mỗi commit: `npm run build` phải **xanh**, `npm run lint` **không lỗi**.
+
+---
+
+## 3. Tài khoản & bí mật
+- **Quản trị gốc:** `sonthkh@gmail.com` (đăng nhập email + mật khẩu; là `quan_tri` tuyệt đối).
+- **Tài khoản khách (chỉ xem):** `user@thanhhoa.gov.vn` / `password`.
+- **5 tài khoản test theo vai trò:** `hainq/lamlt/thttdn/hctcqt/ban @thanhhoa.gov.vn`,
+  mật khẩu lần lượt `1`–`5` (xem `supabase/migrations/2026-06-12-tao-tai-khoan.sql`).
+- **GitHub Actions secret `SUPABASE_DB_URL`:** Session pooler URI (vùng Seoul),
+  ký tự `@` trong mật khẩu phải đổi thành `%40`. Dùng để tự chạy `schema.sql` khi push.
+
+> Bí mật KHÔNG ghi ở đây: mật khẩu CSDL Supabase, service-role key — lấy lại từ Supabase Dashboard.
+
+---
+
+## 4. Đã làm xong (trạng thái hiện tại)
+Toàn bộ nhật ký chi tiết: **`.claude/rules/changelog.md`**. Tóm tắt các mảng đã hoàn thiện:
+
+- **Đăng nhập:** magic link lần đầu → đặt mật khẩu → email + mật khẩu (mẫu HDNDKPI).
+- **Lịch tuần / tháng / ngày:** cột theo đơn vị (Lãnh đạo HĐND tỉnh, Đoàn ĐBQH, 4 Ban,
+  Lãnh đạo Văn phòng); chế độ Đầy đủ / Gọn; đường nét đậm/nhạt tách khối từng ngày.
+- **Nhập lịch:** ScheduleForm multi-leader, nhân bản, nhóm thành phần (tick nhanh).
+- **Quy trình duyệt:** PCT Duyệt / Điều chỉnh / Từ chối + "Duyệt cả tuần"; lịch PCT auto duyệt.
+- **Điều xe:** 2 xe riêng PCT (mặc định tuyệt đối) + 2 xe chung; cảnh báo trùng xe/giờ.
+- **Cảnh báo trùng địa điểm** cả năm (tô tím); họp tại trụ sở thì bỏ điều xe.
+- **Bản in công văn (A4 dọc):** gộp mục giống nhau, **gộp thành phần theo tên Nhóm**
+  (đã sửa lỗi lệch tiền tố "Đ/c"/"Đồng chí" — `scripts/test-compact.mjs` 9/9 đạt).
+- **Bộ lọc đơn vị** thêm 3 nhóm cột; **khung hình theo thiết bị** (Tự động/Máy tính/Điện thoại):
+  điện thoại → lịch chuyển chế độ Gọn kéo dọc, lưới 1 cột.
+- **Quản trị:** tài khoản / lãnh đạo / xe / nhóm thành phần / Sao lưu–Phục hồi.
+- **Tự động hóa CSDL:** GitHub Actions chạy `schema.sql` idempotent khi push (đã xác minh chạy thật).
+
+---
+
+## 5. Việc CÒN LẠI / có thể làm tiếp
+- [ ] **Xuất Word/Excel (G6)** — chưa làm (dự kiến lazy-import `docx` + `xlsx`, mẫu `HDNDKPI/src/lib/exporters.js`).
+- [ ] Cấu hình **Site URL + Redirect URLs** trong Supabase Auth nếu email xác thực còn trỏ về `localhost`.
+- [ ] (Ghi thêm yêu cầu mới phát sinh vào đây.)
+
+---
+
+## 6. QUY TẮC bắt buộc khi làm tiếp (đã từng vấp)
+1. **TUYỆT ĐỐI không chạy lại `seed.sql`** — đã từng gây **mất dữ liệu** đã sửa trên web.
+   Nâng cấp cấu trúc chỉ dùng `schema.sql` (idempotent) hoặc migration nhỏ. `seed.sql` có
+   chốt an toàn tự dừng nếu bảng đã có dữ liệu.
+2. **Tự động push:** sau mỗi lần sửa xong, **commit + push lên `main`** (không cần hỏi) —
+   Vercel sẽ tự deploy. Đây là quy ước đã thống nhất.
+3. **Build xanh trước commit**; UI luôn **tiếng Việt có dấu UTF-8**; tông màu đỏ/vàng chính quyền.
+4. Cuối commit ghi: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
+
+---
+
+## 7. Bản đồ mã nguồn (chi tiết ở `.claude/rules/`)
+- `CLAUDE.md` — bộ nhớ dự án (tự nạp mỗi phiên).
+- `.claude/rules/architecture.md` — cấu trúc file, nơi sửa từng chức năng.
+- `.claude/rules/data-model.md` — bảng CSDL, vai trò, trạng thái, luồng duyệt.
+- `.claude/rules/changelog.md` — **nhật ký đầy đủ** (đọc khi cần biết "đã làm gì, vì sao").
+- `src/lib/` — `supabase.js`, `auth.js`, `api.js`, `permissions.js`, `dates.js`, `constants.js`, `print.js`.
+- `src/components/` — WeekView / MonthView / DayView / ScheduleForm / ApprovalQueue /
+  VehicleBoard / FilterBar / DeviceSelect / EntryCard / EntryDetail / WeekPrintSheet / Admin*.
+
+---
+
+### Checklist mở máy ở cơ quan
+1. Mở thư mục `Calendar` (OneDrive) **hoặc** `git clone` rồi `git pull`.
+2. `npm install`.
+3. Tạo `.env` (URL + anon key từ Supabase/Vercel) — xem mục 2.
+4. `npm run dev` → kiểm tra http://localhost:5173.
+5. Làm việc → `npm run build` xanh → `git commit` → `git push` (Vercel tự deploy).

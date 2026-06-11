@@ -19,6 +19,9 @@ quy trình: cán bộ Văn phòng nhập lịch tuần sau (thứ Sáu) → PCT 
 - `npm run build` — PHẢI xanh trước mỗi commit; `npm run lint` — không lỗi
 - Lưu ý: build KHÔNG có `.env` sẽ ra bundle rỗng (tree-shake vì supabase=null) — bình thường
 
+## Tiếp tục trên máy khác → `BAN-GIAO.md`
+- Khôi phục môi trường (lấy code, tạo `.env`, chạy/deploy), trạng thái đã làm, việc còn lại
+
 ## Quy tắc chi tiết — `.claude/rules/` (tự nạp)
 - `architecture.md` — cấu trúc file, nơi sửa từng chức năng
 - `data-model.md` — bảng, vai trò, trạng thái, luồng duyệt
