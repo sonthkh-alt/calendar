@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, CalendarDays, RotateCcw } from 'lucide-react';
-import { STATUS } from '../lib/constants';
+import { STATUS, UNIT_GROUP_FILTERS, leaderInUnit } from '../lib/constants';
 import { weekLabel, addWeeks, addMonths, fmtDMY } from '../lib/dates';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -18,7 +18,7 @@ export default function FilterBar({ view, anchor, onAnchor, bans, leaders, filte
       ? `${format(anchor, 'EEEE', { locale: vi })}, ${fmtDMY(anchor)}`
       : weekLabel(anchor);
 
-  const visibleLeaders = (leaders || []).filter((l) => l.active && (!filters.banId || l.ban_id === filters.banId));
+  const visibleLeaders = (leaders || []).filter((l) => l.active && leaderInUnit(l, filters.banId));
   const sel = 'bg-white/90 border border-slate-200 rounded-lg px-2 py-1.5 text-[13px] text-slate-700 outline-none focus:border-red-400';
 
   return (
@@ -43,7 +43,10 @@ export default function FilterBar({ view, anchor, onAnchor, bans, leaders, filte
       {/* Bộ lọc */}
       <select value={filters.banId || ''} onChange={(e) => onFilters({ ...filters, banId: e.target.value || null, leaderId: null })} className={sel}>
         <option value="">Tất cả đơn vị</option>
+        <option value="grp:pct">{UNIT_GROUP_FILTERS[0].label}</option>
+        <option value="grp:doan">{UNIT_GROUP_FILTERS[1].label}</option>
         {(bans || []).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+        <option value="grp:vanphong">{UNIT_GROUP_FILTERS[2].label}</option>
       </select>
       <select value={filters.leaderId || ''} onChange={(e) => onFilters({ ...filters, leaderId: e.target.value || null })} className={sel}>
         <option value="">Tất cả lãnh đạo / Ban</option>

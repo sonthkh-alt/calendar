@@ -30,20 +30,25 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
   const units = useMemo(() => {
     const active = (leaders || []).filter((l) => l.active);
     const pick = (ls) => (filters.leaderId ? ls.filter((l) => l.id === filters.leaderId) : ls);
+    const bid = filters.banId;
+    // hiện nhóm cột leader_type khi: không lọc, hoặc lọc đúng nhóm 'grp:<type>'
+    const wantGroup = (t) => !bid || bid === 'grp:' + t;
     const out = [];
 
-    if (!filters.banId) {
+    if (wantGroup('pct')) {
       const pct = pick(active.filter((l) => l.leader_type === 'pct'));
       if (pct.length) out.push({ key: 'pct', label: PCT_GROUP_LABEL, leaderIds: pct.map((l) => l.id) });
+    }
+    if (wantGroup('doan')) {
       const doan = pick(active.filter((l) => l.leader_type === 'doan'));
       if (doan.length) out.push({ key: 'doan', label: DOAN_GROUP_LABEL, leaderIds: doan.map((l) => l.id) });
     }
     for (const b of bans || []) {
-      if (filters.banId && filters.banId !== b.id) continue;
+      if (bid && bid !== b.id) continue;
       const ls = pick(active.filter((l) => l.ban_id === b.id));
       if (ls.length) out.push({ key: b.id, label: b.name, leaderIds: ls.map((l) => l.id) });
     }
-    if (!filters.banId) {
+    if (wantGroup('vanphong')) {
       const vp = pick(active.filter((l) => l.leader_type === 'vanphong'));
       if (vp.length) out.push({ key: 'vp', label: 'Lãnh đạo Văn phòng', leaderIds: vp.map((l) => l.id) });
     }

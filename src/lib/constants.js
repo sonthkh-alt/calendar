@@ -45,6 +45,22 @@ export const PCT_GROUP_LABEL = 'Lãnh đạo HĐND tỉnh';
 export const DOAN_GROUP_LABEL = 'Đoàn ĐBQH tỉnh';
 export const UNIT_GROUP_LABELS = { pct: PCT_GROUP_LABEL, doan: DOAN_GROUP_LABEL };
 
+// Bộ lọc "đơn vị" ngoài 4 Ban: 3 nhóm cột theo leader_type. Dùng tiền tố 'grp:'
+// để giá trị lọc không lẫn với UUID của Ban.
+export const UNIT_GROUP_FILTERS = [
+  { value: 'grp:pct', label: PCT_GROUP_LABEL },
+  { value: 'grp:doan', label: DOAN_GROUP_LABEL },
+  { value: 'grp:vanphong', label: 'Lãnh đạo Văn phòng' },
+];
+
+// Lãnh đạo có thuộc bộ lọc đơn vị hiện hành không.
+// banId: rỗng -> mọi đơn vị; 'grp:<leader_type>' -> theo nhóm; còn lại -> UUID Ban.
+export function leaderInUnit(leader, banId) {
+  if (!banId) return true;
+  if (banId.startsWith('grp:')) return leader?.leader_type === banId.slice(4);
+  return leader?.ban_id === banId;
+}
+
 // Làm việc TẠI CƠ QUAN -> không cần điều xe (bỏ khỏi danh sách chuyến cần xe,
 // không tự hiện lái xe riêng)
 export const isHqLocation = (loc) =>

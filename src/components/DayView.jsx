@@ -3,7 +3,7 @@ import { Sun, Sunset } from 'lucide-react';
 import EntryCard from './EntryCard';
 import { canEditEntry, canSeeEntry, canCreateFor } from '../lib/permissions';
 import { toISODate } from '../lib/dates';
-import { isHqLocation } from '../lib/constants';
+import { isHqLocation, leaderInUnit } from '../lib/constants';
 
 /**
  * Lịch ngày: 2 khối Sáng / Chiều, EntryCard đầy đủ thông tin.
@@ -24,7 +24,7 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
       if (e.date !== dISO) return false;
       const l = leaderById[e.leader_id];
       if (!canSeeEntry(profile, e, l)) return false;
-      if (filters.banId && l?.ban_id !== filters.banId) return false;
+      if (!leaderInUnit(l, filters.banId)) return false;
       if (filters.leaderId && e.leader_id !== filters.leaderId) return false;
       if (filters.status && e.status !== filters.status) return false;
       return true;
