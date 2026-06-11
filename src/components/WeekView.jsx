@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Printer, Plus, LayoutGrid, Rows3 } from 'lucide-react';
 import EntryCard from './EntryCard';
+import WeekPrintSheet from './WeekPrintSheet';
 import { canCreateFor, canEditEntry, canSeeEntry } from '../lib/permissions';
-import { weekDays, toISODate, dayName, fmtDM, fmtDMY, weekStart, weekEnd } from '../lib/dates';
-import { UNIT_NAME, PCT_GROUP_LABEL, DOAN_GROUP_LABEL } from '../lib/constants';
+import { weekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
+import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL } from '../lib/constants';
+import { printPage } from '../lib/print';
 
 /**
  * Lịch tuần kiểu "Lịch công tác tuần" chính quyền — CỘT THEO ĐƠN VỊ:
@@ -85,7 +87,6 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     );
   };
 
-  const ws = weekStart(anchor), we = weekEnd(anchor);
   const allUnitLeaderIds = units.flatMap((u) => u.leaderIds);
 
   // Chế độ GỌN: gộp các mục giống nhau (cùng nội dung + buổi/giờ + địa điểm,
@@ -131,14 +132,11 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
   };
 
   return (
-    <div className="print-root">
-      {/* Tiêu đề khi in */}
-      <div className="print-header">
-        <p style={{ fontSize: 13 }}>{UNIT_NAME.toUpperCase()}</p>
-        <p style={{ fontSize: 17, fontWeight: 700, marginTop: 4 }}>LỊCH CÔNG TÁC TUẦN</p>
-        <p style={{ fontSize: 13, fontStyle: 'italic' }}>Từ ngày {fmtDMY(ws)} đến ngày {fmtDMY(we)}</p>
-      </div>
+    <div>
+      {/* BẢN IN kiểu công văn (A4 dọc) — chỉ hiện khi in */}
+      <WeekPrintSheet anchor={anchor} entries={visible.filter((e) => allUnitLeaderIds.includes(e.leader_id))} leaders={leaders} vehicles={vehicles} />
 
+      <div className="print:hidden">
       {/* Thanh công cụ */}
       <div className="no-print flex items-center justify-between mb-2">
         <div className="flex items-center gap-1 bg-white/90 border border-slate-200 rounded-lg p-0.5">
@@ -151,7 +149,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
               <Plus className="w-4 h-4" /> Thêm lịch
             </button>
           )}
-          <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-slate-700 bg-white/90 border border-slate-200 hover:bg-red-50 shadow-sm">
+          <button onClick={() => printPage('portrait')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-slate-700 bg-white/90 border border-slate-200 hover:bg-red-50 shadow-sm" title="In theo mẫu công văn, khổ A4 dọc">
             <Printer className="w-4 h-4" /> In lịch tuần
           </button>
         </div>
@@ -233,6 +231,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

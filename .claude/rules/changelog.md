@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Bản in lịch tuần kiểu CÔNG VĂN (A4 dọc)
+- WeekPrintSheet.jsx: bản in riêng chỉ hiện khi in (hidden print:block) — bảng theo ngày:
+  Ngày | Thời gian | Nội dung | Địa điểm | Đơn vị/Lãnh đạo | Thành phần | Lái xe;
+  gộp mục giống nhau; mục chờ duyệt chú thích "(chờ duyệt)"; bỏ mục từ chối
+- lib/print.js: printPage(orientation) chèn @page tạm — lịch tuần in DỌC, điều xe in NGANG
+- Màn hình giữ nguyên (print:hidden khi in); thead lặp lại mỗi trang
+
 ## 2026-06-12 — Chế độ Gọn gộp mục trùng + in A4 ngang chuẩn
 - WeekView Gọn: mergeEntries gộp mục cùng nội dung+buổi/giờ+địa điểm thành 1 thẻ
   (lãnh đạo và thành phần nối '; '); Sửa/Xóa/Chi tiết thao tác trên mục gốc đầu tiên

@@ -4,6 +4,7 @@ import { assignVehicle } from '../lib/api';
 import { entryNeedsVehicleOk } from '../lib/permissions';
 import { SESSIONS, UNIT_NAME, VEHICLE_TYPES } from '../lib/constants';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY, fmtTime, sessionsOverlap, weekStart, weekEnd, parseISO } from '../lib/dates';
+import { printPage } from '../lib/print';
 
 /**
  * Bảng điều xe tuần — dành cho Văn phòng (van_phong_xe) / Quản trị.
@@ -89,7 +90,7 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
 
       <div className="no-print flex items-center justify-between">
         <h2 className="text-[15px] font-bold text-slate-800 flex items-center gap-2"><Car className="w-5 h-5 text-red-700" /> Bảng điều xe tuần</h2>
-        <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-slate-700 bg-white/90 border border-slate-200 hover:bg-red-50 shadow-sm">
+        <button onClick={() => printPage('landscape')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-slate-700 bg-white/90 border border-slate-200 hover:bg-red-50 shadow-sm" title="In khổ A4 ngang">
           <Printer className="w-4 h-4" /> In lịch điều xe
         </button>
       </div>

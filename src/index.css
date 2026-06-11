@@ -62,7 +62,9 @@ body {
 
 /* ===== In ấn: bảng lịch tuần / lịch điều xe kiểu công văn ===== */
 @media print {
-  @page { size: A4 landscape; margin: 8mm; }
+  /* Hướng giấy do nút In quyết định (lib/print.js chèn @page size khi in):
+     lịch tuần = A4 dọc kiểu công văn, lịch điều xe = A4 ngang */
+  @page { margin: 10mm 8mm; }
   body { background: #fff !important; }
   /* Ẩn mọi thứ ngoài vùng in */
   .no-print { display: none !important; }
