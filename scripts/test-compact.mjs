@@ -1,5 +1,11 @@
 // Kiểm chứng logic gộp Thành phần theo nhóm (chạy: node scripts/test-compact.mjs)
-const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+const norm = (s) => (s || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[̀-ͯ]/g, '')
+  .replace(/đ/g, 'd')
+  .replace(/\s+/g, ' ')
+  .trim();
 
 // Dữ liệu nhóm THẬT của người dùng (theo ảnh chụp tab Quản trị 12/6)
 const groups = [
@@ -8,6 +14,7 @@ const groups = [
   { name: 'Trưởng các Ban HĐND tỉnh', members: 'Đ/c Lương Tiến Thành, Trưởng Ban DT; Đ/c Hoàng Anh Tuấn, Tỉnh ủy viên, Trưởng Ban KTNS; Đ/c Ngô Thị Hồng Hảo, Tỉnh ủy viên, Trưởng Ban VHXH; Đ/c Nguyễn Quốc Hải, Trưởng Ban PC' },
   { name: 'Lãnh đạo các Ban HĐND tỉnh', members: 'Đ/c Hoàng Anh Tuấn, Tỉnh ủy viên, Trưởng Ban KTNS; Đ/c Ngô Thị Hồng Hảo, Tỉnh ủy viên, Trưởng Ban VHXH; Đ/c Đỗ Ngọc Duy, PTB KTNS; Đ/c Lê Thị Hương, PTB PC; Đ/c Nguyễn Quốc Hải, Trưởng Ban PC; Đ/c Lương Tiến Thành, Trưởng Ban DT; Đ/c Cầm Bá Chái, PTB DT; Đ/c Nguyễn Tuấn Tưởng, PTB VHXH' },
   { name: 'Lãnh đạo Văn phòng', members: 'Đ/c Trần Mạnh Long, Chánh Văn phòng; Đ/c Hà Ngọc Sơn, Phó Chánh Văn phòng; Đ/c Lê Văn Mạnh, Phó Chánh Văn phòng' },
+  { name: 'Toàn thể cơ quan', members: 'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Lương Tiến Thành, Trưởng Ban DT; Đ/c Cầm Bá Chái, PTB DT; Đ/c Nguyễn Tuấn Tưởng, PTB VHXH; Đ/c Nguyễn Quốc Hải, Trưởng Ban PC; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh; Đ/c Lương Thị Hoa, Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh; Đ/c Bùi Văn Dũng, ĐBQH chuyên trách; Đ/c Hoàng Anh Tuấn, Tỉnh ủy viên, Trưởng Ban KTNS; Đ/c Ngô Thị Hồng Hảo, Tỉnh ủy viên, Trưởng Ban VHXH; Đ/c Trần Mạnh Long, Chánh Văn phòng; Đ/c Lê Thị Hương, PTB PC; Đ/c Hà Ngọc Sơn, Phó Chánh Văn phòng; Đ/c Đỗ Ngọc Duy, PTB KTNS; Đ/c Lê Văn Mạnh, Phó Chánh Văn phòng' },
 ];
 
 function compactParticipants(parts) {
@@ -54,6 +61,10 @@ const cases = [
   // 6. Lãnh đạo Văn phòng đủ 3 đ/c
   [['Đ/c Trần Mạnh Long, Chánh Văn phòng; Đ/c Hà Ngọc Sơn, PCVP; Đ/c Lê Văn Mạnh, PCVP'],
    '-> Lãnh đạo Văn phòng'],
+  // 7. TÌNH HUỐNG THẬT (in "Học Nghị quyết"): 15 tên KHÔNG chức vụ, mã Unicode
+  //    TỔ HỢP (NFD) khác với nhóm (NFC) -> trước đây trượt khớp
+  [['Đ/c Hà Ngọc Sơn; Đ/c Lê Tiến Lam; Đ/c Nguyễn Quang Hải; Đ/c Lương Thị Hoa; Đ/c Bùi Văn Dũng; Đ/c Hoàng Anh Tuấn; Đ/c Đỗ Ngọc Duy; Đ/c Lê Thị Hương; Đ/c Nguyễn Quốc Hải; Đ/c Ngô Thị Hồng Hảo; Đ/c Nguyễn Tuấn Tưởng; Đ/c Lương Tiến Thành; Đ/c Cầm Bá Chái; Đ/c Lê Văn Mạnh; Đ/c Trần Mạnh Long'.normalize('NFD')],
+   '-> Toàn thể cơ quan'],
 ];
 
 let ok = 0;

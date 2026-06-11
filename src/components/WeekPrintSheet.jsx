@@ -52,7 +52,15 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
   // - So khớp mềm: chữ thường, bỏ thừa khoảng trắng, chỉ cần khớp phần TÊN
   //   trước dấu phẩy (không phụ thuộc chức vụ, thứ tự).
   // - Thành phần trống -> ghi tên lãnh đạo/đơn vị của mục lịch.
-  const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  // Chuẩn hóa chống lệch Unicode tiếng Việt (dấu tổ hợp vs dựng sẵn):
+  // hạ chữ thường, BỎ DẤU hoàn toàn, gọn khoảng trắng
+  const norm = (s) => (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/\s+/g, ' ')
+    .trim();
   const compactParticipants = (m) => {
     let segs = m._parts.join('; ').split(';').map((s) => s.trim()).filter(Boolean);
     const segName = (s) => norm(s.split(',')[0]);
