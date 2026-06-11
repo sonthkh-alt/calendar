@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — SỰ CỐ + chốt an toàn seed.sql
+- Người dùng chạy lại seed.sql theo hướng dẫn cũ -> mất dữ liệu đã sửa trên web
+- Khắc phục: seed.sql tự DỪNG (raise exception) nếu bảng leaders đã có dữ liệu;
+  khối DELETE chuyển thành comment, chỉ bỏ comment khi cố ý reset
+- QUY TẮC từ nay: nâng cấp cấu trúc -> chỉ đưa schema.sql (idempotent) hoặc
+  snippet migration nhỏ; TUYỆT ĐỐI không bảo người dùng chạy lại seed.sql
+
 ## 2026-06-12 — Hiển thị đủ 4 mục + modal chi tiết + nhóm thành phần
 - EntryCard luôn hiện đủ: Nội dung, Thời gian, Địa điểm, TP (— nếu trống); bấm vào ô → EntryDetail
 - EntryDetail: hiện đầy đủ không cắt chữ; GỘP thành phần của các mục trùng nội dung+ngày+giờ

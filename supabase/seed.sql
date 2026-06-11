@@ -1,17 +1,29 @@
 -- =====================================================================
---  DỮ LIỆU KHỞI TẠO — chạy SAU schema.sql (Supabase SQL Editor)
---  An toàn chạy lại: xóa dữ liệu cũ trước khi chèn lại.
+--  DỮ LIỆU KHỞI TẠO — CHỈ CHẠY 1 LẦN khi mới tạo cơ sở dữ liệu
+--  (chạy SAU schema.sql trong Supabase SQL Editor)
 --  Lịch nhập theo "LỊCH LÀM VIỆC của lãnh đạo Thường trực HĐND tỉnh và
 --  lãnh đạo Đoàn ĐBQH tỉnh — Tuần thứ 24 năm 2026 (08/6 - 14/6/2026)".
+--
+--  ⚠️ CẢNH BÁO: file này NẠP DỮ LIỆU MẪU. Để bảo vệ dữ liệu thật đã
+--  nhập/sửa trên web, script TỰ DỪNG nếu phát hiện đã có dữ liệu.
+--  Khi nâng cấp cấu trúc về sau: CHỈ cần chạy schema.sql (an toàn,
+--  không mất dữ liệu) — KHÔNG chạy lại file này.
 -- =====================================================================
 
--- Xóa theo thứ tự phụ thuộc khóa ngoại
-delete from schedule_entries;
-delete from vehicles;
-delete from participant_groups;
-update profiles set leader_id = null, ban_ids = '{}';
-delete from leaders;
-delete from bans;
+-- CHỐT AN TOÀN: đã có dữ liệu -> dừng ngay, không xóa gì cả
+do $$ begin
+  if exists (select 1 from leaders) then
+    raise exception E'ĐÃ CÓ DỮ LIỆU TRONG HỆ THỐNG — seed.sql chỉ dành cho lần khởi tạo đầu tiên.\nDữ liệu hiện tại KHÔNG bị thay đổi.\nNếu thật sự muốn XÓA TOÀN BỘ và nạp lại dữ liệu mẫu: bỏ chú thích khối DELETE trong file rồi chạy lại.';
+  end if;
+end $$;
+
+-- Khối RESET (bình thường để nguyên; CHỈ bỏ chú thích khi cố ý xóa toàn bộ):
+-- delete from schedule_entries;
+-- delete from vehicles;
+-- delete from participant_groups;
+-- update profiles set leader_id = null, ban_ids = '{}';
+-- delete from leaders;
+-- delete from bans;
 
 -- 1) Bốn Ban của HĐND tỉnh
 insert into bans (id, name, short_name, sort_order) values
