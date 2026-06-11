@@ -30,7 +30,18 @@ jobs:
             echo "::error::Chua cau hinh secret SUPABASE_DB_URL. Vao GitHub repo -> Settings -> Secrets and variables -> Actions -> New repository secret, ten: SUPABASE_DB_URL, gia tri: chuoi ket noi Postgres (Supabase -> Connect -> Session pooler URI)."
             exit 1
           fi
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/schema.sql
+          # Bao loi ra annotation (da loai bo phan mat khau) de chan doan tu xa
+          HOST_PART="${DB_URL#*@}"
+          echo "::notice::Ket noi toi may chu: ${HOST_PART%%/*}"
+          set +e
+          ERR=$(psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/schema.sql 2>&1)
+          CODE=$?
+          set -e
+          if [ $CODE -ne 0 ]; then
+            SAFE=$(printf '%s' "$ERR" | tail -4 | tr '\n' ' | ' | sed -E 's#postgres(ql)?://[^ ]+#<URL-da-an>#g')
+            echo "::error::PSQL LOI (exit $CODE): $SAFE"
+            exit 1
+          fi
           echo "Da ap dung schema.sql thanh cong."
 
       - name: Kiem tra sau cap nhat (liet ke bang)
