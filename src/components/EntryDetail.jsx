@@ -10,7 +10,7 @@ import { fmtTime, fmtDMY, dayName, parseISO } from '../lib/dates';
  * cho cả Lãnh đạo HĐND và Đoàn ĐBQH) được GỘP: thành phần nối lại với nhau.
  * props: entry, entries, leaders, vehicles, canEdit, onEdit, onDelete, onClose
  */
-export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit, canDuplicate, onEdit, onDelete, onDuplicate, onClose }) {
+export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit, canDuplicate, dupWarn, onEdit, onDelete, onDuplicate, onClose }) {
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
 
@@ -67,6 +67,11 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit
         </div>
 
         <div className="p-5 space-y-4">
+          {dupWarn && (
+            <p className="flex items-start gap-2 text-[13px] font-bold text-violet-900 bg-violet-50 border border-violet-300 rounded-xl p-3">
+              ⚠️ Trong tuần này có lịch khác của các Ban cũng tới địa điểm "{entry.location}" — đề nghị cân nhắc gộp đoàn hoặc điều phối chung xe.
+            </p>
+          )}
           {/* Nội dung */}
           <div>
             <p className={lab}>Nội dung</p>

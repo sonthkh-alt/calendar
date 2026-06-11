@@ -1,4 +1,4 @@
-import { MapPin, Users, Clock, Car, Pencil, Trash2, MessageSquareText, UserRound, Copy } from 'lucide-react';
+import { MapPin, Users, Clock, Car, Pencil, Trash2, MessageSquareText, UserRound, Copy, AlertTriangle } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { STATUS, SESSIONS } from '../lib/constants';
 import { fmtTime } from '../lib/dates';
@@ -9,7 +9,7 @@ import { fmtTime } from '../lib/dates';
  * `vehicle` do cha truyền vào: xe đã gán, hoặc xe riêng của lãnh đạo (PCT /
  * Phó Trưởng Đoàn) nếu chưa gán. Bấm vào ô để mở chi tiết đầy đủ.
  */
-export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, onEdit, onDelete, onDuplicate, onView, compact }) {
+export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, dupWarn, onEdit, onDelete, onDuplicate, onView, compact }) {
   const s = STATUS[entry.status] || STATUS.cho_duyet;
   const timeLabel = entry.session === 'gio'
     ? `${fmtTime(entry.start_time)}${entry.end_time ? ' - ' + fmtTime(entry.end_time) : ''}`
@@ -22,8 +22,14 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
     <div
       onClick={() => onView?.(entry)}
       title="Bấm để xem đầy đủ thông tin"
-      className={`group relative rounded-lg border ${s.border} ${s.bg} px-2 py-1.5 text-left ${entry.status === 'tu_choi' ? 'opacity-75' : ''} ${onView ? 'cursor-pointer hover:ring-2 hover:ring-red-200 transition' : ''}`}
+      className={`group relative rounded-lg border px-2 py-1.5 text-left ${entry.status === 'tu_choi' ? 'opacity-75' : ''} ${onView ? 'cursor-pointer transition' : ''}
+        ${dupWarn ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-300 shadow-md shadow-violet-200' : `${s.border} ${s.bg} ${onView ? 'hover:ring-2 hover:ring-red-200' : ''}`}`}
     >
+      {dupWarn && (
+        <p className="flex items-center gap-1 text-[10px] font-bold text-white bg-violet-600 rounded px-1.5 py-0.5 mb-1 -mx-0.5">
+          <AlertTriangle className="w-3 h-3 shrink-0" /> TRÙNG ĐỊA ĐIỂM TRONG TUẦN — cân nhắc gộp đoàn
+        </p>
+      )}
       <div className="flex items-start justify-between gap-1">
         <p className={`text-[12px] font-semibold leading-snug text-slate-800 ${entry.status === 'tu_choi' ? 'line-through' : ''}`}>
           {entry.content}

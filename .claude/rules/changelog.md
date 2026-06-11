@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Cảnh báo trùng địa điểm trong tuần (màu tím)
+- >= 2 lịch của các Ban cùng tuần + cùng địa điểm (chuẩn hóa chữ thường, bỏ địa điểm
+  trong COMMON_LOCATIONS) -> dupLocIds (App.jsx) -> tô tím nổi bật: viền+nền+huy hiệu
+  trên EntryCard, ghi chú trong EntryDetail, chip + viền trái tím ở ApprovalQueue
+- Mục đích: người duyệt thấy ngay để gộp đoàn / điều phối chung xe
+
 ## 2026-06-12 — Nhân bản lịch + 5 tài khoản nội bộ tự động
 - Nút Nhân bản (Copy) trên ô lịch + modal chi tiết: mở form điền sẵn, lưu thành mục MỚI
 - supabase/migrations/2026-06-12-tao-tai-khoan.sql: 5 user (hainq/lamlt/thttdn/hctcqt/ban
