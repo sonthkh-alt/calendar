@@ -105,7 +105,7 @@ export default function AdminLeaders({ leaders, bans, onChanged }) {
               const dirty = !!editing[l.id];
               return (
                 <tr key={l.id} className={l.active ? '' : 'opacity-50 bg-slate-50'}>
-                  <td className="px-3 py-2"><input type="number" className={`${input} w-16`} value={row.sort_order ?? 0} onChange={(e) => change(l, 'sort_order', e.target.value)} /></td>
+                  <td className="px-3 py-2"><input type="number" className={`${input} !w-16 text-center`} value={row.sort_order ?? 0} onChange={(e) => change(l, 'sort_order', e.target.value)} /></td>
                   <td className="px-3 py-2"><input className={input} value={row.full_name} onChange={(e) => change(l, 'full_name', e.target.value)} /></td>
                   <td className="px-3 py-2"><input className={input} value={row.position} onChange={(e) => change(l, 'position', e.target.value)} /></td>
                   <td className="px-3 py-2">

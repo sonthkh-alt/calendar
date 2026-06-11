@@ -128,7 +128,7 @@ export default function AdminGroups({ groups, leaders, onChanged }) {
               const dirty = !!editing[g.id];
               return (
                 <tr key={g.id} className="align-top">
-                  <td className="px-3 py-2"><input type="number" className={`${input} w-16`} value={row.sort_order ?? 0} onChange={(e) => change(g, 'sort_order', e.target.value)} /></td>
+                  <td className="px-3 py-2"><input type="number" className={`${input} !w-16 text-center`} value={row.sort_order ?? 0} onChange={(e) => change(g, 'sort_order', e.target.value)} /></td>
                   <td className="px-3 py-2"><input className={input} value={row.name} onChange={(e) => change(g, 'name', e.target.value)} /></td>
                   <td className="px-3 py-2">
                     <LeaderTicks leaders={leaders} value={row.members} onChange={(v) => change(g, 'members', v)} />
