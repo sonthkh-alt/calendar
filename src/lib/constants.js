@@ -32,15 +32,18 @@ export const SESSIONS = {
   gio: 'Theo giờ',
 };
 
-// Loại đối tượng có lịch (đơn vị hoặc cá nhân PCT)
+// Loại đối tượng có lịch (đơn vị hoặc cá nhân)
 export const LEADER_TYPES = {
   pct: 'Lãnh đạo HĐND tỉnh',
+  doan: 'Đoàn ĐBQH tỉnh',
   ban: 'Ban của HĐND tỉnh',
   vanphong: 'Lãnh đạo Văn phòng',
 };
 
-// Nhãn cột gộp của 2 PCT trên lịch tuần
+// Nhãn cột gộp trên lịch tuần (cá nhân hiển thị chung 1 cột theo đơn vị)
 export const PCT_GROUP_LABEL = 'Lãnh đạo HĐND tỉnh';
+export const DOAN_GROUP_LABEL = 'Đoàn ĐBQH tỉnh';
+export const UNIT_GROUP_LABELS = { pct: PCT_GROUP_LABEL, doan: DOAN_GROUP_LABEL };
 
 // Loại xe
 export const VEHICLE_TYPES = {

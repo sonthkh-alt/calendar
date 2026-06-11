@@ -3,7 +3,7 @@ import { Printer, Plus, LayoutGrid, Rows3 } from 'lucide-react';
 import EntryCard from './EntryCard';
 import { canCreateFor, canEditEntry, canSeeEntry } from '../lib/permissions';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY, weekStart, weekEnd } from '../lib/dates';
-import { UNIT_NAME, PCT_GROUP_LABEL } from '../lib/constants';
+import { UNIT_NAME, PCT_GROUP_LABEL, DOAN_GROUP_LABEL } from '../lib/constants';
 
 /**
  * Lịch tuần kiểu "Lịch công tác tuần" chính quyền — CỘT THEO ĐƠN VỊ:
@@ -28,6 +28,8 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     if (!filters.banId) {
       const pct = pick(active.filter((l) => l.leader_type === 'pct'));
       if (pct.length) out.push({ key: 'pct', label: PCT_GROUP_LABEL, leaderIds: pct.map((l) => l.id) });
+      const doan = pick(active.filter((l) => l.leader_type === 'doan'));
+      if (doan.length) out.push({ key: 'doan', label: DOAN_GROUP_LABEL, leaderIds: doan.map((l) => l.id) });
     }
     for (const b of bans || []) {
       if (filters.banId && filters.banId !== b.id) continue;

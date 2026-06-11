@@ -1,8 +1,8 @@
 -- =====================================================================
---  DỮ LIỆU MẪU — chạy SAU schema.sql (Supabase SQL Editor)
---  An toàn chạy lại: xóa dữ liệu danh mục cũ trước khi chèn lại.
---  Lịch gắn với ĐƠN VỊ (Lãnh đạo HĐND tỉnh chọn đích danh PCT; các Ban
---  chọn Ban) — tên thành viên cụ thể ghi ngay trong Nội dung công việc.
+--  DỮ LIỆU KHỞI TẠO — chạy SAU schema.sql (Supabase SQL Editor)
+--  An toàn chạy lại: xóa dữ liệu cũ trước khi chèn lại.
+--  Lịch nhập theo "LỊCH LÀM VIỆC của lãnh đạo Thường trực HĐND tỉnh và
+--  lãnh đạo Đoàn ĐBQH tỉnh — Tuần thứ 24 năm 2026 (08/6 - 14/6/2026)".
 -- =====================================================================
 
 -- Xóa theo thứ tự phụ thuộc khóa ngoại
@@ -19,49 +19,99 @@ insert into bans (id, name, short_name, sort_order) values
   ('11111111-1111-1111-1111-111111111103', 'Ban Văn hóa - Xã hội',    'VH-XH', 3),
   ('11111111-1111-1111-1111-111111111104', 'Ban Dân tộc',             'DT',    4);
 
--- 2) Đối tượng có lịch: 2 PCT (đích danh, phục vụ gắn xe riêng) + 4 đơn vị Ban
---    + 1 đơn vị Văn phòng (ẩn mặc định — bật ở tab Quản trị nếu muốn hiển thị)
+-- 2) Đối tượng có lịch:
+--    - Lãnh đạo HĐND tỉnh (đích danh, gộp 1 cột) + Đoàn ĐBQH tỉnh (đích danh, 1 cột)
+--    - 4 đơn vị Ban (mỗi Ban 1 cột; tên thành viên ghi trong nội dung)
+--    - Lãnh đạo Văn phòng (cột trực lãnh đạo Văn phòng cuối tuần)
 insert into leaders (id, full_name, position, leader_type, ban_id, sort_order, active) values
-  -- Lãnh đạo HĐND tỉnh (hiển thị gộp 1 cột trên lịch tuần)
-  ('22222222-2222-2222-2222-222222222201', 'Đ/c Lê Tiến Lam',     'Ủy viên BTV Tỉnh ủy, PCT Thường trực HĐND tỉnh', 'pct', null, 1, true),
-  ('22222222-2222-2222-2222-222222222202', 'Đ/c Nguyễn Quang Hải', 'Tỉnh ủy viên, PCT HĐND tỉnh',                   'pct', null, 2, true),
-  -- Các Ban (mỗi Ban 1 cột; tên thành viên ghi trong nội dung lịch)
+  -- Lãnh đạo HĐND tỉnh
+  ('22222222-2222-2222-2222-222222222201', 'Đ/c Lê Tiến Lam',      'Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh', 'pct',  null, 1, true),
+  ('22222222-2222-2222-2222-222222222202', 'Đ/c Nguyễn Quang Hải', 'Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh',                              'pct',  null, 2, true),
+  -- Đoàn ĐBQH tỉnh
+  ('22222222-2222-2222-2222-222222222203', 'Đ/c Lương Thị Hoa',    'Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh',                           'doan', null, 3, true),
+  ('22222222-2222-2222-2222-222222222204', 'Đ/c Bùi Văn Dũng',     'ĐBQH chuyên trách',                                                  'doan', null, 4, true),
+  -- Các Ban
   ('22222222-2222-2222-2222-222222222210', 'Ban Kinh tế - Ngân sách', '', 'ban', '11111111-1111-1111-1111-111111111101', 11, true),
   ('22222222-2222-2222-2222-222222222220', 'Ban Pháp chế',            '', 'ban', '11111111-1111-1111-1111-111111111102', 21, true),
   ('22222222-2222-2222-2222-222222222230', 'Ban Văn hóa - Xã hội',    '', 'ban', '11111111-1111-1111-1111-111111111103', 31, true),
   ('22222222-2222-2222-2222-222222222240', 'Ban Dân tộc',             '', 'ban', '11111111-1111-1111-1111-111111111104', 41, true),
-  -- Văn phòng (ẩn mặc định)
-  ('22222222-2222-2222-2222-222222222250', 'Lãnh đạo Văn phòng',      '', 'vanphong', null, 51, false);
+  -- Văn phòng (hiển thị mục trực lãnh đạo Văn phòng)
+  ('22222222-2222-2222-2222-222222222250', 'Lãnh đạo Văn phòng',      '', 'vanphong', null, 51, true);
 
--- 3) Bốn xe công vụ (2 xe riêng gắn đích danh PCT, 2 xe dùng chung)
+-- 3) Bốn xe công vụ (biển số/lái xe MẪU — sửa trong tab Quản trị)
 insert into vehicles (id, plate, driver_name, driver_phone, vehicle_type, assigned_leader_id, active) values
   ('33333333-3333-3333-3333-333333333301', '36A-001.01', 'Lái xe 1', '0912000001', 'rieng',      '22222222-2222-2222-2222-222222222201', true),
   ('33333333-3333-3333-3333-333333333302', '36A-002.02', 'Lái xe 2', '0912000002', 'rieng',      '22222222-2222-2222-2222-222222222202', true),
   ('33333333-3333-3333-3333-333333333303', '36A-003.03', 'Lái xe 3', '0912000003', 'dung_chung', null, true),
   ('33333333-3333-3333-3333-333333333304', '36A-004.04', 'Lái xe 4', '0912000004', 'dung_chung', null, true);
 
--- 4) Lịch mẫu cho TUẦN HIỆN TẠI (date_trunc('week', ...) = Thứ Hai)
---    Tên người tham gia ghi NGAY TRONG NỘI DUNG.
-with w as (select date_trunc('week', now())::date as t2)
-insert into schedule_entries (leader_id, date, session, start_time, end_time, content, location, participants, status, vehicle_id) values
-  -- Đ/c Lê Tiến Lam: đã duyệt sẵn (lịch lãnh đạo HĐND hiển thị ngay), có xe riêng
-  ('22222222-2222-2222-2222-222222222201', (select t2 from w),     'sang',  null, null, 'Đ/c Lê Tiến Lam chủ trì Hội nghị giao ban Thường trực HĐND tỉnh', 'Phòng họp tầng 2, Trụ sở HĐND tỉnh', 'Thường trực HĐND, lãnh đạo các Ban, CVP', 'da_duyet', '33333333-3333-3333-3333-333333333301'),
-  ('22222222-2222-2222-2222-222222222201', (select t2+2 from w),   'ca_ngay', null, null, 'Đ/c Lê Tiến Lam làm Trưởng đoàn giám sát chuyên đề tại huyện Thọ Xuân', 'UBND huyện Thọ Xuân', 'Đoàn giám sát theo QĐ số .../QĐ-HĐND', 'da_duyet', '33333333-3333-3333-3333-333333333301'),
-  -- Đ/c Nguyễn Quang Hải
-  ('22222222-2222-2222-2222-222222222202', (select t2+1 from w),   'gio', '08:00', '11:30', 'Đ/c Nguyễn Quang Hải tiếp công dân định kỳ', 'Trụ sở Tiếp công dân tỉnh', 'Ban Pháp chế, Văn phòng', 'da_duyet', '33333333-3333-3333-3333-333333333302'),
-  -- Ban KT-NS: chờ duyệt
-  ('22222222-2222-2222-2222-222222222210', (select t2+1 from w),   'sang',  null, null, 'Đ/c Trưởng ban chủ trì thẩm tra dự thảo Nghị quyết về phân bổ ngân sách', 'Phòng họp Ban KT-NS', 'Lãnh đạo Ban, Sở Tài chính', 'cho_duyet', null),
-  ('22222222-2222-2222-2222-222222222210', (select t2+3 from w),   'chieu', null, null, 'Đ/c Phó ban và đ/c Ủy viên chuyên trách khảo sát dự án đầu tư công tại TP Sầm Sơn', 'UBND TP Sầm Sơn', 'Lãnh đạo Ban, UBND TP Sầm Sơn', 'cho_duyet', null),
-  -- Ban Pháp chế: đã duyệt, dùng xe chung
-  ('22222222-2222-2222-2222-222222222220', (select t2+2 from w),   'sang',  null, null, 'Đ/c Trưởng ban làm việc với Công an tỉnh về tình hình ANTT', 'Công an tỉnh', 'Lãnh đạo Ban Pháp chế', 'da_duyet', '33333333-3333-3333-3333-333333333303'),
-  -- Ban VH-XH: đã điều chỉnh
-  ('22222222-2222-2222-2222-222222222230', (select t2+4 from w),   'chieu', null, null, 'Đoàn giám sát của Ban (đ/c Trưởng ban làm Trưởng đoàn) giám sát thực hiện chính sách BHYT tại huyện Quảng Xương', 'UBND huyện Quảng Xương', 'Đoàn giám sát Ban VH-XH', 'da_dieu_chinh', null),
-  -- Ban Dân tộc: 1 từ chối + 1 chờ duyệt
-  ('22222222-2222-2222-2222-222222222240', (select t2+4 from w),   'sang',  null, null, 'Đ/c Trưởng ban khảo sát chương trình 1719 tại huyện Mường Lát', 'UBND huyện Mường Lát', 'Lãnh đạo Ban Dân tộc', 'tu_choi', null),
-  ('22222222-2222-2222-2222-222222222240', (select t2+5 from w),   'sang',  null, null, 'Đ/c Ủy viên chuyên trách dự hội nghị tổng kết công tác dân tộc', 'Hội trường 25B', 'Ủy viên chuyên trách Ban Dân tộc', 'cho_duyet', null);
+-- 4) LỊCH TUẦN 24 NĂM 2026 (08/6 - 14/6/2026) — theo văn bản đã ban hành
+insert into schedule_entries (leader_id, date, session, start_time, end_time, content, location, participants, status) values
 
--- Ghi chú mẫu cho mục bị từ chối / điều chỉnh
-update schedule_entries set review_note = 'Trùng lịch giám sát của Thường trực, đề nghị chuyển sang tuần sau'
-  where status = 'tu_choi';
-update schedule_entries set review_note = 'Điều chỉnh: gộp đoàn với Ban Dân tộc, xuất phát 13h00'
-  where status = 'da_dieu_chinh';
+  -- ===== Thứ 2, 08/6 — Cả ngày =====
+  ('22222222-2222-2222-2222-222222222201', '2026-06-08', 'ca_ngay', null, null,
+   'Thường trực HĐND tỉnh và lãnh đạo Đoàn ĐBQH tỉnh làm việc tại cơ quan',
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', null, 'da_duyet'),
+  ('22222222-2222-2222-2222-222222222203', '2026-06-08', 'ca_ngay', null, null,
+   'Thường trực HĐND tỉnh và lãnh đạo Đoàn ĐBQH tỉnh làm việc tại cơ quan',
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', null, 'da_duyet'),
+
+  -- ===== Thứ 3, 09/6 =====
+  -- 8h00: Hội nghị BCH Đảng bộ tỉnh lần thứ 7 (cả lãnh đạo HĐND và Đoàn ĐBQH)
+  ('22222222-2222-2222-2222-222222222201', '2026-06-09', 'gio', '08:00', null,
+   'Dự Hội nghị Ban Chấp hành Đảng bộ tỉnh lần thứ 7',
+   'Phòng họp Ban Chấp hành Đảng bộ tỉnh',
+   'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh. Cán bộ tham dự: các đ/c Trưởng các Ban HĐND tỉnh; CVP', 'da_duyet'),
+  ('22222222-2222-2222-2222-222222222203', '2026-06-09', 'gio', '08:00', null,
+   'Dự Hội nghị Ban Chấp hành Đảng bộ tỉnh lần thứ 7',
+   'Phòng họp Ban Chấp hành Đảng bộ tỉnh',
+   'Đ/c Lương Thị Hoa, Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh', 'da_duyet'),
+  -- 14h00: Tiếp xúc cử tri — đ/c Nguyễn Quang Hải
+  ('22222222-2222-2222-2222-222222222202', '2026-06-09', 'gio', '14:00', null,
+   'Tiếp xúc cử tri trước kỳ họp thường lệ giữa năm 2026, HĐND tỉnh khóa XIX',
+   'Phường Đông Quang',
+   'Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh. Cán bộ tham dự: Đ/c Sơn, PCVP', 'da_duyet'),
+
+  -- ===== Thứ 4, 10/6 =====
+  -- 14h00: Làm việc với Sở Tài chính — đ/c Nguyễn Quang Hải
+  ('22222222-2222-2222-2222-222222222202', '2026-06-10', 'gio', '14:00', null,
+   'Làm việc với Sở Tài chính',
+   'Trụ sở Sở Tài chính',
+   'Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh. Cán bộ tham dự: Đại diện lãnh đạo Ban KT-NS', 'da_duyet'),
+  -- 14h00: Tiếp xúc cử tri — đ/c Lê Tiến Lam
+  ('22222222-2222-2222-2222-222222222201', '2026-06-10', 'gio', '14:00', null,
+   'Tiếp xúc cử tri trước kỳ họp thường lệ giữa năm 2026, HĐND tỉnh khóa XIX',
+   'Xã Yên Phú',
+   'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh. Cán bộ tham dự: Đ/c Mạnh, PCVP', 'da_duyet'),
+
+  -- ===== Thứ 5, 11/6 =====
+  -- Sáng: Hội nghị Ban Thường vụ Tỉnh ủy — đ/c Lê Tiến Lam
+  ('22222222-2222-2222-2222-222222222201', '2026-06-11', 'sang', null, null,
+   'Dự Hội nghị Ban Thường vụ Tỉnh ủy',
+   'Phòng họp Ban Thường vụ Tỉnh ủy',
+   'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh', 'da_duyet'),
+  -- Sáng: Làm việc với Phòng TH-TT-DN — đ/c Lương Thị Hoa
+  ('22222222-2222-2222-2222-222222222203', '2026-06-11', 'sang', null, null,
+   'Làm việc với Phòng Tổng hợp, Thông tin, Dân nguyện',
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh',
+   'Đ/c Lương Thị Hoa, Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh. Cán bộ tham dự: Đ/c Mạnh, PCVP', 'da_duyet'),
+
+  -- ===== Thứ 6, 12/6 =====
+  -- 8h00: Họp Thường trực HĐND tỉnh (cả 2 PCT)
+  ('22222222-2222-2222-2222-222222222201', '2026-06-12', 'gio', '08:00', null,
+   'Dự họp Thường trực HĐND tỉnh',
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh',
+   'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh. Cán bộ tham dự: Lãnh đạo các Ban; Văn phòng', 'da_duyet'),
+  -- 10h00: Làm việc với các ban, đơn vị trực thuộc HĐND tỉnh (cả 2 PCT)
+  ('22222222-2222-2222-2222-222222222201', '2026-06-12', 'gio', '10:00', null,
+   'Làm việc với các ban, đơn vị trực thuộc HĐND tỉnh',
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh',
+   'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh. Cán bộ tham dự: Lãnh đạo các Ban; Văn phòng', 'da_duyet'),
+
+  -- ===== Thứ 7, 13/6 & Chủ nhật, 14/6 — Trực lãnh đạo Văn phòng =====
+  ('22222222-2222-2222-2222-222222222250', '2026-06-13', 'ca_ngay', null, null,
+   'Trực lãnh đạo Văn phòng: Đ/c Trần Mạnh Long, Tỉnh ủy viên, Chánh Văn phòng',
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', null, 'da_duyet'),
+  ('22222222-2222-2222-2222-222222222250', '2026-06-14', 'ca_ngay', null, null,
+   'Trực lãnh đạo Văn phòng: Đ/c Hà Ngọc Sơn, Phó Chánh Văn phòng',
+   'Trụ sở Đoàn ĐBQH và HĐND tỉnh', null, 'da_duyet');

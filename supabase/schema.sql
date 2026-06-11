@@ -21,16 +21,23 @@ create table if not exists bans (
   sort_order int default 0
 );
 
--- 2) Lãnh đạo có lịch được quản lý (KHÔNG phải tài khoản đăng nhập)
+-- 2) Đối tượng có lịch được quản lý (KHÔNG phải tài khoản đăng nhập)
+--    pct = PCT HĐND tỉnh (đích danh) | doan = lãnh đạo Đoàn ĐBQH tỉnh (đích danh)
+--    ban = đơn vị Ban (1 dòng/Ban)   | vanphong = lãnh đạo Văn phòng
 create table if not exists leaders (
   id uuid primary key default gen_random_uuid(),
   full_name text not null,
-  position text not null,           -- 'Phó Chủ tịch HĐND tỉnh', 'Trưởng ban', ...
-  leader_type text not null check (leader_type in ('pct','ban','vanphong')),
-  ban_id uuid references bans(id),  -- null nếu pct / vanphong
+  position text not null,           -- '' nếu là dòng đơn vị (Ban)
+  leader_type text not null check (leader_type in ('pct','doan','ban','vanphong')),
+  ban_id uuid references bans(id),  -- null nếu không phải 'ban'
   sort_order int default 0,
   active boolean default true
 );
+
+-- Nâng cấp từ bản cũ: bổ sung loại 'doan' vào ràng buộc (an toàn chạy lại)
+alter table leaders drop constraint if exists leaders_leader_type_check;
+alter table leaders add constraint leaders_leader_type_check
+  check (leader_type in ('pct','doan','ban','vanphong'));
 
 -- 3) Hồ sơ phân quyền (1-1 với auth.users, tự tạo khi user đăng nhập lần đầu)
 create table if not exists profiles (

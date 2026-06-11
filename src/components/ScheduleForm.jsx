@@ -32,7 +32,7 @@ export default function ScheduleForm({ profile, leaders, entries, editing, prefi
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
-  // Cảnh báo mềm: PCT đã có lịch giao nhau trong cùng ngày
+  // Cảnh báo mềm: lãnh đạo đích danh (PCT / Đoàn ĐBQH) đã có lịch giao nhau cùng ngày
   // (các Ban có thể có nhiều hoạt động cùng buổi do nhiều thành viên — không cảnh báo)
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const conflicts = useMemo(() => {
@@ -42,7 +42,7 @@ export default function ScheduleForm({ profile, leaders, entries, editing, prefi
       e.id !== editing?.id &&
       e.status !== 'tu_choi' &&
       leaderIds.includes(e.leader_id) &&
-      leaderById[e.leader_id]?.leader_type === 'pct' &&
+      ['pct', 'doan'].includes(leaderById[e.leader_id]?.leader_type) &&
       sessionsOverlap(e, cand)
     );
   }, [entries, date, session, startTime, endTime, leaderIds, editing, leaderById]);
@@ -86,11 +86,13 @@ export default function ScheduleForm({ profile, leaders, entries, editing, prefi
     onClose?.();
   };
 
-  // Nhóm để chọn: đích danh PCT (giữ gợi ý xe riêng) / các Ban / Văn phòng
+  // Nhóm để chọn: đích danh PCT / lãnh đạo Đoàn ĐBQH (giữ gợi ý xe) / các Ban / Văn phòng
   const groups = useMemo(() => {
     const out = [];
     const pct = allowed.filter((l) => l.leader_type === 'pct');
     if (pct.length) out.push({ label: 'Lãnh đạo HĐND tỉnh', items: pct });
+    const doan = allowed.filter((l) => l.leader_type === 'doan');
+    if (doan.length) out.push({ label: 'Đoàn ĐBQH tỉnh', items: doan });
     const banUnits = allowed.filter((l) => l.leader_type === 'ban');
     if (banUnits.length) out.push({ label: 'Các Ban của HĐND tỉnh', items: banUnits });
     const vp = allowed.filter((l) => l.leader_type === 'vanphong');

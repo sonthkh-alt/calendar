@@ -8,14 +8,15 @@ export function canCreateFor(profile, leader) {
   if (profile.role === 'quan_tri') return true;
   if (profile.role === 'cb_ban')
     return leader.leader_type === 'ban' && (profile.ban_ids || []).includes(leader.ban_id);
-  if (profile.role === 'cb_tonghop') return leader.leader_type === 'pct';
+  if (profile.role === 'cb_tonghop')
+    return leader.leader_type === 'pct' || leader.leader_type === 'doan';
   return false;
 }
 
-// Trạng thái khởi tạo khi tạo lịch cho lãnh đạo này
-// (lịch PCT do phòng TH-TT-DN nhập hiển thị ngay, không qua duyệt)
+// Trạng thái khởi tạo khi tạo lịch cho đối tượng này
+// (lịch lãnh đạo HĐND / Đoàn ĐBQH do phòng TH-TT-DN nhập hiển thị ngay, không qua duyệt)
 export function initialStatus(leader) {
-  return leader?.leader_type === 'pct' ? 'da_duyet' : 'cho_duyet';
+  return leader?.leader_type === 'pct' || leader?.leader_type === 'doan' ? 'da_duyet' : 'cho_duyet';
 }
 
 // Được sửa / xóa mục lịch này không?
@@ -38,9 +39,9 @@ export function canAssignVehicle(profile) {
   return profile?.role === 'van_phong_xe' || profile?.role === 'quan_tri';
 }
 
-// Mục lịch này đã đủ điều kiện gán xe chưa? (đã duyệt / đã điều chỉnh / lịch PCT)
+// Mục lịch này đã đủ điều kiện gán xe chưa? (đã duyệt / đã điều chỉnh / lịch lãnh đạo)
 export function entryNeedsVehicleOk(entry, leader) {
-  if (leader?.leader_type === 'pct') return true;
+  if (leader?.leader_type === 'pct' || leader?.leader_type === 'doan') return true;
   return entry.status === 'da_duyet' || entry.status === 'da_dieu_chinh';
 }
 

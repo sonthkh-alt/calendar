@@ -2,10 +2,11 @@
 
 ## Bảng (supabase/schema.sql)
 - `bans` — 4 Ban HĐND (KT-NS, PC, VH-XH, DT)
-- `leaders` — ĐỐI TƯỢNG CÓ LỊCH (không phải tài khoản): leader_type `pct|ban|vanphong`, ban_id, active.
-  QUAN TRỌNG: 2 PCT là dòng đích danh (đ/c Lê Tiến Lam, đ/c Nguyễn Quang Hải — để gắn xe riêng);
-  mỗi Ban là MỘT dòng đơn vị (full_name = tên Ban, position rỗng). Tên thành viên Ban ghi trong
-  Nội dung lịch. Lịch tuần hiển thị 5 cột: "Lãnh đạo HĐND tỉnh" (gộp 2 PCT) + 4 Ban.
+- `leaders` — ĐỐI TƯỢNG CÓ LỊCH (không phải tài khoản): leader_type `pct|doan|ban|vanphong`, ban_id, active.
+  QUAN TRỌNG: pct/doan là dòng đích danh (đ/c Lê Tiến Lam, đ/c Nguyễn Quang Hải / đ/c Lương Thị Hoa,
+  đ/c Bùi Văn Dũng — để gắn xe riêng + lọc); mỗi Ban là MỘT dòng đơn vị (full_name = tên Ban, position rỗng).
+  Tên thành viên ghi trong Nội dung/Thành phần. Lịch tuần hiển thị cột: "Lãnh đạo HĐND tỉnh" (gộp 2 PCT)
+  + "Đoàn ĐBQH tỉnh" (gộp 2 lãnh đạo Đoàn) + 4 Ban + "Lãnh đạo Văn phòng" (trực cuối tuần).
 - `profiles` — 1-1 auth.users (trigger `handle_new_user` tự tạo); role + ban_ids[] + leader_id
 - `vehicles` — 4 xe: `rieng` (gắn PCT qua assigned_leader_id) | `dung_chung`
 - `schedule_entries` — group_id (sự kiện nhiều lãnh đạo), leader_id, date, session `sang|chieu|ca_ngay|gio`(+start/end_time), content/location/participants, status, review_note/reviewed_by/at, vehicle_id/vehicle_note/_by/_at, created_by
