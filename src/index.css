@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gov-red: #b91c1c;
+  --gov-red-deep: #7f1d1d;
+  --gov-gold: #fbbf24;
+}
+
+* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+body {
+  margin: 0;
+  font-family: 'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif;
+  /* Nền aurora tinh tế: ánh đỏ - vàng quốc huy hoà vào nền sáng, sạch sẽ chuyên nghiệp */
+  background-color: #eef2f7;
+  background-image:
+    radial-gradient(60rem 60rem at 110% -10%, rgba(185, 28, 28, 0.10), transparent 60%),
+    radial-gradient(48rem 48rem at -10% 0%, rgba(251, 191, 36, 0.10), transparent 55%),
+    radial-gradient(50rem 50rem at 50% 120%, rgba(2, 132, 199, 0.06), transparent 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* ===== Hiệu ứng chuyển động ===== */
+@keyframes floatY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulseGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(251,191,36,.45), 0 0 22px rgba(251,191,36,.35); } 50% { box-shadow: 0 0 0 6px rgba(251,191,36,0), 0 0 34px rgba(251,191,36,.55); } }
+
+.animate-floatY { animation: floatY 5s ease-in-out infinite; }
+.animate-fadeUp { animation: fadeUp .5s ease both; }
+.emblem-glow { animation: pulseGlow 3.6s ease-in-out infinite; }
+
+/* Dải gradient động cho tiêu đề / header */
+.aurora-text {
+  background: linear-gradient(90deg, #fff, #fde68a, #fff, #fecaca, #fff);
+  background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 6s linear infinite;
+}
+
+/* Lớp kính mờ (glassmorphism) */
+.glass { background: rgba(255,255,255,.65); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); }
+.glass-dark { background: rgba(60, 8, 8, .35); backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%); }
+
+/* Lưới công nghệ mờ phủ lên header */
+.tech-grid {
+  background-image: linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(120% 100% at 80% 0%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(120% 100% at 80% 0%, #000 30%, transparent 75%);
+}
+
+/* Thanh cuộn hiện đại */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(127,29,29,.25); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(127,29,29,.45); background-clip: padding-box; }
+
+/* ===== In ấn: bảng lịch tuần / lịch điều xe kiểu công văn ===== */
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  body { background: #fff !important; }
+  /* Ẩn mọi thứ ngoài vùng in */
+  .no-print { display: none !important; }
+  .print-area { display: block !important; }
+  /* Vùng in chiếm toàn trang, chữ đen trắng kiểu công văn */
+  .print-root {
+    position: absolute; inset: 0;
+    background: #fff; color: #000;
+    font-family: 'Times New Roman', Times, serif;
+  }
+  .print-root table { width: 100%; border-collapse: collapse; }
+  .print-root th, .print-root td { border: 1px solid #000 !important; padding: 4px 6px; background: #fff !important; color: #000 !important; }
+  .print-root * { box-shadow: none !important; text-shadow: none !important; }
+}
+.print-header { display: none; }
+@media print {
+  .print-header { display: block; text-align: center; margin-bottom: 8px; }
+}

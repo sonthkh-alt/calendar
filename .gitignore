@@ -1,0 +1,17 @@
+# Phụ thuộc & build
+node_modules/
+dist/
+
+# Bí mật — KHÔNG commit
+.env
+.env.local
+.env.*.local
+
+# Cấu hình cục bộ Claude (giữ lại .claude/rules/ để đồng bộ giữa các máy)
+.claude/*
+!.claude/rules/
+
+# Hệ điều hành / IDE
+.DS_Store
+Thumbs.db
+*.log
