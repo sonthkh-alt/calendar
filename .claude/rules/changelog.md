@@ -1,5 +1,10 @@
 # Nhật ký dự án
 
+## 2026-06-12 — ĐÃ XÁC MINH chạy thật: workflow CSDL xanh
+- Secret SUPABASE_DB_URL = Session pooler URI vùng aws-1-ap-northeast-2 (Seoul), @ trong mật khẩu -> %40
+- Workflow tự cắt khoảng trắng thừa khi dán secret; lỗi báo ra annotations (che mật khẩu)
+- Run cuối: success; 6 bảng xác nhận: bans, leaders, profiles, vehicles, schedule_entries, participant_groups
+
 ## 2026-06-12 — Tự động cập nhật cấu trúc CSDL qua GitHub Actions
 - .github/workflows/db-migrate.yml: push thay đổi supabase/schema.sql -> tự chạy
   psql schema.sql vào Supabase (cần secret SUPABASE_DB_URL, Session pooler URI)
