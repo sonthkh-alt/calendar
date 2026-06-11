@@ -45,10 +45,23 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
     return e.session === 'sang' ? 'Sáng' : e.session === 'chieu' ? 'Chiều' : 'Cả ngày';
   };
 
-  // Đơn vị/Lãnh đạo: ưu tiên ghi GỌN bằng tên Nhóm thành phần khớp với Thành phần
+  // Đơn vị/Lãnh đạo: ưu tiên ghi GỌN bằng tên Nhóm thành phần.
+  // So khớp MỀM: chuẩn hóa chữ thường/khoảng trắng; nhóm được nhận khi
+  // (a) Thành phần nhắc thẳng tên nhóm, hoặc (b) TÊN của TẤT CẢ thành viên
+  // trong nhóm đều xuất hiện trong Thành phần (không cần đúng nguyên văn chức vụ).
+  const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
   const unitLabel = (m) => {
-    const partText = m._parts.join('; ');
-    const matched = (groups || []).filter((g) => g.members && partText.includes(g.members.trim()));
+    const partText = norm(m._parts.join('; '));
+    const matched = (groups || []).filter((g) => {
+      if (!g.members) return false;
+      if (g.name && partText.includes(norm(g.name))) return true;
+      const members = g.members.split(';').map(norm).filter(Boolean);
+      if (!members.length) return false;
+      return members.every((mem) => {
+        const namePart = mem.split(',')[0].trim(); // 'đ/c lê tiến lam'
+        return partText.includes(mem) || (namePart && partText.includes(namePart));
+      });
+    });
     if (matched.length) return matched.map((g) => g.name).join('; ');
     return [...new Set(m._leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean))].join('; ');
   };
