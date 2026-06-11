@@ -4,6 +4,7 @@
 #   Giá trị: chuỗi kết nối Postgres lấy từ Supabase -> nút "Connect" -> Session pooler URI
 #   dạng: postgresql://postgres.xxxx:MAT_KHAU@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
 # LƯU Ý: chỉ chạy schema.sql (idempotent, không xóa dữ liệu). KHÔNG bao giờ chạy seed.sql.
+# (Chuỗi kết nối phải là Session pooler URI; ký tự đặc biệt trong mật khẩu cần mã hóa, vd @ -> %40)
 name: Cap nhat cau truc CSDL (Supabase)
 
 on:
