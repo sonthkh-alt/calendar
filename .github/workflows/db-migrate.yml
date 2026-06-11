@@ -50,4 +50,6 @@ jobs:
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          psql "$DB_URL" -c "select table_name from information_schema.tables where table_schema='public' order by 1;"
+          DB_URL=$(printf '%s' "$DB_URL" | tr -d '[:space:]')
+          TABLES=$(psql "$DB_URL" -t -A -c "select string_agg(table_name, ', ') from information_schema.tables where table_schema='public';")
+          echo "::notice::Cac bang hien co: $TABLES"
