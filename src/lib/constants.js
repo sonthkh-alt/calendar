@@ -45,6 +45,11 @@ export const PCT_GROUP_LABEL = 'Lãnh đạo HĐND tỉnh';
 export const DOAN_GROUP_LABEL = 'Đoàn ĐBQH tỉnh';
 export const UNIT_GROUP_LABELS = { pct: PCT_GROUP_LABEL, doan: DOAN_GROUP_LABEL };
 
+// Làm việc TẠI CƠ QUAN -> không cần điều xe (bỏ khỏi danh sách chuyến cần xe,
+// không tự hiện lái xe riêng)
+export const isHqLocation = (loc) =>
+  (loc || '').trim().toLowerCase().replace(/\s+/g, ' ') === 'trụ sở đoàn đbqh và hđnd tỉnh';
+
 // Địa điểm gợi ý khi nhập lịch (vẫn gõ tự do được)
 export const COMMON_LOCATIONS = [
   'Trụ sở Tỉnh ủy',

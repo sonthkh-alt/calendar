@@ -4,7 +4,7 @@ import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
 import { canCreateFor, canEditEntry, canSeeEntry } from '../lib/permissions';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
-import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL } from '../lib/constants';
+import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation } from '../lib/constants';
 import { printPage } from '../lib/print';
 
 /**
@@ -74,7 +74,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
         key={e.id}
         entry={e}
         leader={leader}
-        vehicle={(e.vehicle_id ? vehicleById[e.vehicle_id] : null) || dedicatedByLeader[e.leader_id] || null}
+        vehicle={(e.vehicle_id ? vehicleById[e.vehicle_id] : null) || (isHqLocation(e.location) ? null : dedicatedByLeader[e.leader_id]) || null}
         canEdit={canEditEntry(profile, e, leader)}
         canDuplicate={canCreateFor(profile, leader)}
         dupOthers={dupMap?.get(e.id)}
@@ -113,7 +113,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     const orig = m.orig;
     const lead = leaderById[orig.leader_id];
     const names = m.leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean);
-    const veh = (m.vehicleIds[0] ? vehicleById[m.vehicleIds[0]] : null) || dedicatedByLeader[orig.leader_id] || null;
+    const veh = (m.vehicleIds[0] ? vehicleById[m.vehicleIds[0]] : null) || (isHqLocation(orig.location) ? null : dedicatedByLeader[orig.leader_id]) || null;
     return (
       <EntryCard
         key={orig.id}

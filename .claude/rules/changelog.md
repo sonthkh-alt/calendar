@@ -1,5 +1,10 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Họp tại cơ quan không cần điều xe
+- isHqLocation (constants): địa điểm 'Trụ sở Đoàn ĐBQH và HĐND tỉnh' -> bỏ khỏi
+  panel "Chuyến cần xe" (VehicleBoard) và không tự hiện lái xe riêng
+  (WeekView/DayView/EntryDetail/WeekPrintSheet); xe gán tay vẫn hiển thị
+
 ## 2026-06-12 — Bản in lịch tuần kiểu CÔNG VĂN (A4 dọc)
 - WeekPrintSheet.jsx: bản in riêng chỉ hiện khi in (hidden print:block) — bảng theo ngày:
   Ngày | Thời gian | Nội dung | Địa điểm | Đơn vị/Lãnh đạo | Thành phần | Lái xe;

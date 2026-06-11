@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import { SESSIONS, UNIT_GROUP_LABELS } from '../lib/constants';
+import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO } from '../lib/dates';
 
 /**
@@ -43,7 +43,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit
       .map((v) => [v.assigned_leader_id, v])
   );
   const mergedVehicles = [...new Map(
-    merged.map((e) => (e.vehicle_id ? vehicleById[e.vehicle_id] : dedicatedByLeader[e.leader_id]))
+    merged.map((e) => (e.vehicle_id ? vehicleById[e.vehicle_id] : (isHqLocation(e.location) ? null : dedicatedByLeader[e.leader_id])))
       .filter(Boolean).map((v) => [v.id, v])
   ).values()];
 

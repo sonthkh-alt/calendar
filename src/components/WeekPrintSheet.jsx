@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { UNIT_NAME, UNIT_GROUP_LABELS } from '../lib/constants';
+import { UNIT_NAME, UNIT_GROUP_LABELS, isHqLocation } from '../lib/constants';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY, fmtTime, weekStart, weekEnd, getISOWeek } from '../lib/dates';
 
 /**
@@ -59,7 +59,7 @@ export default function WeekPrintSheet({ anchor, entries, leaders, vehicles }) {
   const driverLabel = (m) => {
     const vehs = m._vehIds.length
       ? m._vehIds.map((id) => vehicleById[id]).filter(Boolean)
-      : m._leaderIds.map((id) => dedicatedByLeader[id]).filter(Boolean);
+      : (isHqLocation(m.location) ? [] : m._leaderIds.map((id) => dedicatedByLeader[id]).filter(Boolean));
     return [...new Map(vehs.map((v) => [v.id, v])).values()]
       .map((v) => [v.driver_name, v.plate].filter(Boolean).join(' · ')).join('; ');
   };

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Car, Printer, AlertTriangle, Phone, CircleSlash } from 'lucide-react';
 import { assignVehicle } from '../lib/api';
 import { entryNeedsVehicleOk } from '../lib/permissions';
-import { SESSIONS, UNIT_NAME, VEHICLE_TYPES } from '../lib/constants';
+import { SESSIONS, UNIT_NAME, VEHICLE_TYPES, isHqLocation } from '../lib/constants';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY, fmtTime, sessionsOverlap, weekStart, weekEnd, parseISO } from '../lib/dates';
 import { printPage } from '../lib/print';
 
@@ -24,9 +24,10 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
     [entries, ws, we]
   );
 
-  // Chuyến cần xe: đủ điều kiện (đã duyệt / lịch PCT) nhưng chưa gán
+  // Chuyến cần xe: đủ điều kiện (đã duyệt / lịch lãnh đạo) nhưng chưa gán;
+  // làm việc TẠI CƠ QUAN (Trụ sở Đoàn ĐBQH và HĐND tỉnh) thì không cần xe
   const needVehicle = weekEntries
-    .filter((e) => !e.vehicle_id && entryNeedsVehicleOk(e, leaderById[e.leader_id]))
+    .filter((e) => !e.vehicle_id && !isHqLocation(e.location) && entryNeedsVehicleOk(e, leaderById[e.leader_id]))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // Kiểm tra trùng: xe đã phục vụ chuyến nào giao thời gian với entry chưa?
