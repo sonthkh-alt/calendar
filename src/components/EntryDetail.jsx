@@ -32,8 +32,20 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit
     return l ? (UNIT_GROUP_LABELS[l.leader_type] || l.full_name) : null;
   }).filter(Boolean))];
 
+  // Lãnh đạo đích danh của các mục đã gộp
+  const leaderNames = [...new Set(merged.map((e) => leaderById[e.leader_id]?.full_name).filter(Boolean))];
+
   const mergedParticipants = [...new Set(merged.map((e) => (e.participants || '').trim()).filter(Boolean))].join('; ');
-  const mergedVehicles = [...new Set(merged.map((e) => e.vehicle_id).filter(Boolean))].map((id) => vehicleById[id]).filter(Boolean);
+
+  // Xe: xe đã gán; nếu chưa gán thì xe riêng của lãnh đạo (PCT / Phó Trưởng Đoàn)
+  const dedicatedByLeader = Object.fromEntries(
+    (vehicles || []).filter((v) => v.active && v.vehicle_type === 'rieng' && v.assigned_leader_id)
+      .map((v) => [v.assigned_leader_id, v])
+  );
+  const mergedVehicles = [...new Map(
+    merged.map((e) => (e.vehicle_id ? vehicleById[e.vehicle_id] : dedicatedByLeader[e.leader_id]))
+      .filter(Boolean).map((v) => [v.id, v])
+  ).values()];
 
   const d = parseISO(entry.date);
   const timeLabel = entry.session === 'gio'
@@ -61,12 +73,12 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit
             <p className="text-[15px] font-bold text-slate-900 leading-relaxed mt-0.5">{entry.content}</p>
           </div>
 
-          {/* Đơn vị */}
+          {/* Lãnh đạo / Đơn vị */}
           <div className={row}>
             <Building2 className={ic} />
             <div>
-              <p className={lab}>Đơn vị</p>
-              <p className={val}>{unitLabels.join(' · ') || '—'}</p>
+              <p className={lab}>Lãnh đạo / Đơn vị</p>
+              <p className={val}>{leaderNames.join('; ') || unitLabels.join(' · ') || '—'}</p>
             </div>
           </div>
 
@@ -97,16 +109,16 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit
             </div>
           </div>
 
-          {/* Xe */}
-          {mergedVehicles.length > 0 && (
-            <div className={row}>
-              <Car className={ic} />
-              <div>
-                <p className={lab}>Xe phục vụ</p>
-                <p className={val}>{mergedVehicles.map((v) => `${v.plate}${v.driver_name ? ` · ${v.driver_name}` : ''}${v.driver_phone ? ` (${v.driver_phone})` : ''}`).join('; ')}</p>
-              </div>
+          {/* Lái xe / Xe phục vụ — luôn hiển thị */}
+          <div className={row}>
+            <Car className={ic} />
+            <div>
+              <p className={lab}>Lái xe / Xe phục vụ</p>
+              <p className={val}>{mergedVehicles.length > 0
+                ? mergedVehicles.map((v) => `${[v.driver_name, v.plate].filter(Boolean).join(' · ')}${v.driver_phone ? ` (${v.driver_phone})` : ''}`).join('; ')
+                : '—'}</p>
             </div>
-          )}
+          </div>
 
           {/* Ghi chú duyệt */}
           {entry.review_note && (

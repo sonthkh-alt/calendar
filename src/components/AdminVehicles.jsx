@@ -12,7 +12,8 @@ export default function AdminVehicles({ vehicles, leaders, onChanged }) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ plate: '', driver_name: '', driver_phone: '', vehicle_type: 'dung_chung', assigned_leader_id: '' });
 
-  const pctLeaders = (leaders || []).filter((l) => l.leader_type === 'pct');
+  // Xe riêng gắn được cho lãnh đạo đích danh: PCT HĐND hoặc lãnh đạo Đoàn ĐBQH
+  const pctLeaders = (leaders || []).filter((l) => l.leader_type === 'pct' || l.leader_type === 'doan');
 
   const change = (v, field, value) =>
     setEditing((prev) => ({ ...prev, [v.id]: { ...v, ...prev[v.id], [field]: value } }));
@@ -72,7 +73,7 @@ export default function AdminVehicles({ vehicles, leaders, onChanged }) {
             </select>
           </div>
           <div>
-            <label className="text-[11px] font-bold text-slate-600">Phục vụ PCT</label>
+            <label className="text-[11px] font-bold text-slate-600">Phục vụ lãnh đạo</label>
             <select className={input} disabled={draft.vehicle_type !== 'rieng'} value={draft.assigned_leader_id} onChange={(e) => setDraft({ ...draft, assigned_leader_id: e.target.value })}>
               <option value="">— Chọn —</option>
               {pctLeaders.map((l) => <option key={l.id} value={l.id}>{l.full_name}</option>)}
@@ -116,7 +117,7 @@ export default function AdminVehicles({ vehicles, leaders, onChanged }) {
                       </select>
                       {row.vehicle_type === 'rieng' && (
                         <select className={input} value={row.assigned_leader_id || ''} onChange={(e) => change(v, 'assigned_leader_id', e.target.value)}>
-                          <option value="">— PCT —</option>
+                          <option value="">— Lãnh đạo —</option>
                           {pctLeaders.map((l) => <option key={l.id} value={l.id}>{l.full_name}</option>)}
                         </select>
                       )}

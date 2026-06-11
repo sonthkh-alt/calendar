@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Ô lịch đủ 6 mục + lái xe riêng tự động
+- EntryCard (cả Đầy đủ và Gọn): Nội dung, Lãnh đạo, Thời gian, Địa điểm, TP, Lái xe (thiếu -> "—")
+- Lịch PCT / Phó Trưởng Đoàn chưa gán xe -> tự hiện lái xe + biển số xe riêng của đồng chí đó
+  (dedicatedByLeader: vehicle_type='rieng' + assigned_leader_id)
+- AdminVehicles: gắn xe riêng được cho cả leader_type 'doan'; EntryDetail luôn có dòng Lái xe
+
 ## 2026-06-12 — ĐÃ XÁC MINH chạy thật: workflow CSDL xanh
 - Secret SUPABASE_DB_URL = Session pooler URI vùng aws-1-ap-northeast-2 (Seoul), @ trong mật khẩu -> %40
 - Workflow tự cắt khoảng trắng thừa khi dán secret; lỗi báo ra annotations (che mật khẩu)

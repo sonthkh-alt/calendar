@@ -47,6 +47,6 @@ export const UNIT_GROUP_LABELS = { pct: PCT_GROUP_LABEL, doan: DOAN_GROUP_LABEL 
 
 // Loại xe
 export const VEHICLE_TYPES = {
-  rieng: 'Xe riêng (phục vụ PCT)',
+  rieng: 'Xe riêng (phục vụ lãnh đạo)',
   dung_chung: 'Xe dùng chung',
 };

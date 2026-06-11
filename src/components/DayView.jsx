@@ -12,6 +12,11 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
   const dISO = toISODate(anchor);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
+  // Xe riêng theo lãnh đạo: hiện lái xe mặc định khi entry chưa gán xe
+  const dedicatedByLeader = useMemo(() => Object.fromEntries(
+    (vehicles || []).filter((v) => v.active && v.vehicle_type === 'rieng' && v.assigned_leader_id)
+      .map((v) => [v.assigned_leader_id, v])
+  ), [vehicles]);
 
   const dayEntries = useMemo(
     () => (entries || []).filter((e) => {
@@ -43,8 +48,7 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
               key={e.id}
               entry={e}
               leader={l}
-              vehicle={e.vehicle_id ? vehicleById[e.vehicle_id] : null}
-              showLeader
+              vehicle={(e.vehicle_id ? vehicleById[e.vehicle_id] : null) || dedicatedByLeader[e.leader_id] || null}
               canEdit={canEditEntry(profile, e, l)}
               onEdit={onEdit}
               onDelete={onDelete}

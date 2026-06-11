@@ -18,6 +18,11 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
 
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
+  // Xe riêng theo lãnh đạo (PCT / Phó Trưởng Đoàn): hiện lái xe mặc định khi entry chưa gán xe
+  const dedicatedByLeader = useMemo(() => Object.fromEntries(
+    (vehicles || []).filter((v) => v.active && v.vehicle_type === 'rieng' && v.assigned_leader_id)
+      .map((v) => [v.assigned_leader_id, v])
+  ), [vehicles]);
 
   // Cột đơn vị: Lãnh đạo HĐND tỉnh (gộp PCT) | từng Ban | Văn phòng (nếu bật)
   const units = useMemo(() => {
@@ -67,8 +72,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
         key={e.id}
         entry={e}
         leader={leader}
-        vehicle={e.vehicle_id ? vehicleById[e.vehicle_id] : null}
-        showLeader={mode === 'compact'}
+        vehicle={(e.vehicle_id ? vehicleById[e.vehicle_id] : null) || dedicatedByLeader[e.leader_id] || null}
         canEdit={canEditEntry(profile, e, leader)}
         onEdit={onEdit}
         onDelete={onDelete}
