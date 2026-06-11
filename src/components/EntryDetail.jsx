@@ -1,16 +1,20 @@
-import { useMemo } from 'react';
-import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy, Check, XCircle, Zap } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation } from '../lib/constants';
-import { fmtTime, fmtDMY, dayName, parseISO } from '../lib/dates';
+import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
+import { canReview, canAssignVehicle, entryNeedsVehicleOk } from '../lib/permissions';
+import { reviewEntry, assignVehicle } from '../lib/api';
 
 /**
  * Modal chi tiết 1 mục lịch — hiển thị ĐẦY ĐỦ, không cắt chữ.
- * Các mục TRÙNG nội dung + thời gian (chỉ khác thành phần, vd cùng hội nghị
- * cho cả Lãnh đạo HĐND và Đoàn ĐBQH) được GỘP: thành phần nối lại với nhau.
- * props: entry, entries, leaders, vehicles, canEdit, onEdit, onDelete, onClose
+ * Các mục TRÙNG nội dung + thời gian được GỘP: thành phần nối lại với nhau.
+ * Khu "Xử lý nhanh": Duyệt/Từ chối (PCT, Quản trị) + chọn xe (Văn phòng, Quản trị).
  */
-export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit, canDuplicate, dupOthers, onEdit, onDelete, onDuplicate, onClose }) {
+export default function EntryDetail({ entry, entries, leaders, vehicles, profile, canEdit, canDuplicate, dupOthers, onEdit, onDelete, onDuplicate, onChanged, onClose }) {
+  const [busy, setBusy] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [note, setNote] = useState('');
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
 
@@ -51,6 +55,47 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit
   const timeLabel = entry.session === 'gio'
     ? `${fmtTime(entry.start_time)}${entry.end_time ? ' - ' + fmtTime(entry.end_time) : ''}`
     : SESSIONS[entry.session];
+
+  // ===== Xử lý nhanh: duyệt / từ chối / điều xe ngay trong hộp chi tiết =====
+  const leader = leaderById[entry.leader_id];
+  const showReview = canReview(profile) && entry.status === 'cho_duyet';
+  const showVehicle = canAssignVehicle(profile) && entryNeedsVehicleOk(entry, leader) && !isHqLocation(entry.location);
+  const activeVehicles = (vehicles || []).filter((v) => v.active);
+  const vehicleOptions = [...activeVehicles].sort((a, b) => {
+    const ap = a.assigned_leader_id === leader?.id ? 0 : a.vehicle_type === 'dung_chung' ? 1 : 2;
+    const bp = b.assigned_leader_id === leader?.id ? 0 : b.vehicle_type === 'dung_chung' ? 1 : 2;
+    return ap - bp;
+  });
+  const findConflicts = (vehId) => (entries || []).filter((x) =>
+    x.vehicle_id === vehId && x.id !== entry.id && x.date === entry.date &&
+    (!entry.group_id || x.group_id !== entry.group_id) &&
+    x.status !== 'tu_choi' && sessionsOverlap(x, entry)
+  );
+
+  const doApprove = async () => {
+    setBusy(true);
+    await reviewEntry(entry.id, 'da_duyet', null, profile.id);
+    setBusy(false); onChanged?.(); onClose?.();
+  };
+  const doReject = async () => {
+    if (!note.trim()) { alert('Vui lòng nhập lý do từ chối.'); return; }
+    setBusy(true);
+    await reviewEntry(entry.id, 'tu_choi', note.trim(), profile.id);
+    setBusy(false); onChanged?.(); onClose?.();
+  };
+  const doAssign = async (vehId) => {
+    if (vehId) {
+      const cf = findConflicts(vehId);
+      if (cf.length > 0) {
+        const v = activeVehicles.find((x) => x.id === vehId);
+        const who = leaderById[cf[0].leader_id]?.full_name || '';
+        if (!window.confirm(`⚠️ Xe ${v?.plate} đã được điều cho ${who} (${fmtDM(parseISO(cf[0].date))}): ${cf[0].content}\n\nVẫn gán xe này?`)) return;
+      }
+    }
+    setBusy(true);
+    await assignVehicle(entry.id, vehId || null, null, profile.id);
+    setBusy(false); onChanged?.(); onClose?.();
+  };
 
   const row = 'flex items-start gap-2.5';
   const ic = 'w-4 h-4 shrink-0 text-red-700 mt-0.5';
@@ -139,6 +184,59 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, canEdit
                 <p className={lab}>Ghi chú của lãnh đạo</p>
                 <p className={`${val} italic`}>{entry.review_note}</p>
               </div>
+            </div>
+          )}
+
+          {/* ===== XỬ LÝ NHANH (duyệt / điều xe ngay tại đây) ===== */}
+          {(showReview || showVehicle) && (
+            <div className="rounded-xl border border-red-200 bg-red-50/40 p-3.5 space-y-3">
+              <p className="flex items-center gap-1.5 text-[12px] font-bold text-red-800 uppercase tracking-wide"><Zap className="w-4 h-4" /> Xử lý nhanh</p>
+
+              {showReview && !rejecting && (
+                <div className="flex items-center gap-2">
+                  <button onClick={doApprove} disabled={busy} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60">
+                    <Check className="w-4 h-4" /> Phê duyệt
+                  </button>
+                  <button onClick={() => setRejecting(true)} disabled={busy} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60">
+                    <XCircle className="w-4 h-4" /> Từ chối
+                  </button>
+                </div>
+              )}
+              {showReview && rejecting && (
+                <div className="space-y-2">
+                  <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Lý do từ chối (bắt buộc)" className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setRejecting(false)} className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-slate-600 hover:bg-white">Hủy</button>
+                    <button onClick={doReject} disabled={busy} className="px-4 py-1.5 rounded-lg text-[12px] font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60">Xác nhận từ chối</button>
+                  </div>
+                </div>
+              )}
+
+              {showVehicle && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-semibold text-slate-600 flex items-center gap-1"><Car className="w-3.5 h-3.5" /> Điều xe:</span>
+                  <select
+                    disabled={busy}
+                    value={entry.vehicle_id || ''}
+                    onChange={(e) => doAssign(e.target.value)}
+                    className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[13px] text-slate-700 outline-none focus:border-red-400"
+                  >
+                    <option value="">— Chưa gán xe —</option>
+                    {vehicleOptions.map((v) => {
+                      const own = v.assigned_leader_id === leader?.id;
+                      const conflict = findConflicts(v.id).length > 0;
+                      return (
+                        <option key={v.id} value={v.id}>
+                          {v.plate} · {v.driver_name}{own ? ' (xe riêng)' : v.vehicle_type === 'dung_chung' ? ' (dùng chung)' : ''}{conflict ? ' ⚠ trùng giờ' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {entry.vehicle_id && (
+                    <button onClick={() => doAssign('')} disabled={busy} className="text-[12px] font-semibold text-slate-500 hover:text-rose-700">Bỏ gán xe</button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

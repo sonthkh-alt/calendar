@@ -297,6 +297,8 @@ export default function App() {
           entries={entries}
           leaders={leaders}
           vehicles={vehicles}
+          profile={profile}
+          onChanged={refresh}
           canEdit={canEditEntry(profile, viewing, leaders.find((l) => l.id === viewing.leader_id))}
           canDuplicate={canDup(viewing)}
           dupOthers={dupMap.get(viewing.id)}

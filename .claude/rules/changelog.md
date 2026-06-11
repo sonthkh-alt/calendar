@@ -1,5 +1,10 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Xử lý nhanh trong hộp chi tiết lịch
+- EntryDetail thêm khu "Xử lý nhanh": Phê duyệt / Từ chối (canReview + status cho_duyet)
+  và chọn xe tại chỗ (canAssignVehicle, gợi ý xe riêng đầu, cảnh báo trùng giờ, bỏ gán)
+- Sau thao tác: refresh + đóng modal; App truyền profile + onChanged vào EntryDetail
+
 ## 2026-06-12 — Họp tại cơ quan không cần điều xe
 - isHqLocation (constants): địa điểm 'Trụ sở Đoàn ĐBQH và HĐND tỉnh' -> bỏ khỏi
   panel "Chuyến cần xe" (VehicleBoard) và không tự hiện lái xe riêng
