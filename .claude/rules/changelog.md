@@ -1,5 +1,10 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Chọn lãnh đạo theo cột + Sao lưu/Phục hồi
+- Bấm "+" ở ô của cột nào -> form chỉ hiện nhóm lãnh đạo cột đó (prefill.leaderIds)
+- Tab Quản trị "Sao lưu": tải toàn bộ dữ liệu ra .json; Phục hồi từ file (xóa + nạp lại,
+  giữ id; profiles chỉ cập nhật theo email tồn tại, tham chiếu mồ côi được null hóa)
+
 ## 2026-06-12 — SỰ CỐ + chốt an toàn seed.sql
 - Người dùng chạy lại seed.sql theo hướng dẫn cũ -> mất dữ liệu đã sửa trên web
 - Khắc phục: seed.sql tự DỪNG (raise exception) nếu bảng leaders đã có dữ liệu;

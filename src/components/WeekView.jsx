@@ -145,7 +145,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                             {list.map(renderCard)}
                             {addable.length > 0 && (
                               <button
-                                onClick={() => onAdd?.({ date: d, session: sess, leaderId: addable.length === 1 ? addable[0] : null })}
+                                onClick={() => onAdd?.({ date: d, session: sess, leaderId: addable.length === 1 ? addable[0] : null, leaderIds: u.leaderIds })}
                                 className="no-print w-full text-center text-slate-300 hover:text-red-600 hover:bg-red-50 rounded text-[14px] leading-5 opacity-0 hover:opacity-100 focus:opacity-100 transition"
                                 title={`Thêm lịch ${sess === 'sang' ? 'sáng' : 'chiều'} ${fmtDM(d)} — ${u.label}`}
                               >+</button>

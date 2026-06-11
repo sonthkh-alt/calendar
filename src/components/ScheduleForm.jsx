@@ -14,9 +14,14 @@ import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
  *  - onClose, onSaved
  */
 export default function ScheduleForm({ profile, leaders, entries, groups: pGroups, editing, prefill, onClose, onSaved }) {
+  // Danh sách được chọn: theo quyền; nếu mở từ ô của một cột cụ thể (prefill.leaderIds)
+  // thì CHỈ hiện nhóm lãnh đạo của cột đó
   const allowed = useMemo(
-    () => (leaders || []).filter((l) => l.active && canCreateFor(profile, l)),
-    [leaders, profile]
+    () => (leaders || []).filter((l) =>
+      l.active && canCreateFor(profile, l) &&
+      (!prefill?.leaderIds || prefill.leaderIds.includes(l.id))
+    ),
+    [leaders, profile, prefill]
   );
 
   const [leaderIds, setLeaderIds] = useState(
