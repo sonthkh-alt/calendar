@@ -1,5 +1,10 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Tự động cập nhật cấu trúc CSDL qua GitHub Actions
+- .github/workflows/db-migrate.yml: push thay đổi supabase/schema.sql -> tự chạy
+  psql schema.sql vào Supabase (cần secret SUPABASE_DB_URL, Session pooler URI)
+- Chỉ chạy schema.sql idempotent; seed.sql không bao giờ chạy tự động
+
 ## 2026-06-12 — Chọn lãnh đạo theo cột + Sao lưu/Phục hồi
 - Bấm "+" ở ô của cột nào -> form chỉ hiện nhóm lãnh đạo cột đó (prefill.leaderIds)
 - Tab Quản trị "Sao lưu": tải toàn bộ dữ liệu ra .json; Phục hồi từ file (xóa + nạp lại,

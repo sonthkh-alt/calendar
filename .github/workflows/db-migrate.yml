@@ -1,0 +1,38 @@
+# Tự động cập nhật CẤU TRÚC cơ sở dữ liệu Supabase mỗi khi schema.sql thay đổi.
+# Yêu cầu 1 lần: tạo secret SUPABASE_DB_URL trong GitHub repo
+#   (Settings -> Secrets and variables -> Actions -> New repository secret)
+#   Giá trị: chuỗi kết nối Postgres lấy từ Supabase -> nút "Connect" -> Session pooler URI
+#   dạng: postgresql://postgres.xxxx:MAT_KHAU@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
+# LƯU Ý: chỉ chạy schema.sql (idempotent, không xóa dữ liệu). KHÔNG bao giờ chạy seed.sql.
+name: Cap nhat cau truc CSDL (Supabase)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/schema.sql'
+      - '.github/workflows/db-migrate.yml'
+  workflow_dispatch: {}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ap dung schema.sql vao Supabase
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "::error::Chua cau hinh secret SUPABASE_DB_URL. Vao GitHub repo -> Settings -> Secrets and variables -> Actions -> New repository secret, ten: SUPABASE_DB_URL, gia tri: chuoi ket noi Postgres (Supabase -> Connect -> Session pooler URI)."
+            exit 1
+          fi
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/schema.sql
+          echo "Da ap dung schema.sql thanh cong."
+
+      - name: Kiem tra sau cap nhat (liet ke bang)
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$DB_URL" -c "select table_name from information_schema.tables where table_schema='public' order by 1;"
