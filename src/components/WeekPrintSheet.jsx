@@ -1,20 +1,17 @@
 import { useMemo } from 'react';
-import { UNIT_NAME, UNIT_GROUP_LABELS, isHqLocation } from '../lib/constants';
+import { UNIT_NAME } from '../lib/constants';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY, fmtTime, weekStart, weekEnd, getISOWeek } from '../lib/dates';
 
 /**
  * BẢN IN lịch tuần theo định dạng công văn (A4 DỌC) — chỉ hiện khi in.
- * Bảng theo ngày: Ngày | Thời gian | Nội dung | Địa điểm | Đơn vị/Lãnh đạo |
- * Thành phần | Lái xe. Các mục giống nhau (nhiều đơn vị cùng dự) được gộp 1 hàng.
+ * Bảng theo ngày: Ngày | Thời gian | Nội dung | Địa điểm | Đơn vị/Lãnh đạo | Thành phần.
+ * - Các mục giống nhau (nhiều đơn vị cùng dự) được gộp 1 hàng.
+ * - Cột Đơn vị/Lãnh đạo: nếu Thành phần khớp với một "Nhóm thành phần" đã định
+ *   nghĩa thì ghi GỌN bằng tên nhóm (vd "Thường trực HĐND tỉnh").
  */
-export default function WeekPrintSheet({ anchor, entries, leaders, vehicles }) {
+export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
   const days = useMemo(() => weekDays(anchor), [anchor]);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
-  const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
-  const dedicatedByLeader = useMemo(() => Object.fromEntries(
-    (vehicles || []).filter((v) => v.active && v.vehicle_type === 'rieng' && v.assigned_leader_id)
-      .map((v) => [v.assigned_leader_id, v])
-  ), [vehicles]);
 
   const ws = weekStart(anchor), we = weekEnd(anchor);
 
@@ -33,12 +30,11 @@ export default function WeekPrintSheet({ anchor, entries, leaders, vehicles }) {
       const key = `${e.content}|${e.session}|${e.start_time || ''}|${(e.location || '').trim().toLowerCase()}`;
       const m = map.get(key);
       if (!m) {
-        const item = { ...e, _leaderIds: [e.leader_id], _parts: e.participants ? [e.participants] : [], _vehIds: e.vehicle_id ? [e.vehicle_id] : [] };
+        const item = { ...e, _leaderIds: [e.leader_id], _parts: e.participants ? [e.participants] : [] };
         map.set(key, item); out.push(item);
       } else {
         if (!m._leaderIds.includes(e.leader_id)) m._leaderIds.push(e.leader_id);
         if (e.participants && !m._parts.includes(e.participants)) m._parts.push(e.participants);
-        if (e.vehicle_id && !m._vehIds.includes(e.vehicle_id)) m._vehIds.push(e.vehicle_id);
       }
     }
     return out.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
@@ -49,21 +45,12 @@ export default function WeekPrintSheet({ anchor, entries, leaders, vehicles }) {
     return e.session === 'sang' ? 'Sáng' : e.session === 'chieu' ? 'Chiều' : 'Cả ngày';
   };
 
-  const unitLabel = (m) => [...new Set(
-    m._leaderIds.map((id) => {
-      const l = leaderById[id];
-      return l ? (UNIT_GROUP_LABELS[l.leader_type] ? l.full_name : l.full_name) : null;
-    }).filter(Boolean)
-  )].join('; ');
-
-  const driverLabel = (m) => {
-    const vehs = m._vehIds.length
-      ? m._vehIds.map((id) => vehicleById[id]).filter(Boolean)
-      : m._leaderIds
-          .filter((id) => leaderById[id]?.leader_type === 'pct' || !isHqLocation(m.location))
-          .map((id) => dedicatedByLeader[id]).filter(Boolean);
-    return [...new Map(vehs.map((v) => [v.id, v])).values()]
-      .map((v) => [v.driver_name, v.plate].filter(Boolean).join(' · ')).join('; ');
+  // Đơn vị/Lãnh đạo: ưu tiên ghi GỌN bằng tên Nhóm thành phần khớp với Thành phần
+  const unitLabel = (m) => {
+    const partText = m._parts.join('; ');
+    const matched = (groups || []).filter((g) => g.members && partText.includes(g.members.trim()));
+    if (matched.length) return matched.map((g) => g.name).join('; ');
+    return [...new Set(m._leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean))].join('; ');
   };
 
   const td = { border: '0.5pt solid #000', padding: '4px 5px', verticalAlign: 'top', wordWrap: 'break-word' };
@@ -85,11 +72,10 @@ export default function WeekPrintSheet({ anchor, entries, leaders, vehicles }) {
         <colgroup>
           <col style={{ width: '8%' }} />
           <col style={{ width: '9%' }} />
-          <col style={{ width: '26%' }} />
-          <col style={{ width: '13%' }} />
-          <col style={{ width: '13%' }} />
-          <col style={{ width: '21%' }} />
-          <col style={{ width: '10%' }} />
+          <col style={{ width: '30%' }} />
+          <col style={{ width: '14%' }} />
+          <col style={{ width: '15%' }} />
+          <col style={{ width: '24%' }} />
         </colgroup>
         <thead>
           <tr>
@@ -99,7 +85,6 @@ export default function WeekPrintSheet({ anchor, entries, leaders, vehicles }) {
             <th style={th}>Địa điểm</th>
             <th style={th}>Đơn vị / Lãnh đạo</th>
             <th style={th}>Thành phần</th>
-            <th style={th}>Lái xe</th>
           </tr>
         </thead>
         <tbody>
@@ -115,7 +100,7 @@ export default function WeekPrintSheet({ anchor, entries, leaders, vehicles }) {
               return (
                 <tr key={dISO}>
                   {dayCell}
-                  <td style={td} colSpan={6}>&nbsp;</td>
+                  <td style={td} colSpan={5}>&nbsp;</td>
                 </tr>
               );
             }
@@ -131,7 +116,6 @@ export default function WeekPrintSheet({ anchor, entries, leaders, vehicles }) {
                 <td style={td}>{m.location || ''}</td>
                 <td style={td}>{unitLabel(m)}</td>
                 <td style={td}>{m._parts.join('; ')}</td>
-                <td style={td}>{driverLabel(m)}</td>
               </tr>
             ));
           })}

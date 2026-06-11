@@ -1,5 +1,10 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Tick lãnh đạo khi soạn nhóm + tinh gọn bản in
+- AdminGroups: LeaderTicks — tick lãnh đạo/đơn vị để chèn "tên, chức vụ" vào members
+- WeekPrintSheet: BỎ cột Lái xe; cột Đơn vị/Lãnh đạo ghi GỌN bằng tên Nhóm thành phần
+  nếu Thành phần chứa members của nhóm (groups truyền từ App qua WeekView)
+
 ## 2026-06-12 — Xe riêng PCT mặc định tuyệt đối
 - Lịch PCT luôn hiện lái xe riêng (kể cả họp tại trụ sở); lịch PCT vốn không cần duyệt
 - VehicleBoard: lãnh đạo có xe riêng -> chuyến KHÔNG vào "Chuyến cần xe"; dòng xe riêng

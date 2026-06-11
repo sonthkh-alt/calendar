@@ -14,7 +14,7 @@ import { printPage } from '../lib/print';
  * - Chế độ "Đầy đủ": bảng ngày × (Sáng/Chiều) × cột đơn vị.
  * - Chế độ "Gọn": mỗi ngày 1 khối (hợp mobile).
  */
-export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, filters, dupMap, onAdd, onEdit, onDelete, onDuplicate, onView }) {
+export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, onAdd, onEdit, onDelete, onDuplicate, onView }) {
   const [mode, setMode] = useState('full'); // full | compact
   const days = useMemo(() => weekDays(anchor), [anchor]);
 
@@ -134,7 +134,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
   return (
     <div>
       {/* BẢN IN kiểu công văn (A4 dọc) — chỉ hiện khi in */}
-      <WeekPrintSheet anchor={anchor} entries={visible.filter((e) => allUnitLeaderIds.includes(e.leader_id))} leaders={leaders} vehicles={vehicles} />
+      <WeekPrintSheet anchor={anchor} entries={visible.filter((e) => allUnitLeaderIds.includes(e.leader_id))} leaders={leaders} groups={groups} />
 
       <div className="print:hidden">
       {/* Thanh công cụ */}
