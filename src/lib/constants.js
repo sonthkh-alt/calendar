@@ -32,12 +32,15 @@ export const SESSIONS = {
   gio: 'Theo giờ',
 };
 
-// Loại lãnh đạo
+// Loại đối tượng có lịch (đơn vị hoặc cá nhân PCT)
 export const LEADER_TYPES = {
-  pct: 'Thường trực HĐND tỉnh',
-  ban: 'Lãnh đạo Ban',
+  pct: 'Lãnh đạo HĐND tỉnh',
+  ban: 'Ban của HĐND tỉnh',
   vanphong: 'Lãnh đạo Văn phòng',
 };
+
+// Nhãn cột gộp của 2 PCT trên lịch tuần
+export const PCT_GROUP_LABEL = 'Lãnh đạo HĐND tỉnh';
 
 // Loại xe
 export const VEHICLE_TYPES = {

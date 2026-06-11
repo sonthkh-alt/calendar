@@ -240,7 +240,6 @@ export default function App() {
         <ScheduleForm
           profile={profile}
           leaders={leaders}
-          bans={bans}
           entries={entries}
           editing={editing}
           prefill={prefill}

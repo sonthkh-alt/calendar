@@ -117,7 +117,7 @@ export default function ApprovalQueue({ profile, anchor, entries, leaders, bans,
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[14px] font-bold text-slate-800">{e.content}</p>
-                      <p className="text-[12px] font-semibold text-red-800 mt-0.5">{l?.full_name} · {l?.position}</p>
+                      <p className="text-[12px] font-semibold text-red-800 mt-0.5">{l?.full_name}{l?.position ? ` · ${l.position}` : ''}</p>
                       <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-slate-600">
                         <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-400" /> {dayName(parseISO(e.date))}, {fmtDMY(parseISO(e.date))} · {timeLabel}</span>
                         {e.location && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {e.location}</span>}

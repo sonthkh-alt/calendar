@@ -42,11 +42,11 @@ export default function FilterBar({ view, anchor, onAnchor, bans, leaders, filte
 
       {/* Bộ lọc */}
       <select value={filters.banId || ''} onChange={(e) => onFilters({ ...filters, banId: e.target.value || null, leaderId: null })} className={sel}>
-        <option value="">Tất cả Ban / Thường trực</option>
+        <option value="">Tất cả đơn vị</option>
         {(bans || []).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
       </select>
       <select value={filters.leaderId || ''} onChange={(e) => onFilters({ ...filters, leaderId: e.target.value || null })} className={sel}>
-        <option value="">Tất cả lãnh đạo</option>
+        <option value="">Tất cả lãnh đạo / Ban</option>
         {visibleLeaders.map((l) => <option key={l.id} value={l.id}>{l.full_name}</option>)}
       </select>
       <select value={filters.status || ''} onChange={(e) => onFilters({ ...filters, status: e.target.value || null })} className={sel}>

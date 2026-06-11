@@ -1,6 +1,6 @@
 import { MapPin, Users, Clock, Car, Pencil, Trash2, MessageSquareText } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import { STATUS, SESSIONS } from '../lib/constants';
+import { STATUS, SESSIONS, PCT_GROUP_LABEL } from '../lib/constants';
 import { fmtTime } from '../lib/dates';
 
 /**
@@ -28,7 +28,7 @@ export default function EntryCard({ entry, leader, vehicle, showLeader, canEdit,
       </div>
 
       {showLeader && leader && (
-        <p className="text-[11px] font-medium text-red-800 mt-0.5">{leader.full_name} · {leader.position}</p>
+        <p className="text-[11px] font-medium text-red-800 mt-0.5">{leader.leader_type === 'pct' ? PCT_GROUP_LABEL : leader.full_name}</p>
       )}
 
       <div className="mt-1 space-y-0.5 text-[11px] text-slate-600">

@@ -13,7 +13,7 @@ import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
  *  - prefill: { date, session, leaderId } khi click ô trống
  *  - onClose, onSaved
  */
-export default function ScheduleForm({ profile, leaders, bans, entries, editing, prefill, onClose, onSaved }) {
+export default function ScheduleForm({ profile, leaders, entries, editing, prefill, onClose, onSaved }) {
   const allowed = useMemo(
     () => (leaders || []).filter((l) => l.active && canCreateFor(profile, l)),
     [leaders, profile]
@@ -32,7 +32,9 @@ export default function ScheduleForm({ profile, leaders, bans, entries, editing,
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
-  // Cảnh báo mềm: lãnh đạo đã có lịch giao nhau trong cùng ngày
+  // Cảnh báo mềm: PCT đã có lịch giao nhau trong cùng ngày
+  // (các Ban có thể có nhiều hoạt động cùng buổi do nhiều thành viên — không cảnh báo)
+  const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const conflicts = useMemo(() => {
     const cand = { session, start_time: session === 'gio' ? startTime : null, end_time: session === 'gio' ? endTime : null };
     return (entries || []).filter((e) =>
@@ -40,9 +42,10 @@ export default function ScheduleForm({ profile, leaders, bans, entries, editing,
       e.id !== editing?.id &&
       e.status !== 'tu_choi' &&
       leaderIds.includes(e.leader_id) &&
+      leaderById[e.leader_id]?.leader_type === 'pct' &&
       sessionsOverlap(e, cand)
     );
-  }, [entries, date, session, startTime, endTime, leaderIds, editing]);
+  }, [entries, date, session, startTime, endTime, leaderIds, editing, leaderById]);
 
   const toggleLeader = (id) =>
     setLeaderIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -83,19 +86,17 @@ export default function ScheduleForm({ profile, leaders, bans, entries, editing,
     onClose?.();
   };
 
-  // Nhóm lãnh đạo theo Ban / Thường trực để chọn
+  // Nhóm để chọn: đích danh PCT (giữ gợi ý xe riêng) / các Ban / Văn phòng
   const groups = useMemo(() => {
     const out = [];
     const pct = allowed.filter((l) => l.leader_type === 'pct');
-    if (pct.length) out.push({ label: 'Thường trực HĐND tỉnh', items: pct });
-    for (const b of bans || []) {
-      const items = allowed.filter((l) => l.ban_id === b.id);
-      if (items.length) out.push({ label: b.name, items });
-    }
+    if (pct.length) out.push({ label: 'Lãnh đạo HĐND tỉnh', items: pct });
+    const banUnits = allowed.filter((l) => l.leader_type === 'ban');
+    if (banUnits.length) out.push({ label: 'Các Ban của HĐND tỉnh', items: banUnits });
     const vp = allowed.filter((l) => l.leader_type === 'vanphong');
-    if (vp.length) out.push({ label: 'Lãnh đạo Văn phòng', items: vp });
+    if (vp.length) out.push({ label: 'Văn phòng', items: vp });
     return out;
-  }, [allowed, bans]);
+  }, [allowed]);
 
   const input = 'w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 transition';
 
@@ -122,7 +123,7 @@ export default function ScheduleForm({ profile, leaders, bans, entries, editing,
                       {g.items.map((l) => (
                         <label key={l.id} className={`flex items-center gap-2 text-[13px] rounded-lg px-2 py-1.5 cursor-pointer border transition ${leaderIds.includes(l.id) ? 'bg-red-50 border-red-300 text-red-900 font-semibold' : 'bg-white border-slate-200 text-slate-700 hover:border-red-200'}`}>
                           <input type="checkbox" checked={leaderIds.includes(l.id)} onChange={() => toggleLeader(l.id)} className="accent-red-700" />
-                          <span>{l.full_name} <span className="text-slate-400 font-normal">· {l.position}</span></span>
+                          <span>{l.full_name}{l.position ? <span className="text-slate-400 font-normal"> · {l.position}</span> : null}</span>
                         </label>
                       ))}
                     </div>
