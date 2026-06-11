@@ -61,21 +61,29 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
     .replace(/đ/g, 'd')
     .replace(/\s+/g, ' ')
     .trim();
+  // TÊN CỐT LÕI để so khớp: lấy phần trước dấu phẩy, chuẩn hóa, BỎ tiền tố kính ngữ
+  // (Đ/c, Đồng chí, Ông, Bà...) — để "Đ/c Hà Ngọc Sơn" khớp "Đồng chí Hà Ngọc Sơn".
+  const coreName = (s) => norm(s.split(',')[0])
+    .replace(/^(d\s*\/\s*c|dong chi|ong|ba)\s+/, '')
+    .trim();
+  // Một đoạn (seg) có phải là 1 thành viên (member name đã coreName) không —
+  // dùng CHUNG cho cả bước kiểm "đủ người" lẫn bước thay thế (tránh lệch nhau).
+  const isSamePerson = (segCore, n) =>
+    segCore === n || segCore.startsWith(n + ' ') || n.startsWith(segCore + ' ');
   const compactParticipants = (m) => {
     let segs = m._parts.join('; ').split(';').map((s) => s.trim()).filter(Boolean);
-    const segName = (s) => norm(s.split(',')[0]);
     // Nhóm NHIỀU thành viên xét trước (các nhóm lồng nhau: Lãnh đạo các Ban ⊃ Trưởng các Ban...)
     const ordered = [...(groups || [])].sort((a, b) =>
       (b.members || '').split(';').length - (a.members || '').split(';').length);
     for (const g of ordered) {
       if (!g.members || !g.name) continue;
-      const memberNames = g.members.split(';').map((x) => norm(x.split(',')[0])).filter(Boolean);
+      const memberNames = g.members.split(';').map((x) => coreName(x)).filter(Boolean);
       if (!memberNames.length) continue;
-      const present = memberNames.every((n) => segs.some((s) => norm(s).includes(n)));
+      const present = memberNames.every((n) => segs.some((s) => isSamePerson(coreName(s), n)));
       if (!present) continue;
       let inserted = false;
       segs = segs.flatMap((s) => {
-        const isMember = memberNames.some((n) => segName(s) === n || segName(s).startsWith(n));
+        const isMember = memberNames.some((n) => isSamePerson(coreName(s), n));
         if (!isMember) return [s];
         // Giữ phần thông tin thêm sau dấu chấm (vd "... Cán bộ tham dự: ...")
         const dot = s.indexOf('. ');

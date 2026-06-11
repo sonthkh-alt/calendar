@@ -17,20 +17,25 @@ const groups = [
   { name: 'Toàn thể cơ quan', members: 'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Lương Tiến Thành, Trưởng Ban DT; Đ/c Cầm Bá Chái, PTB DT; Đ/c Nguyễn Tuấn Tưởng, PTB VHXH; Đ/c Nguyễn Quốc Hải, Trưởng Ban PC; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh; Đ/c Lương Thị Hoa, Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh; Đ/c Bùi Văn Dũng, ĐBQH chuyên trách; Đ/c Hoàng Anh Tuấn, Tỉnh ủy viên, Trưởng Ban KTNS; Đ/c Ngô Thị Hồng Hảo, Tỉnh ủy viên, Trưởng Ban VHXH; Đ/c Trần Mạnh Long, Chánh Văn phòng; Đ/c Lê Thị Hương, PTB PC; Đ/c Hà Ngọc Sơn, Phó Chánh Văn phòng; Đ/c Đỗ Ngọc Duy, PTB KTNS; Đ/c Lê Văn Mạnh, Phó Chánh Văn phòng' },
 ];
 
+const coreName = (s) => norm(s.split(',')[0])
+  .replace(/^(d\s*\/\s*c|dong chi|ong|ba)\s+/, '')
+  .trim();
+const isSamePerson = (segCore, n) =>
+  segCore === n || segCore.startsWith(n + ' ') || n.startsWith(segCore + ' ');
+
 function compactParticipants(parts) {
   let segs = parts.join('; ').split(';').map((s) => s.trim()).filter(Boolean);
-  const segName = (s) => norm(s.split(',')[0]);
   const ordered = [...groups].sort((a, b) =>
     (b.members || '').split(';').length - (a.members || '').split(';').length);
   for (const g of ordered) {
     if (!g.members || !g.name) continue;
-    const memberNames = g.members.split(';').map((x) => norm(x.split(',')[0])).filter(Boolean);
+    const memberNames = g.members.split(';').map((x) => coreName(x)).filter(Boolean);
     if (!memberNames.length) continue;
-    const present = memberNames.every((n) => segs.some((s) => norm(s).includes(n)));
+    const present = memberNames.every((n) => segs.some((s) => isSamePerson(coreName(s), n)));
     if (!present) continue;
     let inserted = false;
     segs = segs.flatMap((s) => {
-      const isMember = memberNames.some((n) => segName(s) === n || segName(s).startsWith(n));
+      const isMember = memberNames.some((n) => isSamePerson(coreName(s), n));
       if (!isMember) return [s];
       const dot = s.indexOf('. ');
       const tail = dot > -1 ? [s.slice(dot + 1).trim()] : [];
@@ -65,6 +70,12 @@ const cases = [
   //    TỔ HỢP (NFD) khác với nhóm (NFC) -> trước đây trượt khớp
   [['Đ/c Hà Ngọc Sơn; Đ/c Lê Tiến Lam; Đ/c Nguyễn Quang Hải; Đ/c Lương Thị Hoa; Đ/c Bùi Văn Dũng; Đ/c Hoàng Anh Tuấn; Đ/c Đỗ Ngọc Duy; Đ/c Lê Thị Hương; Đ/c Nguyễn Quốc Hải; Đ/c Ngô Thị Hồng Hảo; Đ/c Nguyễn Tuấn Tưởng; Đ/c Lương Tiến Thành; Đ/c Cầm Bá Chái; Đ/c Lê Văn Mạnh; Đ/c Trần Mạnh Long'.normalize('NFD')],
    '-> Toàn thể cơ quan'],
+  // 8. LỆCH TIỀN TỐ: lịch ghi "Đồng chí ..." còn nhóm lưu "Đ/c ..." (4 Trưởng Ban)
+  [['Đồng chí Lương Tiến Thành, TB DT; Đồng chí Hoàng Anh Tuấn, TB KTNS; Đồng chí Ngô Thị Hồng Hảo, TB VHXH; Đồng chí Nguyễn Quốc Hải, TB PC'],
+   '-> Trưởng các Ban HĐND tỉnh'],
+  // 9. KHÔNG tiền tố: lịch chỉ ghi tên trần (3 đ/c Văn phòng)
+  [['Trần Mạnh Long, Chánh Văn phòng; Hà Ngọc Sơn, PCVP; Lê Văn Mạnh, PCVP'],
+   '-> Lãnh đạo Văn phòng'],
 ];
 
 let ok = 0;

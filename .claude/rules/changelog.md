@@ -1,5 +1,13 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Sửa lỗi GỐC không gộp tên nhóm khi in: lệch tiền tố kính ngữ
+- Triệu chứng: in ra vẫn liệt kê đủ tên dù đã định nghĩa nhóm. Nguyên nhân: `present`
+  so khớp bằng `norm(s).includes(memberName)` — đòi cả tiền tố; nhóm lưu "Đ/c X" mà
+  lịch ghi "Đồng chí X" (hoặc tên trần) -> includes=false -> coi như thiếu người -> bỏ gộp
+- Sửa WeekPrintSheet: thêm coreName() (bỏ tiền tố Đ/c|Đồng chí|Ông|Bà) + isSamePerson()
+  dùng CHUNG cho cả bước kiểm đủ người lẫn bước thay thế (trước đây 2 bước lệch nhau)
+- test-compact.mjs: thêm ca 8 (lịch "Đồng chí" vs nhóm "Đ/c") + ca 9 (tên trần) — 9/9 đạt
+
 ## 2026-06-12 — Bản in: gộp cột Thành phần + sửa lỗi nhận diện nhóm
 - Gộp Đơn vị/Lãnh đạo + Thành phần thành 1 cột "Thành phần" (5 cột)
 - compactParticipants: THAY đoạn thành viên khớp nhóm bằng tên nhóm, GIỮ phần sau
