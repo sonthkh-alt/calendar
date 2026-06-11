@@ -30,6 +30,8 @@ jobs:
             echo "::error::Chua cau hinh secret SUPABASE_DB_URL. Vao GitHub repo -> Settings -> Secrets and variables -> Actions -> New repository secret, ten: SUPABASE_DB_URL, gia tri: chuoi ket noi Postgres (Supabase -> Connect -> Session pooler URI)."
             exit 1
           fi
+          # Tu dong cat khoang trang/xuong dong thua khi dan secret
+          DB_URL=$(printf '%s' "$DB_URL" | tr -d '[:space:]')
           # Bao loi ra annotation (da loai bo phan mat khau) de chan doan tu xa
           HOST_PART="${DB_URL#*@}"
           echo "::notice::Ket noi toi may chu: ${HOST_PART%%/*}"
