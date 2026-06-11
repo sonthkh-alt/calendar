@@ -17,6 +17,11 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
   const days = useMemo(() => weekDays(anchor), [anchor]);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const activeVehicles = useMemo(() => (vehicles || []).filter((v) => v.active), [vehicles]);
+  // Lãnh đạo có xe riêng -> mọi chuyến mặc định đi xe đó, không cần điều
+  const dedicatedByLeader = useMemo(() => Object.fromEntries(
+    activeVehicles.filter((v) => v.vehicle_type === 'rieng' && v.assigned_leader_id)
+      .map((v) => [v.assigned_leader_id, v])
+  ), [activeVehicles]);
 
   const ws = toISODate(weekStart(anchor)), we = toISODate(weekEnd(anchor));
   const weekEntries = useMemo(
@@ -24,16 +29,22 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
     [entries, ws, we]
   );
 
-  // Chuyến cần xe: đủ điều kiện (đã duyệt / lịch lãnh đạo) nhưng chưa gán;
-  // làm việc TẠI CƠ QUAN (Trụ sở Đoàn ĐBQH và HĐND tỉnh) thì không cần xe
+  // Chuyến cần xe: đủ điều kiện (đã duyệt / lịch lãnh đạo) nhưng chưa gán.
+  // KHÔNG tính: họp tại cơ quan; lãnh đạo có XE RIÊNG (mặc định xe đó phục vụ).
   const needVehicle = weekEntries
-    .filter((e) => !e.vehicle_id && !isHqLocation(e.location) && entryNeedsVehicleOk(e, leaderById[e.leader_id]))
+    .filter((e) => !e.vehicle_id && !isHqLocation(e.location) && !dedicatedByLeader[e.leader_id] && entryNeedsVehicleOk(e, leaderById[e.leader_id]))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // Kiểm tra trùng: xe đã phục vụ chuyến nào giao thời gian với entry chưa?
+  // Tính cả chuyến MẶC ĐỊNH của lãnh đạo gắn xe riêng (không cần gán tay).
+  const usesVehicle = (e, vehicleId) => {
+    if (e.vehicle_id) return e.vehicle_id === vehicleId;
+    const ded = dedicatedByLeader[e.leader_id];
+    return ded && ded.id === vehicleId && !isHqLocation(e.location);
+  };
   const findConflicts = (vehicleId, entry) =>
     weekEntries.filter((e) =>
-      e.vehicle_id === vehicleId &&
+      usesVehicle(e, vehicleId) &&
       e.id !== entry.id &&
       e.date === entry.date &&
       (!entry.group_id || e.group_id !== entry.group_id) &&
@@ -74,7 +85,7 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
 
   const cellTrips = (vehicleId, dISO, sess) =>
     weekEntries.filter((e) =>
-      e.vehicle_id === vehicleId && e.date === dISO &&
+      usesVehicle(e, vehicleId) && e.date === dISO &&
       (sess === 'sang'
         ? (e.session === 'sang' || e.session === 'ca_ngay' || (e.session === 'gio' && (e.start_time || '08:00') < '12:00'))
         : (e.session === 'chieu' || e.session === 'ca_ngay' || (e.session === 'gio' && (e.start_time || '08:00') >= '12:00')))
@@ -132,10 +143,12 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
                         return trips.map((e) => (
                           <div key={e.id + sess} className="mb-1 rounded-md bg-red-50 border border-red-200 px-1.5 py-1">
                             <p className="text-[10px] font-bold text-red-800">{sess === 'sang' ? 'S' : 'C'}{e.session === 'gio' ? ` · ${fmtTime(e.start_time)}` : ''} · {leaderById[e.leader_id]?.full_name}</p>
-                            <p className="text-[10px] text-slate-600 leading-tight">{e.location || e.content}</p>
-                            <button onClick={() => doAssign(e, null)} disabled={busy === e.id} title="Bỏ gán xe" className="no-print mt-0.5 text-[9px] text-slate-400 hover:text-rose-600 flex items-center gap-0.5">
-                              <CircleSlash className="w-2.5 h-2.5" /> Bỏ gán
-                            </button>
+                            <p className="text-[10px] text-slate-600 leading-tight">{e.location || e.content}{!e.vehicle_id && <i> (xe riêng mặc định)</i>}</p>
+                            {e.vehicle_id && (
+                              <button onClick={() => doAssign(e, null)} disabled={busy === e.id} title="Bỏ gán xe" className="no-print mt-0.5 text-[9px] text-slate-400 hover:text-rose-600 flex items-center gap-0.5">
+                                <CircleSlash className="w-2.5 h-2.5" /> Bỏ gán
+                              </button>
+                            )}
                           </div>
                         ));
                       })}

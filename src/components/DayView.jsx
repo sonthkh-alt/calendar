@@ -49,7 +49,7 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
               key={e.id}
               entry={e}
               leader={l}
-              vehicle={(e.vehicle_id ? vehicleById[e.vehicle_id] : null) || (isHqLocation(e.location) ? null : dedicatedByLeader[e.leader_id]) || null}
+              vehicle={(e.vehicle_id ? vehicleById[e.vehicle_id] : null) || ((l?.leader_type === 'pct' || !isHqLocation(e.location)) ? dedicatedByLeader[e.leader_id] : null) || null}
               canEdit={canEditEntry(profile, e, l)}
               canDuplicate={canCreateFor(profile, l)}
               dupOthers={dupMap?.get(e.id)}

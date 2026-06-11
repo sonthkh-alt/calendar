@@ -74,7 +74,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
         key={e.id}
         entry={e}
         leader={leader}
-        vehicle={(e.vehicle_id ? vehicleById[e.vehicle_id] : null) || (isHqLocation(e.location) ? null : dedicatedByLeader[e.leader_id]) || null}
+        vehicle={(e.vehicle_id ? vehicleById[e.vehicle_id] : null) || ((leader?.leader_type === 'pct' || !isHqLocation(e.location)) ? dedicatedByLeader[e.leader_id] : null) || null}
         canEdit={canEditEntry(profile, e, leader)}
         canDuplicate={canCreateFor(profile, leader)}
         dupOthers={dupMap?.get(e.id)}
@@ -113,7 +113,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     const orig = m.orig;
     const lead = leaderById[orig.leader_id];
     const names = m.leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean);
-    const veh = (m.vehicleIds[0] ? vehicleById[m.vehicleIds[0]] : null) || (isHqLocation(orig.location) ? null : dedicatedByLeader[orig.leader_id]) || null;
+    const veh = (m.vehicleIds[0] ? vehicleById[m.vehicleIds[0]] : null) || ((lead?.leader_type === 'pct' || !isHqLocation(orig.location)) ? dedicatedByLeader[orig.leader_id] : null) || null;
     return (
       <EntryCard
         key={orig.id}

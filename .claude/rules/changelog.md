@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Xe riêng PCT mặc định tuyệt đối
+- Lịch PCT luôn hiện lái xe riêng (kể cả họp tại trụ sở); lịch PCT vốn không cần duyệt
+- VehicleBoard: lãnh đạo có xe riêng -> chuyến KHÔNG vào "Chuyến cần xe"; dòng xe riêng
+  hiển thị cả chuyến mặc định "(xe riêng mặc định)" không có nút bỏ gán;
+  usesVehicle/findConflicts tính cả chuyến mặc định khi cảnh báo trùng giờ
+
 ## 2026-06-12 — Xử lý nhanh trong hộp chi tiết lịch
 - EntryDetail thêm khu "Xử lý nhanh": Phê duyệt / Từ chối (canReview + status cho_duyet)
   và chọn xe tại chỗ (canAssignVehicle, gợi ý xe riêng đầu, cảnh báo trùng giờ, bỏ gán)

@@ -59,7 +59,9 @@ export default function WeekPrintSheet({ anchor, entries, leaders, vehicles }) {
   const driverLabel = (m) => {
     const vehs = m._vehIds.length
       ? m._vehIds.map((id) => vehicleById[id]).filter(Boolean)
-      : (isHqLocation(m.location) ? [] : m._leaderIds.map((id) => dedicatedByLeader[id]).filter(Boolean));
+      : m._leaderIds
+          .filter((id) => leaderById[id]?.leader_type === 'pct' || !isHqLocation(m.location))
+          .map((id) => dedicatedByLeader[id]).filter(Boolean);
     return [...new Map(vehs.map((v) => [v.id, v])).values()]
       .map((v) => [v.driver_name, v.plate].filter(Boolean).join(' · ')).join('; ');
   };
