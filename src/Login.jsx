@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Mail, LogIn, CheckCircle2, AlertTriangle, Lock, KeyRound } from 'lucide-react';
-import { signInWithOtp, signInWithPassword } from './lib/auth';
+import { Mail, LogIn, CheckCircle2, AlertTriangle, Lock, KeyRound, Eye } from 'lucide-react';
+import { signInWithOtp, signInWithPassword, GUEST } from './lib/auth';
 import { APP_NAME, UNIT_NAME } from './lib/constants';
 
 // Theme màn đăng nhập (tông cổ điển — đỏ/vàng).
@@ -18,10 +18,21 @@ const t = {
 
 export default function Login() {
   const [mode, setMode] = useState('password'); // password | link
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(GUEST.email);
+  const [password, setPassword] = useState(GUEST.password);
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
   const [msg, setMsg] = useState('');
+
+  // Vào nhanh bằng tài khoản khách (chỉ xem)
+  const guestLogin = async () => {
+    setEmail(GUEST.email); setPassword(GUEST.password);
+    setStatus('sending'); setMsg('');
+    const { error } = await signInWithPassword(GUEST.email, GUEST.password);
+    if (error) {
+      setStatus('error');
+      setMsg('Tài khoản khách chưa được khởi tạo trên máy chủ. Vui lòng liên hệ quản trị.');
+    }
+  };
 
   const submitPassword = async (e) => {
     e.preventDefault();
@@ -111,6 +122,13 @@ export default function Login() {
               {status === 'error' && (
                 <p className="text-xs text-rose-600 flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /> {msg}</p>
               )}
+              <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3">
+                <p className="text-[12px] font-bold text-amber-800 flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" /> Tài khoản khách (chỉ xem)</p>
+                <p className="text-[12px] text-amber-800/90 mt-1">Email: <b>{GUEST.email}</b> · Mật khẩu: <b>{GUEST.password}</b></p>
+                <button type="button" onClick={guestLogin} disabled={status === 'sending'} className="mt-2 w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-[13px] font-semibold py-2 rounded-lg transition">
+                  <Eye className="w-3.5 h-3.5" /> Vào xem ngay (chỉ xem)
+                </button>
+              </div>
               <button type="submit" disabled={status === 'sending'} className={`w-full flex items-center justify-center gap-2 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl shadow-lg transition ${t.btn}`}>
                 <LogIn className="w-4 h-4" /> {status === 'sending' ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </button>

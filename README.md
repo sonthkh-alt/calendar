@@ -24,6 +24,13 @@ npm run dev   # mở http://localhost:5173
 2. Mở email, bấm liên kết → hệ thống yêu cầu nhập Họ tên, Chức vụ và **tạo mật khẩu**.
 3. Các lần sau đăng nhập bằng email + mật khẩu.
 
+### 3b. Tạo tài khoản khách (chỉ xem) — hiện sẵn trên trang đăng nhập
+Trang đăng nhập có ô "Tài khoản khách (chỉ xem)" với nút **Vào xem ngay**.
+Để nút này hoạt động, tạo tài khoản 1 lần trong Supabase:
+1. Supabase Dashboard → **Authentication → Users → Add user → Create new user**
+2. Email: `user@thanhhoa.gov.vn` · Password: `password` · BẬT **Auto Confirm User**
+3. Xong — tài khoản tự có vai trò *Người xem* (chỉ xem lịch đã duyệt, không sửa được gì).
+
 ### 4. Thiết lập ban đầu (tab Quản trị)
 - **Lãnh đạo**: sửa tên thật của 2 PCT, 12 lãnh đạo Ban (seed chỉ là tên mẫu).
 - **Xe công vụ**: sửa biển số, tên + SĐT lái xe thật.

@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Tài khoản khách (chỉ xem) trên trang đăng nhập
+- Ô vàng + nút "Vào xem ngay": user@thanhhoa.gov.vn / password (pattern HDNDKPI)
+- Là tài khoản Supabase THẬT (role nguoi_xem) vì RLS yêu cầu đăng nhập — tạo 1 lần
+  trong Dashboard -> Authentication -> Add user (Auto Confirm); xem README mục 3b
+- Khách bỏ qua màn bắt tạo mật khẩu (isGuestEmail) và không có nút đổi mật khẩu
+
 ## 2026-06-12 — Thêm cột Đoàn ĐBQH tỉnh + dữ liệu lịch thật tuần 24
 - leader_type mới 'doan': đ/c Lương Thị Hoa (TUV, Phó Trưởng Đoàn), đ/c Bùi Văn Dũng (ĐBQH chuyên trách)
 - cb_tonghop nhập được lịch pct + doan (auto da_duyet); cảnh báo trùng + điều xe áp dụng cả doan

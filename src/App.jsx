@@ -6,7 +6,7 @@ import {
 import Login from './Login';
 import SetPassword from './SetPassword';
 import { supabase } from './lib/supabase';
-import { getSession, onAuthChange, signOut, getMyProfile } from './lib/auth';
+import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, deleteEntry } from './lib/api';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES } from './lib/constants';
 import { toISODate, weekStart, weekEnd, startOfMonth, endOfMonth } from './lib/dates';
@@ -123,7 +123,7 @@ export default function App() {
 
   if (!session) return <Login />;
 
-  if (!session.user?.user_metadata?.pw_set) {
+  if (!session.user?.user_metadata?.pw_set && !isGuestEmail(session.user?.email)) {
     return <SetPassword unit={UNIT_NAME} email={session.user?.email} onDone={() => getMyProfile().then((p) => p && setProfile((prev) => ({ ...prev, ...p })))} />;
   }
 
@@ -163,7 +163,9 @@ export default function App() {
               <p className="text-[13px] font-bold leading-tight">{profile.full_name || profile.email}</p>
               <p className="text-[11px] text-amber-200">{ROLES[profile.role]}</p>
             </div>
-            <button onClick={() => setShowChangePw(true)} title="Đổi mật khẩu" className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition"><KeyRound className="w-4 h-4" /></button>
+            {!isGuestEmail(profile.email) && (
+              <button onClick={() => setShowChangePw(true)} title="Đổi mật khẩu" className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition"><KeyRound className="w-4 h-4" /></button>
+            )}
             <button onClick={signOut} title="Đăng xuất" className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition"><LogOut className="w-4 h-4" /></button>
           </div>
           <button onClick={signOut} className="sm:hidden p-2 rounded-lg bg-white/10"><LogOut className="w-4 h-4" /></button>

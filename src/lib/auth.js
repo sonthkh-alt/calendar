@@ -1,5 +1,10 @@
 import { supabase } from './supabase';
 
+// Tài khoản KHÁCH (chỉ xem) — tài khoản Supabase thật với vai trò 'nguoi_xem'.
+// Tạo 1 lần trong Supabase Dashboard -> Authentication -> Add user (Auto Confirm).
+export const GUEST = { email: 'user@thanhhoa.gov.vn', password: 'password' };
+export const isGuestEmail = (email) => (email || '').trim().toLowerCase() === GUEST.email;
+
 // Lấy phiên đăng nhập hiện tại (null nếu chưa đăng nhập / chưa cấu hình máy chủ)
 export async function getSession() {
   if (!supabase) return null;
