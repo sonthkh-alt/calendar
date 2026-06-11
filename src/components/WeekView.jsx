@@ -88,6 +88,48 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
   const ws = weekStart(anchor), we = weekEnd(anchor);
   const allUnitLeaderIds = units.flatMap((u) => u.leaderIds);
 
+  // Chế độ GỌN: gộp các mục giống nhau (cùng nội dung + buổi/giờ + địa điểm,
+  // khác lãnh đạo/thành phần) thành MỘT thẻ — lãnh đạo và thành phần nối lại.
+  const mergeEntries = (list) => {
+    const map = new Map();
+    const out = [];
+    for (const e of list) {
+      const key = `${e.content}|${e.session}|${e.start_time || ''}|${(e.location || '').trim().toLowerCase()}`;
+      const m = map.get(key);
+      if (!m) {
+        const item = { orig: e, leaderIds: [e.leader_id], parts: e.participants ? [e.participants] : [], vehicleIds: e.vehicle_id ? [e.vehicle_id] : [] };
+        map.set(key, item); out.push(item);
+      } else {
+        if (!m.leaderIds.includes(e.leader_id)) m.leaderIds.push(e.leader_id);
+        if (e.participants && !m.parts.includes(e.participants)) m.parts.push(e.participants);
+        if (e.vehicle_id && !m.vehicleIds.includes(e.vehicle_id)) m.vehicleIds.push(e.vehicle_id);
+      }
+    }
+    return out;
+  };
+
+  const renderMergedCard = (m) => {
+    const orig = m.orig;
+    const lead = leaderById[orig.leader_id];
+    const names = m.leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean);
+    const veh = (m.vehicleIds[0] ? vehicleById[m.vehicleIds[0]] : null) || dedicatedByLeader[orig.leader_id] || null;
+    return (
+      <EntryCard
+        key={orig.id}
+        entry={{ ...orig, participants: m.parts.join('; ') }}
+        leader={lead ? { ...lead, full_name: names.join('; ') } : null}
+        vehicle={veh}
+        canEdit={canEditEntry(profile, orig, lead)}
+        canDuplicate={canCreateFor(profile, lead)}
+        dupOthers={dupMap?.get(orig.id)}
+        onEdit={() => onEdit?.(orig)}
+        onDelete={() => onDelete?.(orig)}
+        onDuplicate={() => onDuplicate?.(orig)}
+        onView={() => onView?.(orig)}
+      />
+    );
+  };
+
   return (
     <div className="print-root">
       {/* Tiêu đề khi in */}
@@ -184,7 +226,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                 </div>
                 <div className="p-2.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {dayEntries.length === 0 && <p className="text-[12px] text-slate-400 italic col-span-full">Không có lịch.</p>}
-                  {dayEntries.map(renderCard)}
+                  {mergeEntries(dayEntries).map(renderMergedCard)}
                 </div>
               </div>
             );

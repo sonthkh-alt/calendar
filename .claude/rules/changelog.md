@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Chế độ Gọn gộp mục trùng + in A4 ngang chuẩn
+- WeekView Gọn: mergeEntries gộp mục cùng nội dung+buổi/giờ+địa điểm thành 1 thẻ
+  (lãnh đạo và thành phần nối '; '); Sửa/Xóa/Chi tiết thao tác trên mục gốc đầu tiên
+- Print CSS: bảng width 100% table-layout fixed font 9.5px vừa A4 ngang; thead lặp lại
+  khi sang trang (table-header-group); không cắt đôi hàng; bỏ line-clamp; đen trắng toàn bộ
+
 ## 2026-06-12 — Trùng địa điểm quét CẢ NĂM + chi tiết ngày; mở quyền xem
 - App nạp entries cả năm (anchor year); dupMap: id -> [{date, name}] các mục trùng
 - Hiển thị rõ "TRÙNG ĐỊA ĐIỂM với: 15/06 (Ban X); ..." ở ô lịch / chi tiết / Chờ duyệt

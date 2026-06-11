@@ -62,7 +62,7 @@ body {
 
 /* ===== In ấn: bảng lịch tuần / lịch điều xe kiểu công văn ===== */
 @media print {
-  @page { size: A4 landscape; margin: 10mm; }
+  @page { size: A4 landscape; margin: 8mm; }
   body { background: #fff !important; }
   /* Ẩn mọi thứ ngoài vùng in */
   .no-print { display: none !important; }
@@ -73,8 +73,30 @@ body {
     background: #fff; color: #000;
     font-family: 'Times New Roman', Times, serif;
   }
-  .print-root table { width: 100%; border-collapse: collapse; }
-  .print-root th, .print-root td { border: 1px solid #000 !important; padding: 4px 6px; background: #fff !important; color: #000 !important; }
+  /* Bảng vừa khít chiều ngang A4: bỏ cuộn ngang, bỏ ép độ rộng tối thiểu */
+  .print-root .overflow-x-auto { overflow: visible !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; }
+  .print-root table {
+    width: 100% !important; min-width: 0 !important;
+    border-collapse: collapse; table-layout: fixed;
+    font-size: 9.5px; line-height: 1.35;
+  }
+  .print-root th, .print-root td {
+    border: 0.5pt solid #000 !important; padding: 3px 4px;
+    background: #fff !important; color: #000 !important;
+    word-wrap: break-word; overflow-wrap: break-word; vertical-align: top;
+  }
+  /* Sang trang: lặp lại hàng tiêu đề của bảng, không cắt đôi một hàng */
+  .print-root thead { display: table-header-group; }
+  .print-root tbody tr { page-break-inside: avoid; break-inside: avoid; }
+  /* Hiện đầy đủ chữ — bỏ mọi giới hạn số dòng khi in */
+  .print-root .line-clamp-2, .print-root .line-clamp-3 {
+    display: block !important; -webkit-line-clamp: unset !important;
+    -webkit-box-orient: unset !important; overflow: visible !important;
+  }
+  .print-root .truncate { overflow: visible !important; white-space: normal !important; }
+  /* Ô lịch trong bảng: bỏ màu nền/viền màu, giữ chữ đen trắng gọn gàng */
+  .print-root [class*='rounded-lg'] { border-radius: 0 !important; }
+  .print-root td * { background: transparent !important; color: #000 !important; border-color: #000 !important; }
   .print-root * { box-shadow: none !important; text-shadow: none !important; }
 }
 .print-header { display: none; }
