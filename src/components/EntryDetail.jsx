@@ -165,9 +165,6 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
             <div>
               <p className={lab}>Lãnh đạo / Đơn vị</p>
               <p className={val}>{entry.group_label || leaderNames.join('; ') || unitLabels.join(' · ') || '—'}</p>
-              {entry.group_label && leaderNames.length > 0 && (
-                <p className="text-[12px] text-slate-500 mt-0.5">Gồm: {leaderNames.join('; ')}</p>
-              )}
             </div>
           </div>
 

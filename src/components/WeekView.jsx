@@ -117,6 +117,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
         onDuplicate={() => onDuplicate?.(orig)}
         onView={() => onView?.(orig)}
         compact={compact}
+        brief
       />
     );
   };

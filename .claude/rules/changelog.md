@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Tinh gọn thẻ lịch tuần + bỏ dòng "Gồm:" trong chi tiết
+- EntryCard: thêm prop brief -> thẻ lịch tuần BỎ dòng TP và Lái xe, in ĐẬM + rõ Giờ
+  (icon đỏ, font-bold). WeekView truyền brief; DayView vẫn hiện đầy đủ
+- EntryDetail: bỏ dòng "Gồm: <danh sách lãnh đạo>" dưới Lãnh đạo/Đơn vị (Thành phần
+  bên dưới đã liệt kê đủ)
+
 ## 2026-06-12 — Sửa cảnh báo trùng địa điểm SAI với sự kiện nhiều lãnh đạo
 - Lỗi: 1 sự kiện có nhiều lãnh đạo Ban -> nhiều dòng cùng địa điểm -> tự cảnh báo
   "TRÙNG ĐỊA ĐIỂM" lẫn nhau (dù là cùng một sự kiện)

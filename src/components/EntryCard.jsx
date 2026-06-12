@@ -9,7 +9,7 @@ import { fmtTime, fmtDM, parseISO } from '../lib/dates';
  * `vehicle` do cha truyền vào: xe đã gán, hoặc xe riêng của lãnh đạo (PCT /
  * Phó Trưởng Đoàn) nếu chưa gán. Bấm vào ô để mở chi tiết đầy đủ.
  */
-export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, dupOthers, onEdit, onDelete, onDuplicate, onView, compact }) {
+export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, dupOthers, onEdit, onDelete, onDuplicate, onView, compact, brief }) {
   const dupWarn = dupOthers?.length > 0;
   const dupDetail = dupWarn
     ? dupOthers.map((o) => `${fmtDM(parseISO(o.date))} (${o.name})`).join(', ')
@@ -65,15 +65,19 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
           </p>
         ) : (
           <>
-            <p className="flex items-center gap-1"><Clock className="w-3 h-3 shrink-0 text-slate-400" /> {timeLabel}</p>
+            <p className="flex items-center gap-1 text-[12px] font-bold text-slate-800"><Clock className="w-3.5 h-3.5 shrink-0 text-red-600" /> {timeLabel}</p>
             <p className="flex items-start gap-1"><MapPin className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" /> <span>{entry.location || '—'}</span></p>
-            <p className="flex items-start gap-1" title={entry.participants || ''}>
-              <Users className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" />
-              <span className={compact ? 'line-clamp-3' : ''}><b className="font-semibold">TP:</b> {entry.participants || '—'}</span>
-            </p>
-            <p className="flex items-center gap-1 font-medium text-slate-700">
-              <Car className="w-3 h-3 shrink-0 text-slate-500" /> <span><b className="font-semibold">Lái xe:</b> {driverLabel}</span>
-            </p>
+            {!brief && (
+              <>
+                <p className="flex items-start gap-1" title={entry.participants || ''}>
+                  <Users className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" />
+                  <span className={compact ? 'line-clamp-3' : ''}><b className="font-semibold">TP:</b> {entry.participants || '—'}</span>
+                </p>
+                <p className="flex items-center gap-1 font-medium text-slate-700">
+                  <Car className="w-3 h-3 shrink-0 text-slate-500" /> <span><b className="font-semibold">Lái xe:</b> {driverLabel}</span>
+                </p>
+              </>
+            )}
           </>
         )}
         {entry.review_note && (
