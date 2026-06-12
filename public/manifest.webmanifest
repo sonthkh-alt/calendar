@@ -1,0 +1,20 @@
+{
+  "name": "Lịch công tác tuần — VP Đoàn ĐBQH và HĐND tỉnh Thanh Hóa",
+  "short_name": "Lịch công tác",
+  "description": "Quản lý lịch công tác tuần của lãnh đạo HĐND tỉnh, Đoàn ĐBQH và các Ban.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "vi",
+  "background_color": "#ffffff",
+  "theme_color": "#7f1d1d",
+  "icons": [
+    {
+      "src": "/quoc-huy.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

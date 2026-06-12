@@ -1,0 +1,56 @@
+# Tự động SAO LƯU dữ liệu Supabase hằng ngày -> lưu thành artifact của GitHub.
+# Dùng lại secret SUPABASE_DB_URL (Session pooler URI) như workflow migrate.
+# Xuất mỗi bảng ra JSON bằng psql (không dùng pg_dump để tránh lệch phiên bản).
+# CHỈ ĐỌC dữ liệu (select) — tuyệt đối không ghi/xóa.
+# Tải bản sao lưu: GitHub repo -> Actions -> chọn lần chạy -> mục Artifacts.
+name: Sao luu du lieu (Supabase)
+
+on:
+  schedule:
+    - cron: '0 22 * * *'   # 22:00 UTC hằng ngày = 05:00 giờ Việt Nam hôm sau
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Xuat tung bang ra JSON
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "::error::Chua cau hinh secret SUPABASE_DB_URL (xem workflow db-migrate)."
+            exit 1
+          fi
+          DB_URL=$(printf '%s' "$DB_URL" | tr -d '[:space:]')
+          STAMP=$(date -u +%Y%m%d-%H%M)
+          OUT="backup/$STAMP"
+          mkdir -p "$OUT"
+          TABLES="bans leaders vehicles participant_groups schedule_entries profiles"
+          for t in $TABLES; do
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -t -A \
+              -c "select coalesce(json_agg(row_to_json(x)), '[]'::json) from public.$t x" \
+              > "$OUT/$t.json"
+            ROWS=$(psql "$DB_URL" -t -A -c "select count(*) from public.$t")
+            echo "Da sao luu $t: $ROWS dong"
+          done
+          # Tệp gộp đánh dấu (đọc lại được bằng tab "Phục hồi" của app nếu cần)
+          {
+            echo "{\"app\":\"lichcongtac-hdndth\",\"version\":1,\"exported_at\":\"$(date -u +%FT%TZ)\",\"data\":{"
+            FIRST=1
+            for t in $TABLES; do
+              [ $FIRST -eq 1 ] || echo ","
+              FIRST=0
+              printf '"%s":' "$t"
+              cat "$OUT/$t.json"
+            done
+            echo "}}"
+          } > "$OUT/backup-full.json"
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+
+      - name: Tai len artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ env.STAMP }}
+          path: backup/
+          retention-days: 90

@@ -11,3 +11,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+
+// PWA: đăng ký service worker (cài lên màn hình + xem offline)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* bỏ qua nếu không hỗ trợ */ });
+  });
+}
