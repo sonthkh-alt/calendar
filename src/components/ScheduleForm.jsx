@@ -44,14 +44,18 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     () => (pGroups || []).filter((g) => (g.leader_ids || []).some((id) => allowedIds.has(id))),
     [pGroups, allowedIds]
   );
+  // Chọn nhóm ở trường Lãnh đạo: chọn các đơn vị + đặt nhãn nhóm + ĐIỀN THÀNH PHẦN
+  // bằng đúng danh sách thành viên của nhóm (giống hệt khi tick nhóm ở ô Thành phần)
   const toggleLeaderGroup = (g) => {
     const ids = (g.leader_ids || []).filter((id) => allowedIds.has(id));
     if (groupLabel === g.name) {
       setLeaderIds((prev) => prev.filter((id) => !ids.includes(id)));
       setGroupLabel('');
+      removeMembers(g.members);
     } else {
       setLeaderIds((prev) => [...new Set([...prev, ...ids])]);
       setGroupLabel(g.name);
+      addMembers(g.members);
     }
   };
 
@@ -75,20 +79,22 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
 
   // Tick nhóm thành phần: chèn/gỡ chuỗi thành viên của nhóm vào ô Thành phần
   const groupChecked = (g) => participants.includes(g.members);
-  const toggleGroup = (g) => {
+  const addMembers = (members) =>
     setParticipants((prev) => {
-      if (prev.includes(g.members)) {
-        return prev
-          .replace(g.members, '')
-          .replace(/;\s*;/g, ';')
-          .replace(/^\s*;\s*|\s*;\s*$/g, '')
-          .trim();
-      }
+      if (!members || prev.includes(members)) return prev;
       const base = prev.trim();
-      if (!base) return g.members;
-      return base.replace(/;?\s*$/, '') + '; ' + g.members;
+      return base ? base.replace(/;?\s*$/, '') + '; ' + members : members;
     });
-  };
+  const removeMembers = (members) =>
+    setParticipants((prev) => {
+      if (!members) return prev;
+      return prev
+        .replace(members, '')
+        .replace(/;\s*;/g, ';')
+        .replace(/^\s*;\s*|\s*;\s*$/g, '')
+        .trim();
+    });
+  const toggleGroup = (g) => (participants.includes(g.members) ? removeMembers(g.members) : addMembers(g.members));
 
   const submit = async (e) => {
     e.preventDefault();
