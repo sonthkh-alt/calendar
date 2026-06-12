@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { STATUS, leaderInUnit } from '../lib/constants';
 import { canSeeEntry } from '../lib/permissions';
-import { monthGrid, toISODate, isSameMonth } from '../lib/dates';
+import { monthGrid, toISODate, isSameMonth, solarToLunar } from '../lib/dates';
 
 const DOW = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
 
@@ -49,32 +49,30 @@ export default function MonthView({ profile, anchor, entries, leaders, filters, 
               if (seen.has(k)) return false;
               seen.add(k); return true;
             });
-            const counts = {};
-            for (const e of list) counts[e.status] = (counts[e.status] || 0) + 1;
+            // Số âm lịch (mùng 1 hiện thêm tháng âm): màu xanh nhẹ
+            const lunar = solarToLunar(d);
+            const lunarLabel = lunar.day === 1 ? `${lunar.day}/${lunar.month}` : `${lunar.day}`;
+            const MAX = 8;
             return (
               <button
                 key={dISO}
                 onClick={() => onPickDay?.(d)}
-                className={`min-h-[92px] p-1.5 text-left border-r border-slate-100 last:border-r-0 transition hover:bg-red-50/60
+                className={`min-h-[150px] p-1.5 text-left align-top border-r border-slate-100 last:border-r-0 transition hover:bg-red-50/60
                   ${inMonth ? 'bg-white' : 'bg-slate-50/70'} ${isToday ? 'ring-2 ring-inset ring-amber-300 bg-amber-50/50' : ''}`}
               >
-                <p className={`text-[12px] font-bold ${inMonth ? 'text-slate-700' : 'text-slate-300'} ${isToday ? 'text-amber-700' : ''}`}>{d.getDate()}</p>
+                <div className="flex items-baseline justify-between">
+                  <span className={`text-[13px] font-bold ${inMonth ? 'text-slate-700' : 'text-slate-300'} ${isToday ? 'text-amber-700' : ''}`}>{d.getDate()}</span>
+                  <span className={`text-[10px] font-semibold ${inMonth ? 'text-sky-500' : 'text-sky-300'}`} title="Âm lịch">{lunarLabel}</span>
+                </div>
                 {list.length > 0 && (
                   <div className="mt-1 space-y-0.5">
-                    <p className="text-[11px] font-semibold text-slate-600">{list.length} mục</p>
-                    <div className="flex flex-wrap gap-0.5">
-                      {Object.entries(counts).map(([st, n]) => (
-                        <span key={st} title={`${STATUS[st]?.label}: ${n}`} className="flex items-center gap-0.5">
-                          {Array.from({ length: Math.min(n, 4) }, (_, i) => (
-                            <span key={i} className={`w-1.5 h-1.5 rounded-full ${STATUS[st]?.dot}`} />
-                          ))}
-                        </span>
-                      ))}
-                    </div>
-                    {list.slice(0, 2).map((e) => (
-                      <p key={e.id} className="text-[10px] text-slate-500 truncate leading-tight">• {e.content}</p>
+                    {list.slice(0, MAX).map((e) => (
+                      <p key={e.id} className="flex items-center gap-1 text-[10px] text-slate-600 leading-tight">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS[e.status]?.dot}`} />
+                        <span className="truncate min-w-0">{e.content}</span>
+                      </p>
                     ))}
-                    {list.length > 2 && <p className="text-[10px] text-slate-400">+{list.length - 2} mục khác...</p>}
+                    {list.length > MAX && <p className="text-[10px] text-slate-400 leading-tight pl-2.5">…</p>}
                   </div>
                 )}
               </button>
