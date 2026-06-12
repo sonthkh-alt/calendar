@@ -36,15 +36,14 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
         </p>
       )}
       <div className="flex items-start justify-between gap-1">
-        <div className="flex items-start gap-1.5 min-w-0">
-          {/* Khung GIỜ nổi bật (to ~1.4 lần, in đậm) đứng TRƯỚC nội dung, cùng dòng */}
-          <span className="inline-flex items-center gap-1 shrink-0 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[17px] font-bold leading-none text-red-700">
-            <Clock className="w-[18px] h-[18px] shrink-0" /> {timeLabel}
+        {/* Khung GIỜ nổi bật (to ~1.15 lần, in đậm) đứng TRƯỚC nội dung; nội dung
+            chảy inline nên khi xuống dòng sẽ canh về cùng đầu hàng với icon đồng hồ. */}
+        <p className="text-[12px] font-semibold leading-snug text-slate-800 min-w-0">
+          <span className="inline-flex items-center gap-1 align-middle mr-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[14px] font-bold leading-none text-red-700">
+            <Clock className="w-4 h-4 shrink-0" /> {timeLabel}
           </span>
-          <p className={`text-[12px] font-semibold leading-snug text-slate-800 pt-0.5 ${entry.status === 'tu_choi' ? 'line-through' : ''}`}>
-            {entry.content}
-          </p>
-        </div>
+          <span className={entry.status === 'tu_choi' ? 'line-through' : ''}>{entry.content}</span>
+        </p>
         {(canEdit || canDuplicate) && (
           <span className="hidden group-hover:flex items-center gap-0.5 shrink-0 no-print">
             {canDuplicate && (
