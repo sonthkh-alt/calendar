@@ -111,6 +111,23 @@ export default function App() {
   useEffect(() => { if (session && profile) loadCatalogs(); }, [session, profile, loadCatalogs]);
   useEffect(() => { if (session && profile) loadEntries(); }, [session, profile, loadEntries]);
 
+  // Realtime: tự cập nhật khi NGƯỜI KHÁC thay đổi lịch / danh mục (không cần tải lại trang).
+  // Gom sự kiện trong 400ms để 1 thao tác nhiều dòng (vd tạo cả nhóm) chỉ refetch 1 lần.
+  useEffect(() => {
+    if (!supabase || !session || !profile) return undefined;
+    let tE, tC;
+    const bumpEntries = () => { clearTimeout(tE); tE = setTimeout(() => loadEntries(), 400); };
+    const bumpCatalogs = () => { clearTimeout(tC); tC = setTimeout(() => loadCatalogs(), 400); };
+    const ch = supabase
+      .channel('rt-lichcongtac')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_entries' }, bumpEntries)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leaders' }, bumpCatalogs)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicles' }, bumpCatalogs)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participant_groups' }, bumpCatalogs)
+      .subscribe();
+    return () => { clearTimeout(tE); clearTimeout(tC); supabase.removeChannel(ch); };
+  }, [session, profile, loadEntries, loadCatalogs]);
+
   const refresh = useCallback(() => { loadEntries(); }, [loadEntries]);
 
   const onAdd = (pf) => { setEditing(null); setDuplicating(null); setPrefill(pf || null); setFormOpen(true); };

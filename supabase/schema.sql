@@ -141,6 +141,26 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
+-- 7) REALTIME: đưa các bảng vào publication supabase_realtime để client
+--    nhận sự kiện thay đổi và TỰ cập nhật lịch (không cần tải lại trang).
+--    Idempotent: chỉ thêm bảng khi chưa có trong publication.
+do $$
+declare t text;
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+  foreach t in array array['schedule_entries','leaders','vehicles','participant_groups','bans'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------------
 -- NÂNG CẤP SAU (TÙY CHỌN): siết RLS theo vai trò thay vì kiểm tra trong app.
 -- Ví dụ chỉ cho phép sửa schedule_entries khi vai trò phù hợp:
 --   create policy "entries_update_by_role" on schedule_entries for update
