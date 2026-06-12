@@ -4,7 +4,8 @@
 > Mở thư mục dự án bằng Claude Code rồi bảo: *"đọc BAN-GIAO.md và tiếp tục"*.
 > (CLAUDE.md đã tự nạp mỗi phiên; file này bổ sung phần "khôi phục môi trường".)
 
-Cập nhật lần cuối: 12/06/2026 — commit mới nhất trên `main`: **khung hình theo thiết bị**.
+Cập nhật lần cuối: 12/06/2026 — commit mới nhất trên `main`: **Sửa lịch cho phép sửa cả danh sách "Lãnh đạo"** (`fc74131`).
+Toàn bộ đã `git push` lên `main`, cây làm việc sạch. Mở máy ở nhà là `git pull` rồi làm tiếp.
 
 ---
 
@@ -66,6 +67,11 @@ Trước mỗi commit: `npm run build` phải **xanh**, `npm run lint` **không 
 - **Tài khoản khách (chỉ xem):** `user@thanhhoa.gov.vn` / `password`.
 - **5 tài khoản test theo vai trò:** `hainq/lamlt/thttdn/hctcqt/ban @thanhhoa.gov.vn`,
   mật khẩu lần lượt `1`–`5` (xem `supabase/migrations/2026-06-12-tao-tai-khoan.sql`).
+- **Luồng Đoàn ĐBQH** (`supabase/migrations/2026-06-12-tai-khoan-ctqh-doan.sql`):
+  `hoalt@thanhhoa.gov.vn` / `6` — đ/c Lương Thị Hoa, vai trò `pho_truong_doan` (DUYỆT lịch Đoàn);
+  `ctqh@thanhhoa.gov.vn` / `7` — vai trò `cb_ctqh` (NHẬP lịch Đoàn → chờ duyệt).
+- **Lưu ý token:** mọi migration tạo user phải set cột token = `''` (NULL gây lỗi
+  "Database error querying schema" khi đăng nhập — đã từng vấp).
 - **GitHub Actions secret `SUPABASE_DB_URL`:** Session pooler URI (vùng Seoul),
   ký tự `@` trong mật khẩu phải đổi thành `%40`. Dùng để tự chạy `schema.sql` khi push.
 
@@ -90,11 +96,32 @@ Toàn bộ nhật ký chi tiết: **`.claude/rules/changelog.md`**. Tóm tắt c
 - **Quản trị:** tài khoản / lãnh đạo / xe / nhóm thành phần / Sao lưu–Phục hồi.
 - **Tự động hóa CSDL:** GitHub Actions chạy `schema.sql` idempotent khi push (đã xác minh chạy thật).
 
+### Bổ sung phiên 12/06 (mới nhất — chi tiết trong changelog)
+- **Chuẩn hóa dữ liệu:** bỏ "Đ/c" trong họ tên; tên 4 Ban đầy đủ; STT **tự đánh 1..N** + nút ↑↓
+  ở tab Lãnh đạo & Nhóm thành phần. Đổi nhãn cột PCT → **"Lãnh đạo TTr HĐND tỉnh"**.
+- **Làm việc tại cơ quan:** ô tick trong form → không cần duyệt; lịch chỉ hiện Nội dung +
+  dòng đậm "Làm việc tại cơ quan"; Thành phần vẫn lưu & **in được**.
+- **Lãnh đạo HĐND tỉnh + Đoàn ĐBQH:** ô Lái xe luôn để trống (tự bố trí xe riêng).
+- **Chọn nhóm ở trường "Lãnh đạo":** tạo mục cho từng đơn vị, hiển thị theo **tên nhóm**;
+  gộp các mục trùng trong 1 cột thành **1 thẻ**; duyệt/điều chỉnh/xóa/điều xe áp dụng **cả nhóm**.
+- **Duyệt:** cho phép **Điều chỉnh / Từ chối lịch ĐÃ duyệt**; Phó Trưởng Đoàn chỉ duyệt lịch Đoàn.
+- **Sắp xếp** (xem + in): Sáng→Chiều, rồi theo STT nhóm/lãnh đạo. **Ngày nhập dd/mm/yyyy** (component `DateField`).
+- **In:** sửa khoảng trắng lớn (bỏ `break-inside:avoid`), **lề trên/dưới 2cm**.
+- **Sửa lịch:** nay **sửa được cả danh sách "Lãnh đạo"** (đối chiếu theo group_id, giữ id/xe).
+
 ---
 
-## 5. Việc CÒN LẠI / có thể làm tiếp
+## 5. ⚠️ Việc CẦN KIỂM TRA NGAY khi về nhà
+- [ ] **Kiểm tra họ tên lãnh đạo Ban** ở tab Quản trị → Lãnh đạo: trước đây 1 migration ghi đè
+  tên thành viên thành tên Ban (vd "Hoàng Anh Tuấn" → "Ban Kinh tế Ngân sách") mỗi lần deploy.
+  **Đã sửa** (xóa bước đó trong `2026-06-12-chuan-hoa-du-lieu.sql`) nên KHÔNG tái diễn; nhưng nếu
+  còn dòng nào đang bị sai tên thì sửa tay & Lưu **một lần**.
+- [ ] **Đăng nhập thử** `hoalt@`(6) và `ctqh@`(7) sau khi Actions deploy xong (cần migration mới chạy).
+
+## 5b. Việc CÒN LẠI / có thể làm tiếp
 - [ ] **Xuất Word/Excel (G6)** — chưa làm (dự kiến lazy-import `docx` + `xlsx`, mẫu `HDNDKPI/src/lib/exporters.js`).
 - [ ] Cấu hình **Site URL + Redirect URLs** trong Supabase Auth nếu email xác thực còn trỏ về `localhost`.
+- [ ] (Tùy chọn) ApprovalQueue: duyệt 1 dòng = duyệt cả nhóm cho đồng bộ với lịch tuần.
 - [ ] (Ghi thêm yêu cầu mới phát sinh vào đây.)
 
 ---
@@ -107,6 +134,9 @@ Toàn bộ nhật ký chi tiết: **`.claude/rules/changelog.md`**. Tóm tắt c
    Vercel sẽ tự deploy. Đây là quy ước đã thống nhất.
 3. **Build xanh trước commit**; UI luôn **tiếng Việt có dấu UTF-8**; tông màu đỏ/vàng chính quyền.
 4. Cuối commit ghi: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
+5. **GitHub Actions chạy LẠI mọi migration mỗi lần deploy** (không phải 1 lần). Migration
+   phải idempotent VÀ **không ghi đè dữ liệu người dùng đã sửa** (đã từng làm hỏng họ tên).
+   Tránh `update <bảng> set <trường người dùng nhập> = <giá trị suy ra>` không có guard chặt.
 
 ---
 
