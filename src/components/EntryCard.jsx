@@ -1,4 +1,4 @@
-import { MapPin, Users, Clock, Car, Pencil, Trash2, MessageSquareText, UserRound, Copy, AlertTriangle } from 'lucide-react';
+import { MapPin, Users, Clock, Car, Pencil, Trash2, MessageSquareText, UserRound, Copy, AlertTriangle, Building2 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { STATUS, SESSIONS } from '../lib/constants';
 import { fmtTime, fmtDM, parseISO } from '../lib/dates';
@@ -58,15 +58,24 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
         <p className="flex items-start gap-1 font-medium text-red-800">
           <UserRound className="w-3 h-3 shrink-0 mt-0.5" /> <span>{leader?.full_name || '—'}</span>
         </p>
-        <p className="flex items-center gap-1"><Clock className="w-3 h-3 shrink-0 text-slate-400" /> {timeLabel}</p>
-        <p className="flex items-start gap-1"><MapPin className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" /> <span>{entry.location || '—'}</span></p>
-        <p className="flex items-start gap-1" title={entry.participants || ''}>
-          <Users className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" />
-          <span className={compact ? 'line-clamp-3' : ''}><b className="font-semibold">TP:</b> {entry.participants || '—'}</span>
-        </p>
-        <p className="flex items-center gap-1 font-medium text-slate-700">
-          <Car className="w-3 h-3 shrink-0 text-slate-500" /> <span><b className="font-semibold">Lái xe:</b> {driverLabel}</span>
-        </p>
+        {entry.at_office ? (
+          /* Làm việc tại cơ quan: chỉ Nội dung (ở trên) + dòng chữ in đậm nổi bật */
+          <p className="flex items-center gap-1 mt-1 font-bold text-amber-800 bg-amber-100 rounded px-1.5 py-1">
+            <Building2 className="w-3.5 h-3.5 shrink-0" /> <span>Làm việc tại cơ quan</span>
+          </p>
+        ) : (
+          <>
+            <p className="flex items-center gap-1"><Clock className="w-3 h-3 shrink-0 text-slate-400" /> {timeLabel}</p>
+            <p className="flex items-start gap-1"><MapPin className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" /> <span>{entry.location || '—'}</span></p>
+            <p className="flex items-start gap-1" title={entry.participants || ''}>
+              <Users className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" />
+              <span className={compact ? 'line-clamp-3' : ''}><b className="font-semibold">TP:</b> {entry.participants || '—'}</span>
+            </p>
+            <p className="flex items-center gap-1 font-medium text-slate-700">
+              <Car className="w-3 h-3 shrink-0 text-slate-500" /> <span><b className="font-semibold">Lái xe:</b> {driverLabel}</span>
+            </p>
+          </>
+        )}
         {entry.review_note && (
           <p className={`flex items-start gap-1 italic ${s.text}`}><MessageSquareText className="w-3 h-3 shrink-0 mt-0.5" /> {entry.review_note}</p>
         )}

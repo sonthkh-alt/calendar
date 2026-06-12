@@ -30,9 +30,9 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
   );
 
   // Chuyến cần xe: đủ điều kiện (đã duyệt / lịch lãnh đạo) nhưng chưa gán.
-  // KHÔNG tính: họp tại cơ quan; lãnh đạo có XE RIÊNG (mặc định xe đó phục vụ).
+  // KHÔNG tính: làm việc tại cơ quan; họp tại cơ quan; lãnh đạo có XE RIÊNG (mặc định xe đó phục vụ).
   const needVehicle = weekEntries
-    .filter((e) => !e.vehicle_id && !isHqLocation(e.location) && !dedicatedByLeader[e.leader_id] && entryNeedsVehicleOk(e, leaderById[e.leader_id]))
+    .filter((e) => !e.vehicle_id && !e.at_office && !isHqLocation(e.location) && !dedicatedByLeader[e.leader_id] && entryNeedsVehicleOk(e, leaderById[e.leader_id]))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // Kiểm tra trùng: xe đã phục vụ chuyến nào giao thời gian với entry chưa?

@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Cờ "Làm việc tại cơ quan" (at_office)
+- schema.sql: ALTER ADD COLUMN at_office boolean not null default false (idempotent)
+- ScheduleForm: checkbox "Làm việc tại cơ quan"; tick -> ẩn + bỏ bắt buộc Địa điểm/Thành phần,
+  lưu location/participants = null, vào THẲNG da_duyet (không cần phê duyệt mọi vai trò)
+- EntryCard / EntryDetail: at_office -> chỉ hiện Nội dung (+Lãnh đạo) + dòng in đậm nổi bật
+  "Làm việc tại cơ quan" (nền amber), ẩn Thời gian/Địa điểm/Thành phần/Lái xe
+- WeekPrintSheet: cột Địa điểm in đậm "Làm việc tại cơ quan", Thành phần để trống
+- VehicleBoard: loại entry at_office khỏi panel "Chuyến cần xe"
+
 ## 2026-06-12 — Lãnh đạo HĐND tỉnh + Đoàn ĐBQH: ô Lái xe LUÔN để trống
 - Yêu cầu: lịch của pct/doan không hiển thị lái xe (các đ/c tự bố trí xe riêng),
   kể cả khi Văn phòng có gán xe thủ công -> đảo lại quyết định "Xe riêng PCT mặc định"

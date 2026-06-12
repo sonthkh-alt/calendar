@@ -144,43 +144,52 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
             </div>
           </div>
 
-          {/* Thời gian */}
-          <div className={row}>
-            <Clock className={ic} />
-            <div>
-              <p className={lab}>Thời gian</p>
-              <p className={val}>{dayName(d)}, ngày {fmtDMY(d)} · {timeLabel}</p>
+          {entry.at_office ? (
+            /* Làm việc tại cơ quan: chỉ Nội dung + Lãnh đạo + dòng chữ in đậm nổi bật */
+            <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 font-bold text-amber-800">
+              <Building2 className="w-5 h-5 shrink-0" /> Làm việc tại cơ quan
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Thời gian */}
+              <div className={row}>
+                <Clock className={ic} />
+                <div>
+                  <p className={lab}>Thời gian</p>
+                  <p className={val}>{dayName(d)}, ngày {fmtDMY(d)} · {timeLabel}</p>
+                </div>
+              </div>
 
-          {/* Địa điểm */}
-          <div className={row}>
-            <MapPin className={ic} />
-            <div>
-              <p className={lab}>Địa điểm</p>
-              <p className={val}>{entry.location || '—'}</p>
-            </div>
-          </div>
+              {/* Địa điểm */}
+              <div className={row}>
+                <MapPin className={ic} />
+                <div>
+                  <p className={lab}>Địa điểm</p>
+                  <p className={val}>{entry.location || '—'}</p>
+                </div>
+              </div>
 
-          {/* Thành phần (đã gộp) */}
-          <div className={row}>
-            <Users className={ic} />
-            <div>
-              <p className={lab}>Thành phần</p>
-              <p className={val}>{mergedParticipants || '—'}</p>
-            </div>
-          </div>
+              {/* Thành phần (đã gộp) */}
+              <div className={row}>
+                <Users className={ic} />
+                <div>
+                  <p className={lab}>Thành phần</p>
+                  <p className={val}>{mergedParticipants || '—'}</p>
+                </div>
+              </div>
 
-          {/* Lái xe / Xe phục vụ — luôn hiển thị */}
-          <div className={row}>
-            <Car className={ic} />
-            <div>
-              <p className={lab}>Lái xe / Xe phục vụ</p>
-              <p className={val}>{mergedVehicles.length > 0
-                ? mergedVehicles.map((v) => `${[v.driver_name, v.plate].filter(Boolean).join(' · ')}${v.driver_phone ? ` (${v.driver_phone})` : ''}`).join('; ')
-                : '—'}</p>
-            </div>
-          </div>
+              {/* Lái xe / Xe phục vụ */}
+              <div className={row}>
+                <Car className={ic} />
+                <div>
+                  <p className={lab}>Lái xe / Xe phục vụ</p>
+                  <p className={val}>{mergedVehicles.length > 0
+                    ? mergedVehicles.map((v) => `${[v.driver_name, v.plate].filter(Boolean).join(' · ')}${v.driver_phone ? ` (${v.driver_phone})` : ''}`).join('; ')
+                    : '—'}</p>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Ghi chú duyệt */}
           {entry.review_note && (

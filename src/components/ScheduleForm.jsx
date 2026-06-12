@@ -33,6 +33,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const [content, setContent] = useState(src?.content || '');
   const [location, setLocation] = useState(src?.location || '');
   const [participants, setParticipants] = useState(src?.participants || '');
+  const [atOffice, setAtOffice] = useState(src?.at_office || false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
@@ -74,7 +75,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const submit = async (e) => {
     e.preventDefault();
     if (!content.trim()) { setErr('Vui lòng nhập Nội dung công việc.'); return; }
-    if (!location.trim()) { setErr('Vui lòng nhập Địa điểm.'); return; }
+    if (!atOffice && !location.trim()) { setErr('Vui lòng nhập Địa điểm.'); return; }
     if (!editing && leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); return; }
     setSaving(true); setErr('');
 
@@ -83,22 +84,26 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       start_time: session === 'gio' ? startTime : null,
       end_time: session === 'gio' ? endTime : null,
       content: content.trim(),
-      location: location.trim() || null,
-      participants: participants.trim() || null,
+      // "Làm việc tại cơ quan": bỏ trống Địa điểm / Thành phần (chỉ hiện Nội dung + dòng chữ)
+      location: atOffice ? null : (location.trim() || null),
+      participants: atOffice ? null : (participants.trim() || null),
+      at_office: atOffice,
       created_by: profile.id,
     };
 
     let res;
     if (editing) {
-      // Sửa: lịch Ban bị từ chối sửa lại -> quay về chờ duyệt
+      // Sửa: lịch Ban bị từ chối sửa lại -> quay về chờ duyệt (trừ khi là "làm việc tại cơ quan")
       const leader = leaders.find((l) => l.id === editing.leader_id);
       const patch = { ...base };
-      if (editing.status === 'tu_choi') { patch.status = initialStatus(leader); patch.review_note = null; }
+      if (atOffice) { patch.status = 'da_duyet'; patch.review_note = null; }
+      else if (editing.status === 'tu_choi') { patch.status = initialStatus(leader); patch.review_note = null; }
       res = await updateEntry(editing.id, patch);
     } else {
       const pairs = leaderIds.map((leaderId) => ({
         leaderId,
-        status: initialStatus(leaders.find((l) => l.id === leaderId)),
+        // "Làm việc tại cơ quan" -> vào thẳng đã duyệt, không cần thẩm quyền phê duyệt
+        status: atOffice ? 'da_duyet' : initialStatus(leaders.find((l) => l.id === leaderId)),
       }));
       res = await createEntries(base, pairs);
     }
@@ -196,27 +201,42 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
             <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Nội dung <span className="text-rose-600">*</span></label>
             <textarea required rows={2} value={content} onChange={(e) => setContent(e.target.value)} placeholder="VD: Giám sát chuyên đề về đầu tư công tại huyện..." className={`${input} mt-1.5 resize-y`} />
           </div>
-          <div>
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm <span className="text-rose-600">*</span></label>
-            <input type="text" required list="goi-y-dia-diem" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chọn gợi ý hoặc gõ tự do — VD: UBND huyện Thọ Xuân" className={`${input} mt-1.5`} />
-            <datalist id="goi-y-dia-diem">
-              {COMMON_LOCATIONS.map((loc) => <option key={loc} value={loc} />)}
-            </datalist>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Thành phần</label>
-            {(pGroups || []).length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {pGroups.map((g) => (
-                  <label key={g.id} title={g.members} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${groupChecked(g) ? 'bg-red-50 border-red-300 text-red-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-red-200'}`}>
-                    <input type="checkbox" checked={groupChecked(g)} onChange={() => toggleGroup(g)} className="accent-red-700" />
-                    {g.name}
-                  </label>
-                ))}
+
+          {/* Làm việc tại cơ quan */}
+          <label className={`flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer transition ${atOffice ? 'bg-amber-50 border-amber-300' : 'bg-slate-50/60 border-slate-200 hover:border-amber-200'}`}>
+            <input type="checkbox" checked={atOffice} onChange={(e) => setAtOffice(e.target.checked)} className="accent-amber-600 mt-0.5 w-4 h-4" />
+            <span className="text-[13px] text-slate-700">
+              <span className="font-bold text-amber-800">Làm việc tại cơ quan</span>
+              <span className="block text-[12px] text-slate-500 mt-0.5">Không cần phê duyệt; trên lịch chỉ hiển thị Nội dung và dòng chữ in đậm “Làm việc tại cơ quan”.</span>
+            </span>
+          </label>
+
+          {/* Địa điểm + Thành phần — ẩn khi "Làm việc tại cơ quan" */}
+          {!atOffice && (
+            <>
+              <div>
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm <span className="text-rose-600">*</span></label>
+                <input type="text" list="goi-y-dia-diem" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chọn gợi ý hoặc gõ tự do — VD: UBND huyện Thọ Xuân" className={`${input} mt-1.5`} />
+                <datalist id="goi-y-dia-diem">
+                  {COMMON_LOCATIONS.map((loc) => <option key={loc} value={loc} />)}
+                </datalist>
               </div>
-            )}
-            <textarea rows={3} value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="Tick nhóm ở trên hoặc gõ trực tiếp: Đ/c..., chức vụ; Đ/c..., chức vụ (có thể bỏ trống)" className={`${input} mt-1.5 resize-y`} />
-          </div>
+              <div>
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Thành phần</label>
+                {(pGroups || []).length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {pGroups.map((g) => (
+                      <label key={g.id} title={g.members} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${groupChecked(g) ? 'bg-red-50 border-red-300 text-red-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-red-200'}`}>
+                        <input type="checkbox" checked={groupChecked(g)} onChange={() => toggleGroup(g)} className="accent-red-700" />
+                        {g.name}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <textarea rows={3} value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="Tick nhóm ở trên hoặc gõ trực tiếp: Đ/c..., chức vụ; Đ/c..., chức vụ (có thể bỏ trống)" className={`${input} mt-1.5 resize-y`} />
+              </div>
+            </>
+          )}
 
           {/* Cảnh báo trùng lịch (mềm — không chặn) */}
           {conflicts.length > 0 && (

@@ -114,6 +114,11 @@ create index if not exists idx_entries_date on schedule_entries(date);
 create index if not exists idx_entries_leader_date on schedule_entries(leader_id, date);
 create index if not exists idx_entries_vehicle_date on schedule_entries(vehicle_id, date) where vehicle_id is not null;
 
+-- Nâng cấp: cờ "Làm việc tại cơ quan" — mục chỉ hiển thị Nội dung + dòng chữ in đậm
+-- "Làm việc tại cơ quan", vào thẳng trạng thái đã duyệt (không cần phê duyệt).
+-- An toàn chạy lại trên DB cũ.
+alter table schedule_entries add column if not exists at_office boolean not null default false;
+
 -- 6) RLS: chỉ người ĐÃ ĐĂNG NHẬP mới đọc/ghi; phân quyền chi tiết do app xử lý.
 do $$ declare t text;
 begin
