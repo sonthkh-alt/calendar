@@ -144,7 +144,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const groups = useMemo(() => {
     const out = [];
     const pct = allowed.filter((l) => l.leader_type === 'pct');
-    if (pct.length) out.push({ label: 'Lãnh đạo HĐND tỉnh', items: pct });
+    if (pct.length) out.push({ label: 'Lãnh đạo TTr HĐND tỉnh', items: pct });
     const doan = allowed.filter((l) => l.leader_type === 'doan');
     if (doan.length) out.push({ label: 'Đoàn ĐBQH tỉnh', items: doan });
     const banUnits = allowed.filter((l) => l.leader_type === 'ban');
