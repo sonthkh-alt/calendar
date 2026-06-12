@@ -64,17 +64,18 @@ export function leaderInUnit(leader, banId) {
 }
 
 // Bộ so sánh sắp xếp lịch trong NGÀY (lịch tuần + bản in):
-//  1) Sáng trước Chiều (cả ngày lên đầu; "theo giờ" xếp sáng/chiều theo mốc 12:00)
+//  1) Sáng trước Chiều. "Cả ngày" coi như BUỔI SÁNG (bắt đầu từ sáng) để trong
+//     buổi sáng vẫn xếp theo STT lãnh đạo; "theo giờ" phân sáng/chiều theo mốc 12:00.
 //  2) Ưu tiên theo SỐ THỨ TỰ: nếu lịch có Tên nhóm (group_label thuộc Nhóm thành
 //     phần) -> dùng STT của nhóm; nếu không -> STT của lãnh đạo. Đều tăng dần.
+//     (Nhờ vậy lịch PCT — STT nhỏ — luôn lên trước lịch các Ban trong cùng buổi.)
 export const makeEntrySorter = (leaders, groups) => {
   const leaderSort = Object.fromEntries((leaders || []).map((l) => [l.id, l.sort_order ?? 999]));
   const groupSort = Object.fromEntries((groups || []).map((g) => [g.name, g.sort_order ?? 999]));
   const sessRank = (e) => {
-    if (e.session === 'ca_ngay') return 0;
     if (e.session === 'chieu') return 2;
     if (e.session === 'gio') return (e.start_time || '08:00') < '12:00' ? 1 : 2;
-    return 1; // sang
+    return 1; // sang + ca_ngay -> buổi sáng
   };
   const prio = (e) => (e.group_label != null && groupSort[e.group_label] != null)
     ? groupSort[e.group_label]

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Printer, Plus, LayoutGrid, Rows3 } from 'lucide-react';
+import { Printer, Plus, LayoutGrid, Rows3, CalendarDays } from 'lucide-react';
 import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
 import { canCreateFor, canEditEntry, canSeeEntry } from '../lib/permissions';
@@ -214,7 +214,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
         </div>
       ) : (
         /* ===== CHẾ ĐỘ GỌN: mỗi ngày một khối ===== */
-        <div className="space-y-3">
+        <div className="space-y-5">
           {days.map((d) => {
             const dISO = toISODate(d);
             const isToday = dISO === toISODate(new Date());
@@ -222,10 +222,14 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
               .filter((e) => e.date === dISO && allUnitLeaderIds.includes(e.leader_id))
               .sort(entrySorter);
             return (
-              <div key={dISO} className={`rounded-xl border bg-white shadow-sm overflow-hidden ${isToday ? 'border-amber-300 ring-1 ring-amber-200' : 'border-slate-200'}`}>
-                <div className={`px-3 py-2 flex items-center justify-between ${isToday ? 'bg-amber-50' : 'bg-slate-50'}`}>
-                  <p className="text-[13px] font-bold text-red-800">{dayName(d)} <span className="text-slate-500 font-medium">{fmtDMY(d)}</span></p>
-                  {isToday && <span className="text-[10px] font-bold text-amber-700 bg-amber-200 rounded px-1.5 py-0.5">HÔM NAY</span>}
+              <div key={dISO} className={`rounded-2xl border bg-white shadow-md overflow-hidden ${isToday ? 'border-amber-400 ring-2 ring-amber-300' : 'border-slate-200'}`}>
+                <div className={`px-4 py-3 flex items-center justify-between border-b-4 ${isToday ? 'bg-gradient-to-r from-amber-300 to-amber-200 border-amber-500' : 'bg-gradient-to-r from-red-800 via-red-700 to-red-600 border-red-900'}`}>
+                  <p className={`flex items-center gap-2 text-[18px] font-extrabold tracking-wide ${isToday ? 'text-red-900' : 'text-white'}`}>
+                    <CalendarDays className={`w-5 h-5 ${isToday ? 'text-red-700' : 'text-amber-300'}`} />
+                    {dayName(d)}
+                    <span className={`text-[15px] font-bold ${isToday ? 'text-red-700' : 'text-amber-200'}`}>· {fmtDMY(d)}</span>
+                  </p>
+                  {isToday && <span className="text-[11px] font-extrabold text-amber-900 bg-white/80 rounded-full px-2.5 py-1 shadow-sm">HÔM NAY</span>}
                 </div>
                 <div className={`p-2.5 grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
                   {dayEntries.length === 0 && <p className="text-[12px] text-slate-400 italic col-span-full">Không có lịch.</p>}

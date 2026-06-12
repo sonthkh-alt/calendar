@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Header ngày (Gọn) nổi bật + sửa sắp xếp "Cả ngày"
+- WeekView Gọn: dải tiêu đề ngày to/đậm thành BĂNG ĐỎ riêng rẽ (gradient đỏ, chữ
+  trắng 18px + icon lịch, viền đáy 4px; hôm nay = băng vàng), khối cách nhau space-y-5
+- constants.makeEntrySorter: "Cả ngày" KHÔNG còn hạng 0 (đứng trước mọi thứ) mà coi
+  như BUỔI SÁNG (hạng 1) -> trong buổi sáng xếp theo STT lãnh đạo. Sửa lỗi lịch
+  "Cả ngày" của Ban đứng trước lịch "Sáng" của PCT (PCT STT nhỏ -> nay lên trước)
+
 ## 2026-06-12 — Nâng cấp hạ tầng: PWA, sao lưu tự động, realtime, audit log + RLS
 - **#7 PWA:** public/manifest.webmanifest + public/sw.js (network-first cho điều hướng &
   Supabase REST GET, cache-first cho asset) + đăng ký SW trong main.jsx + meta iOS trong
