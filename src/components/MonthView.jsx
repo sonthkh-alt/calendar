@@ -60,9 +60,11 @@ export default function MonthView({ profile, anchor, entries, leaders, filters, 
                 className={`min-h-[150px] p-1.5 text-left align-top border-r border-slate-100 last:border-r-0 transition hover:bg-red-50/60
                   ${inMonth ? 'bg-white' : 'bg-slate-50/70'} ${isToday ? 'ring-2 ring-inset ring-amber-300 bg-amber-50/50' : ''}`}
               >
-                <div className="flex items-baseline justify-between">
-                  <span className={`text-[13px] font-bold ${inMonth ? 'text-slate-700' : 'text-slate-300'} ${isToday ? 'text-amber-700' : ''}`}>{d.getDate()}</span>
-                  <span className={`text-[10px] font-semibold ${inMonth ? 'text-sky-500' : 'text-sky-300'}`} title="Âm lịch">{lunarLabel}</span>
+                <div className="relative mb-0.5 h-4">
+                  {/* Dương lịch: ở giữa, trên cùng */}
+                  <span className={`block text-center text-[14px] font-bold leading-4 ${inMonth ? 'text-slate-700' : 'text-slate-300'} ${isToday ? 'text-amber-700' : ''}`}>{d.getDate()}</span>
+                  {/* Âm lịch: cùng hàng, sát mép phải */}
+                  <span className={`absolute top-0 right-0 text-[10px] font-semibold leading-4 ${inMonth ? 'text-sky-500' : 'text-sky-300'}`} title="Âm lịch">{lunarLabel}</span>
                 </div>
                 {list.length > 0 && (
                   <div className="mt-1 space-y-0.5">
