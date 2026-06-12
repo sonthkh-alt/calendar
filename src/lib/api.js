@@ -55,9 +55,11 @@ export async function fetchEntries(fromISO, toISO) {
 // Tạo lịch cho nhiều lãnh đạo: 1 dòng / lãnh đạo, chung group_id
 export async function createEntries(base, leaderStatusPairs) {
   if (!supabase) return NO_DB;
-  const group_id = crypto.randomUUID();
+  // Dùng group_id truyền sẵn (vd khi sửa thêm lãnh đạo vào sự kiện cũ) nếu có
+  const { group_id: baseGroupId, ...rest } = base;
+  const group_id = baseGroupId || crypto.randomUUID();
   const rows = leaderStatusPairs.map(({ leaderId, status }) => ({
-    ...base, leader_id: leaderId, status, group_id,
+    ...rest, leader_id: leaderId, status, group_id,
   }));
   return supabase.from('schedule_entries').insert(rows).select();
 }

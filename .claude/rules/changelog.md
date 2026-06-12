@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Sửa lịch: cho phép sửa cả danh sách "Lãnh đạo"
+- ScheduleForm: hiện phần chọn Lãnh đạo + chip nhóm CẢ KHI SỬA (trước chỉ khi thêm mới);
+  điền sẵn tất cả lãnh đạo của sự kiện (cùng group_id) + group_label
+- Lưu khi sửa: ĐỐI CHIẾU theo group_id -> cập nhật mục của lãnh đạo còn lại (giữ id/xe),
+  tạo mục cho lãnh đạo mới thêm (chung group_id), xóa mục của lãnh đạo bị bỏ
+- api.createEntries: nhận group_id truyền sẵn (giữ nhóm khi thêm lãnh đạo vào sự kiện cũ)
+
 ## 2026-06-12 — Điều xe cho CẢ NHÓM + bỏ xe riêng mặc định khỏi bảng điều xe
 - api.assignVehicles(ids, ...): gán/bỏ gán xe nhiều mục cùng lúc (.in)
 - VehicleBoard: "Chuyến cần xe" gom theo group_id -> 1 mục, chọn xe gán cho CẢ NHÓM

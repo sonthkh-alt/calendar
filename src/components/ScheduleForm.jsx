@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { X, Save, AlertTriangle, CalendarPlus } from 'lucide-react';
 import { SESSIONS, COMMON_LOCATIONS, groupLeaderIds } from '../lib/constants';
 import { canCreateFor, initialStatus } from '../lib/permissions';
-import { createEntries, updateEntry } from '../lib/api';
+import { createEntries, updateEntry, deleteEntry } from '../lib/api';
 import DateField from './DateField';
 import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
 
@@ -24,9 +24,16 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     [leaders, profile]
   );
 
-  const [leaderIds, setLeaderIds] = useState(
-    src ? [src.leader_id] : prefill?.leaderId ? [prefill.leaderId] : []
-  );
+  // Lãnh đạo điền sẵn: nếu sửa/nhân bản một sự kiện theo nhóm (cùng group_id) thì
+  // lấy TẤT CẢ lãnh đạo của sự kiện đó (cho phép sửa cả danh sách); ngược lại 1 người.
+  const [leaderIds, setLeaderIds] = useState(() => {
+    if (src?.group_id) {
+      const ids = [...new Set((entries || []).filter((e) => e.group_id === src.group_id).map((e) => e.leader_id))];
+      if (ids.length) return ids;
+    }
+    if (src) return [src.leader_id];
+    return prefill?.leaderId ? [prefill.leaderId] : [];
+  });
   const [date, setDate] = useState(src?.date || (prefill?.date ? toISODate(prefill.date) : toISODate(new Date())));
   const [session, setSession] = useState(src?.session || prefill?.session || 'sang');
   const [startTime, setStartTime] = useState(src?.start_time?.slice(0, 5) || '08:00');
@@ -101,7 +108,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     e.preventDefault();
     if (!content.trim()) { setErr('Vui lòng nhập Nội dung công việc.'); return; }
     if (!atOffice && !location.trim()) { setErr('Vui lòng nhập Địa điểm.'); return; }
-    if (!editing && leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); return; }
+    if (leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); return; }
     setSaving(true); setErr('');
 
     const base = {
@@ -117,21 +124,39 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       group_label: groupLabel.trim() || null,
       created_by: profile.id,
     };
+    // Trạng thái cho 1 lãnh đạo (mục đang có / mới): at_office -> da_duyet; tu_choi sửa lại -> về đầu
+    const statusFor = (leaderId, existing) => {
+      if (atOffice) return 'da_duyet';
+      const leader = leaders.find((l) => l.id === leaderId);
+      if (!existing) return initialStatus(leader, profile);
+      return existing.status === 'tu_choi' ? initialStatus(leader, profile) : existing.status;
+    };
 
-    let res;
+    let res = { error: null };
     if (editing) {
-      // Sửa: lịch Ban bị từ chối sửa lại -> quay về chờ duyệt (trừ khi là "làm việc tại cơ quan")
-      const leader = leaders.find((l) => l.id === editing.leader_id);
-      const patch = { ...base };
-      if (atOffice) { patch.status = 'da_duyet'; patch.review_note = null; }
-      else if (editing.status === 'tu_choi') { patch.status = initialStatus(leader, profile); patch.review_note = null; }
-      res = await updateEntry(editing.id, patch);
+      // SỬA: cho phép đổi cả danh sách Lãnh đạo. Đối chiếu các mục của SỰ KIỆN
+      // (cùng group_id) -> giữ id/xe của lãnh đạo còn lại, thêm mục cho lãnh đạo mới,
+      // xóa mục của lãnh đạo bị bỏ. Mọi mục dùng CHUNG group_id để vẫn gộp với nhau.
+      const groupId = editing.group_id || (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()));
+      const eventEntries = editing.group_id
+        ? (entries || []).filter((e) => e.group_id === editing.group_id)
+        : [editing];
+      const existingByLeader = Object.fromEntries(eventEntries.map((e) => [e.leader_id, e]));
+      const ops = [];
+      for (const lid of leaderIds) {
+        const existing = existingByLeader[lid];
+        const patch = { ...base, group_id: groupId, status: statusFor(lid, existing) };
+        if (!atOffice && existing?.status === 'tu_choi') patch.review_note = null;
+        if (existing) ops.push(updateEntry(existing.id, patch));
+        else ops.push(createEntries({ ...base, group_id: groupId }, [{ leaderId: lid, status: statusFor(lid, null) }]));
+      }
+      for (const e of eventEntries) {
+        if (!leaderIds.includes(e.leader_id)) ops.push(deleteEntry(e.id));
+      }
+      const results = await Promise.all(ops);
+      res.error = results.find((r) => r?.error)?.error || null;
     } else {
-      const pairs = leaderIds.map((leaderId) => ({
-        leaderId,
-        // "Làm việc tại cơ quan" -> vào thẳng đã duyệt, không cần thẩm quyền phê duyệt
-        status: atOffice ? 'da_duyet' : initialStatus(leaders.find((l) => l.id === leaderId), profile),
-      }));
+      const pairs = leaderIds.map((leaderId) => ({ leaderId, status: statusFor(leaderId, null) }));
       res = await createEntries(base, pairs);
     }
     setSaving(false);
@@ -174,9 +199,8 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
         </div>
 
         <form onSubmit={submit} className="p-5 space-y-4">
-          {/* Chọn lãnh đạo */}
-          {!editing && (
-            <div>
+          {/* Chọn lãnh đạo — hiện cả khi Sửa để cho phép đổi cả danh sách Lãnh đạo */}
+          <div>
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Lãnh đạo <span className="text-rose-600">*</span></label>
               {leaderGroups.length > 0 && (
                 <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50/60 p-2.5">
@@ -208,7 +232,6 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
                 ))}
               </div>
             </div>
-          )}
 
           {/* Thời gian */}
           <div className="grid grid-cols-2 gap-3">
