@@ -209,6 +209,38 @@ export default function App() {
     return map;
   }, [entries, leaders, locationNames]);
 
+  // CẢNH BÁO ĐI CƠ SỞ: trong CÙNG MỘT THÁNG có > 1 nhóm/đoàn đi làm việc tại
+  // xã / phường / thị trấn -> communeMap: id -> [{date, location, name}] các nhóm
+  // KHÁC trong tháng (để Văn phòng/lãnh đạo cân nhắc điều phối, gộp đoàn).
+  const communeMap = useMemo(() => {
+    const isCW = (loc) => /(^|[\s,.])(xã|phường|thị trấn)([\s,.]|$)/i.test((loc || '').toLowerCase());
+    const leaderById = Object.fromEntries(leaders.map((l) => [l.id, l]));
+    const eventKey = (e) => e.group_id || `${e.content}|${e.date}|${e.session}|${e.start_time || ''}`;
+    const byMonth = {};
+    for (const e of entries) {
+      if (e.status === 'tu_choi' || e.at_office || !isCW(e.location)) continue;
+      const ym = (e.date || '').slice(0, 7);
+      (byMonth[ym] ||= new Map());
+      const k = eventKey(e);
+      let ev = byMonth[ym].get(k);
+      if (!ev) { ev = { date: e.date, location: e.location, ids: [], names: new Set() }; byMonth[ym].set(k, ev); }
+      ev.ids.push(e.id);
+      const nm = e.group_label || leaderById[e.leader_id]?.full_name;
+      if (nm) ev.names.add(nm);
+    }
+    const map = new Map();
+    for (const ym of Object.keys(byMonth)) {
+      const events = [...byMonth[ym].values()];
+      if (events.length < 2) continue; // chỉ cảnh báo khi > 1 nhóm trong tháng
+      for (const ev of events) {
+        const others = events.filter((o) => o !== ev)
+          .map((o) => ({ date: o.date, location: o.location, name: [...o.names].join(', ') }));
+        for (const id of ev.ids) map.set(id, others);
+      }
+    }
+    return map;
+  }, [entries, leaders]);
+
   // ===== Các cổng vào =====
   if (!supabase) {
     return (
@@ -314,16 +346,16 @@ export default function App() {
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
 
         {tab === 'week' && (
-          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} filters={filters} dupMap={dupMap} isMobile={isMobile} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} />
+          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} filters={filters} dupMap={dupMap} communeMap={communeMap} isMobile={isMobile} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'month' && (
           <MonthView profile={profile} anchor={anchor} entries={entries} leaders={leaders} filters={filters} onPickDay={(d) => { setAnchor(d); setTab('day'); }} />
         )}
         {tab === 'day' && (
-          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} dupMap={dupMap} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} />
+          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} dupMap={dupMap} communeMap={communeMap} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'approve' && canReview(profile) && (
-          <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupMap={dupMap} onChanged={refresh} />
+          <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupMap={dupMap} communeMap={communeMap} onChanged={refresh} />
         )}
         {tab === 'vehicles' && canAssignVehicle(profile) && (
           <VehicleBoard profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} onChanged={refresh} />
@@ -386,6 +418,7 @@ export default function App() {
           canEdit={canEditEntry(profile, viewing, leaders.find((l) => l.id === viewing.leader_id))}
           canDuplicate={canDup(viewing)}
           dupOthers={dupMap.get(viewing.id)}
+          communeOthers={communeMap.get(viewing.id)}
           onEdit={onEdit}
           onDelete={onDelete}
           onDuplicate={onDuplicate}

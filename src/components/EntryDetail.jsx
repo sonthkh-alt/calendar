@@ -12,7 +12,7 @@ import DateField from './DateField';
  * Các mục TRÙNG nội dung + thời gian được GỘP: thành phần nối lại với nhau.
  * Khu "Xử lý nhanh": Duyệt/Từ chối (PCT, Quản trị) + chọn xe (Văn phòng, Quản trị).
  */
-export default function EntryDetail({ entry, entries, leaders, vehicles, profile, canEdit, canDuplicate, dupOthers, onEdit, onDelete, onDuplicate, onChanged, onClose }) {
+export default function EntryDetail({ entry, entries, leaders, vehicles, profile, canEdit, canDuplicate, dupOthers, communeOthers, onEdit, onDelete, onDuplicate, onChanged, onClose }) {
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
@@ -152,6 +152,17 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                 ))}
               </ul>
               <p className="mt-1 italic">Đề nghị cân nhắc gộp đoàn hoặc điều phối chung xe.</p>
+            </div>
+          )}
+          {communeOthers?.length > 0 && (
+            <div className="text-[13px] text-orange-900 bg-orange-50 border border-orange-300 rounded-xl p-3">
+              <p className="font-bold">⚠️ Trong tháng có nhiều nhóm đi làm việc tại xã/phường/thị trấn:</p>
+              <ul className="mt-1 list-disc list-inside space-y-0.5">
+                {communeOthers.map((o, i) => (
+                  <li key={i}>{dayName(parseISO(o.date))}, ngày {fmtDMY(parseISO(o.date))} — {o.location}{o.name ? ` (${o.name})` : ''}</li>
+                ))}
+              </ul>
+              <p className="mt-1 italic">Đề nghị cân nhắc điều phối, gộp đoàn đi cơ sở.</p>
             </div>
           )}
           {/* Nội dung */}

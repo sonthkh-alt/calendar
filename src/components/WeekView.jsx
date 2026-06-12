@@ -14,7 +14,7 @@ import { printPage } from '../lib/print';
  * - Chế độ "Đầy đủ": bảng ngày × (Sáng/Chiều) × cột đơn vị.
  * - Chế độ "Gọn": mỗi ngày 1 khối (hợp mobile).
  */
-export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView }) {
+export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, communeMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView }) {
   const [mode, setMode] = useState(isMobile ? 'compact' : 'full'); // full | compact
   // Điện thoại: luôn dùng chế độ Gọn (khối từng ngày, kéo dọc) cho dễ xem
   useEffect(() => { if (isMobile) setMode('compact'); }, [isMobile]);
@@ -114,6 +114,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
         canEdit={canEditEntry(profile, orig, lead)}
         canDuplicate={canCreateFor(profile, lead)}
         dupOthers={dupMap?.get(orig.id)}
+        communeOthers={communeMap?.get(orig.id)}
         onEdit={() => onEdit?.(orig)}
         onDelete={() => (m.ids.length > 1 && onDeleteMany ? onDeleteMany(m.ids, orig.content) : onDelete?.(orig))}
         onDuplicate={() => onDuplicate?.(orig)}
