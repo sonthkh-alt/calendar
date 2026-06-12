@@ -79,8 +79,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const toggleLeader = (id) =>
     setLeaderIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
-  // Tick nhóm thành phần: chèn/gỡ chuỗi thành viên của nhóm vào ô Thành phần
-  const groupChecked = (g) => participants.includes(g.members);
+  // Chèn/gỡ chuỗi thành viên của nhóm vào ô Thành phần (dùng khi chọn nhóm ở trường Lãnh đạo)
   const addMembers = (members) =>
     setParticipants((prev) => {
       if (!members || prev.includes(members)) return prev;
@@ -96,7 +95,6 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
         .replace(/^\s*;\s*|\s*;\s*$/g, '')
         .trim();
     });
-  const toggleGroup = (g) => (participants.includes(g.members) ? removeMembers(g.members) : addMembers(g.members));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -263,17 +261,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Thành phần</label>
-                {(pGroups || []).length > 0 && (
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {pGroups.map((g) => (
-                      <label key={g.id} title={g.members} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${groupChecked(g) ? 'bg-red-50 border-red-300 text-red-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-red-200'}`}>
-                        <input type="checkbox" checked={groupChecked(g)} onChange={() => toggleGroup(g)} className="accent-red-700" />
-                        {g.name}
-                      </label>
-                    ))}
-                  </div>
-                )}
-                <textarea rows={3} value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="Tick nhóm ở trên hoặc gõ trực tiếp: Đ/c..., chức vụ; Đ/c..., chức vụ (có thể bỏ trống)" className={`${input} mt-1.5 resize-y`} />
+                <textarea rows={3} value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="Gõ trực tiếp: Đ/c..., chức vụ; Đ/c..., chức vụ (có thể bỏ trống)" className={`${input} mt-1.5 resize-y`} />
               </div>
             </>
           )}
