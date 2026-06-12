@@ -108,9 +108,10 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       start_time: session === 'gio' ? startTime : null,
       end_time: session === 'gio' ? endTime : null,
       content: content.trim(),
-      // "Làm việc tại cơ quan": bỏ trống Địa điểm / Thành phần (chỉ hiện Nội dung + dòng chữ)
+      // "Làm việc tại cơ quan": Địa điểm bỏ trống (hiện dòng chữ thay địa điểm),
+      // nhưng GIỮ Thành phần để hiển thị khi in công văn.
       location: atOffice ? null : (location.trim() || null),
-      participants: atOffice ? null : (participants.trim() || null),
+      participants: participants.trim() || null,
       at_office: atOffice,
       group_label: groupLabel.trim() || null,
       created_by: profile.id,
@@ -249,22 +250,21 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
             </span>
           </label>
 
-          {/* Địa điểm + Thành phần — ẩn khi "Làm việc tại cơ quan" */}
+          {/* Địa điểm — ẩn khi "Làm việc tại cơ quan" (địa điểm là tại cơ quan) */}
           {!atOffice && (
-            <>
-              <div>
-                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm <span className="text-rose-600">*</span></label>
-                <input type="text" list="goi-y-dia-diem" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chọn gợi ý hoặc gõ tự do — VD: UBND huyện Thọ Xuân" className={`${input} mt-1.5`} />
-                <datalist id="goi-y-dia-diem">
-                  {COMMON_LOCATIONS.map((loc) => <option key={loc} value={loc} />)}
-                </datalist>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Thành phần</label>
-                <textarea rows={3} value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="Gõ trực tiếp: Đ/c..., chức vụ; Đ/c..., chức vụ (có thể bỏ trống)" className={`${input} mt-1.5 resize-y`} />
-              </div>
-            </>
+            <div>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm <span className="text-rose-600">*</span></label>
+              <input type="text" list="goi-y-dia-diem" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chọn gợi ý hoặc gõ tự do — VD: UBND huyện Thọ Xuân" className={`${input} mt-1.5`} />
+              <datalist id="goi-y-dia-diem">
+                {COMMON_LOCATIONS.map((loc) => <option key={loc} value={loc} />)}
+              </datalist>
+            </div>
           )}
+          {/* Thành phần — LUÔN hiện (kể cả "Làm việc tại cơ quan") để in công văn */}
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Thành phần</label>
+            <textarea rows={3} value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="Gõ trực tiếp: Đ/c..., chức vụ; Đ/c..., chức vụ (có thể bỏ trống)" className={`${input} mt-1.5 resize-y`} />
+          </div>
 
           {/* Cảnh báo trùng lịch (mềm — không chặn) */}
           {conflicts.length > 0 && (

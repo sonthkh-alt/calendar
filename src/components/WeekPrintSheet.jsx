@@ -157,7 +157,7 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
                   {m.status === 'da_dieu_chinh' && m.review_note && <i> ({m.review_note})</i>}
                 </td>
                 <td style={td}>{m.at_office ? <b>Làm việc tại cơ quan</b> : (m.location || '')}</td>
-                <td style={td}>{m.at_office ? '' : (m.group_label || compactParticipants(m))}</td>
+                <td style={td}>{m.group_label || compactParticipants(m)}</td>
               </tr>
             ));
           })}

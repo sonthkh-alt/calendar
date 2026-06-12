@@ -172,10 +172,21 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
           </div>
 
           {entry.at_office ? (
-            /* Làm việc tại cơ quan: chỉ Nội dung + Lãnh đạo + dòng chữ in đậm nổi bật */
-            <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 font-bold text-amber-800">
-              <Building2 className="w-5 h-5 shrink-0" /> Làm việc tại cơ quan
-            </div>
+            /* Làm việc tại cơ quan: dòng chữ in đậm + Thành phần (để in công văn) */
+            <>
+              <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 font-bold text-amber-800">
+                <Building2 className="w-5 h-5 shrink-0" /> Làm việc tại cơ quan
+              </div>
+              {mergedParticipants && (
+                <div className={row}>
+                  <Users className={ic} />
+                  <div>
+                    <p className={lab}>Thành phần</p>
+                    <p className={val}>{mergedParticipants}</p>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <>
               {/* Thời gian */}

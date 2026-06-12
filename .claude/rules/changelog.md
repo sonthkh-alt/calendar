@@ -1,5 +1,13 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Sửa: "Làm việc tại cơ quan" KHÔNG in được Thành phần
+- ScheduleForm: tick at_office trước đây lưu participants=null + ẩn ô Thành phần
+  -> Sửa: ô Thành phần LUÔN hiện (chỉ ẩn Địa điểm); lưu participants bình thường
+- WeekPrintSheet: bỏ việc để trống Thành phần cho at_office -> in group_label/compactParticipants
+- EntryDetail: nhánh at_office hiện thêm dòng Thành phần (nếu có) để xem trước khi in
+- EntryCard (ô lịch) vẫn tối giản: chỉ Nội dung + "Làm việc tại cơ quan"
+- Lưu ý: mục at_office tạo TRƯỚC bản vá có participants=null -> sửa & lưu lại để in TP
+
 ## 2026-06-12 — Cho phép Điều chỉnh / Từ chối lịch ĐÃ DUYỆT (trong chi tiết)
 - EntryDetail "Xử lý nhanh": canModerate cho cả cho_duyet/da_duyet/da_dieu_chinh
   (trước chỉ cho_duyet). Đã duyệt -> ẩn nút Phê duyệt, hiện Điều chỉnh + Từ chối
