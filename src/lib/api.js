@@ -122,6 +122,18 @@ export async function assignVehicle(id, vehicleId, note, assignerId) {
   });
 }
 
+// Gán / bỏ gán xe cho NHIỀU mục cùng lúc (cả nhóm nhiều đơn vị của một sự kiện)
+export async function assignVehicles(ids, vehicleId, note, assignerId) {
+  if (!supabase) return NO_DB;
+  return supabase.from('schedule_entries').update({
+    vehicle_id: vehicleId,
+    vehicle_note: note || null,
+    vehicle_assigned_by: vehicleId ? assignerId : null,
+    vehicle_assigned_at: vehicleId ? new Date().toISOString() : null,
+    updated_at: new Date().toISOString(),
+  }).in('id', ids);
+}
+
 // ===== Quản trị danh mục =====
 export async function upsertLeader(row) {
   if (!supabase) return NO_DB;

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Car, Printer, AlertTriangle, Phone, CircleSlash } from 'lucide-react';
-import { assignVehicle } from '../lib/api';
+import { assignVehicles } from '../lib/api';
 import { entryNeedsVehicleOk } from '../lib/permissions';
 import { SESSIONS, UNIT_NAME, VEHICLE_TYPES, isHqLocation } from '../lib/constants';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY, fmtTime, sessionsOverlap, weekStart, weekEnd, parseISO } from '../lib/dates';
@@ -30,18 +30,27 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
   );
 
   // Chuyến cần xe: đủ điều kiện (đã duyệt / lịch lãnh đạo) nhưng chưa gán.
-  // KHÔNG tính: làm việc tại cơ quan; họp tại cơ quan; lãnh đạo có XE RIÊNG (mặc định xe đó phục vụ).
+  // KHÔNG tính: làm việc tại cơ quan; họp tại cơ quan; lãnh đạo có XE RIÊNG (đồng chí tự lo).
   const needVehicle = weekEntries
     .filter((e) => !e.vehicle_id && !e.at_office && !isHqLocation(e.location) && !dedicatedByLeader[e.leader_id] && entryNeedsVehicleOk(e, leaderById[e.leader_id]))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // Kiểm tra trùng: xe đã phục vụ chuyến nào giao thời gian với entry chưa?
-  // Tính cả chuyến MẶC ĐỊNH của lãnh đạo gắn xe riêng (không cần gán tay).
-  const usesVehicle = (e, vehicleId) => {
-    if (e.vehicle_id) return e.vehicle_id === vehicleId;
-    const ded = dedicatedByLeader[e.leader_id];
-    return ded && ded.id === vehicleId && !isHqLocation(e.location);
-  };
+  // Gom "chuyến cần xe" theo SỰ KIỆN (cùng group_id) -> 1 mục: gán xe 1 lần cho CẢ NHÓM
+  const needVehicleGroups = useMemo(() => {
+    const map = new Map(); const out = [];
+    for (const e of needVehicle) {
+      const key = e.group_id || e.id;
+      if (!map.has(key)) { const it = { key, rep: e, ids: [e.id], leaderIds: [e.leader_id] }; map.set(key, it); out.push(it); }
+      else { const it = map.get(key); it.ids.push(e.id); if (!it.leaderIds.includes(e.leader_id)) it.leaderIds.push(e.leader_id); }
+    }
+    return out;
+  }, [needVehicle]);
+
+  // Tất cả id mục cùng sự kiện (để gán/bỏ gán cả nhóm)
+  const groupIdsOf = (e) => (e.group_id ? weekEntries.filter((x) => x.group_id === e.group_id).map((x) => x.id) : [e.id]);
+
+  // Kiểm tra trùng: CHỈ tính xe đã GÁN TAY (xe riêng mặc định không tính).
+  const usesVehicle = (e, vehicleId) => e.vehicle_id === vehicleId;
   const findConflicts = (vehicleId, entry) =>
     weekEntries.filter((e) =>
       usesVehicle(e, vehicleId) &&
@@ -51,15 +60,16 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
       sessionsOverlap(e, entry)
     );
 
-  const doAssign = async (entry, vehicleId) => {
+  // Gán/bỏ gán xe cho CẢ NHÓM (ids = mọi mục cùng sự kiện); rep = mục đại diện để cảnh báo
+  const doAssignGroup = async (ids, vehicleId, rep) => {
     if (!vehicleId) {
-      setBusy(entry.id);
-      await assignVehicle(entry.id, null, null, profile.id);
+      setBusy(rep.id);
+      await assignVehicles(ids, null, null, profile.id);
       setBusy(null); onChanged?.();
       return;
     }
     const v = activeVehicles.find((x) => x.id === vehicleId);
-    const conflicts = findConflicts(vehicleId, entry);
+    const conflicts = findConflicts(vehicleId, rep);
     if (conflicts.length > 0) {
       const c = conflicts[0];
       const who = leaderById[c.leader_id]?.full_name || '';
@@ -68,8 +78,8 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
       );
       if (!ok) return;
     }
-    setBusy(entry.id);
-    await assignVehicle(entry.id, vehicleId, null, profile.id);
+    setBusy(rep.id);
+    await assignVehicles(ids, vehicleId, null, profile.id);
     setBusy(null); onChanged?.();
   };
 
@@ -83,13 +93,18 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
     });
   };
 
-  const cellTrips = (vehicleId, dISO, sess) =>
-    weekEntries.filter((e) =>
+  const cellTrips = (vehicleId, dISO, sess) => {
+    const trips = weekEntries.filter((e) =>
       usesVehicle(e, vehicleId) && e.date === dISO &&
       (sess === 'sang'
         ? (e.session === 'sang' || e.session === 'ca_ngay' || (e.session === 'gio' && (e.start_time || '08:00') < '12:00'))
         : (e.session === 'chieu' || e.session === 'ca_ngay' || (e.session === 'gio' && (e.start_time || '08:00') >= '12:00')))
     );
+    // Gộp các mục cùng sự kiện (group_id) -> 1 ô trên lưới
+    const seen = new Set(); const out = [];
+    for (const e of trips) { const k = e.group_id || e.id; if (seen.has(k)) continue; seen.add(k); out.push(e); }
+    return out;
+  };
 
   return (
     <div className="print-root space-y-5">
@@ -142,13 +157,11 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
                         if (trips.length === 0) return null;
                         return trips.map((e) => (
                           <div key={e.id + sess} className="mb-1 rounded-md bg-red-50 border border-red-200 px-1.5 py-1">
-                            <p className="text-[10px] font-bold text-red-800">{sess === 'sang' ? 'S' : 'C'}{e.session === 'gio' ? ` · ${fmtTime(e.start_time)}` : ''} · {leaderById[e.leader_id]?.full_name}</p>
-                            <p className="text-[10px] text-slate-600 leading-tight">{e.location || e.content}{!e.vehicle_id && <i> (xe riêng mặc định)</i>}</p>
-                            {e.vehicle_id && (
-                              <button onClick={() => doAssign(e, null)} disabled={busy === e.id} title="Bỏ gán xe" className="no-print mt-0.5 text-[9px] text-slate-400 hover:text-rose-600 flex items-center gap-0.5">
-                                <CircleSlash className="w-2.5 h-2.5" /> Bỏ gán
-                              </button>
-                            )}
+                            <p className="text-[10px] font-bold text-red-800">{sess === 'sang' ? 'S' : 'C'}{e.session === 'gio' ? ` · ${fmtTime(e.start_time)}` : ''} · {e.group_label || leaderById[e.leader_id]?.full_name}</p>
+                            <p className="text-[10px] text-slate-600 leading-tight">{e.location || e.content}</p>
+                            <button onClick={() => doAssignGroup(groupIdsOf(e), null, e)} disabled={busy === e.id} title="Bỏ gán xe" className="no-print mt-0.5 text-[9px] text-slate-400 hover:text-rose-600 flex items-center gap-0.5">
+                              <CircleSlash className="w-2.5 h-2.5" /> Bỏ gán
+                            </button>
                           </div>
                         ));
                       })}
@@ -164,27 +177,30 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
       {/* Chuyến cần xe */}
       <div className="no-print rounded-xl border border-amber-200 bg-white shadow-sm overflow-hidden">
         <div className="bg-amber-500 text-white px-4 py-2 text-[13px] font-bold flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" /> Chuyến công tác cần điều xe ({needVehicle.length})
+          <AlertTriangle className="w-4 h-4" /> Chuyến công tác cần điều xe ({needVehicleGroups.length})
         </div>
-        {needVehicle.length === 0 ? (
+        {needVehicleGroups.length === 0 ? (
           <p className="p-4 text-[13px] text-slate-500 italic">Mọi chuyến đã duyệt trong tuần đều đã được gán xe.</p>
         ) : (
           <div className="divide-y divide-slate-100">
-            {needVehicle.map((e) => {
+            {needVehicleGroups.map((item) => {
+              const e = item.rep;
               const l = leaderById[e.leader_id];
+              const names = item.leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean);
+              const unitLabel = e.group_label || names.join('; ');
               const timeLabel = e.session === 'gio' ? `${fmtTime(e.start_time)} - ${fmtTime(e.end_time)}` : SESSIONS[e.session];
               return (
-                <div key={e.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                <div key={item.key} className="px-4 py-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[13px] font-bold text-slate-800">{e.content}</p>
+                    <p className="text-[13px] font-bold text-slate-800">{e.content}{item.ids.length > 1 ? <span className="font-normal text-amber-700"> · điều xe cho cả nhóm ({item.ids.length} đơn vị)</span> : null}</p>
                     <p className="text-[12px] text-slate-600 mt-0.5">
-                      <span className="font-semibold text-red-800">{l?.full_name}</span> · {dayName(parseISO(e.date))} {fmtDM(parseISO(e.date))} · {timeLabel}{e.location ? ` · ${e.location}` : ''}
+                      <span className="font-semibold text-red-800">{unitLabel}</span> · {dayName(parseISO(e.date))} {fmtDM(parseISO(e.date))} · {timeLabel}{e.location ? ` · ${e.location}` : ''}
                     </p>
                   </div>
                   <select
                     disabled={busy === e.id}
                     defaultValue=""
-                    onChange={(ev) => { if (ev.target.value) doAssign(e, ev.target.value); ev.target.value = ''; }}
+                    onChange={(ev) => { if (ev.target.value) doAssignGroup(item.ids, ev.target.value, e); ev.target.value = ''; }}
                     className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[13px] text-slate-700 outline-none focus:border-red-400"
                   >
                     <option value="">— Chọn xe —</option>

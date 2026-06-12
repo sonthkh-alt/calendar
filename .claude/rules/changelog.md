@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Điều xe cho CẢ NHÓM + bỏ xe riêng mặc định khỏi bảng điều xe
+- api.assignVehicles(ids, ...): gán/bỏ gán xe nhiều mục cùng lúc (.in)
+- VehicleBoard: "Chuyến cần xe" gom theo group_id -> 1 mục, chọn xe gán cho CẢ NHÓM
+  (assignVehicles); lưới xe gộp mục cùng group_id thành 1 ô, "Bỏ gán" gỡ cả nhóm
+- usesVehicle CHỈ tính xe đã GÁN TAY (e.vehicle_id) -> xe riêng mặc định của PCT/Đoàn
+  KHÔNG còn hiện/tính trên bảng + không tính khi cảnh báo trùng (bỏ nhánh dedicated)
+
 ## 2026-06-12 — SỬA LỖI nghiêm trọng: migration ghi đè HỌ TÊN lãnh đạo Ban
 - Triệu chứng: sau mỗi lần deploy, họ tên thành viên Ban bị đổi thành tên Ban
   (vd "Hoàng Anh Tuấn" -> "Ban Kinh tế Ngân sách"); người dùng sửa tay rồi lại bị đổi
