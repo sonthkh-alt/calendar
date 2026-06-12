@@ -36,9 +36,15 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
         </p>
       )}
       <div className="flex items-start justify-between gap-1">
-        <p className={`text-[12px] font-semibold leading-snug text-slate-800 ${entry.status === 'tu_choi' ? 'line-through' : ''}`}>
-          {entry.content}
-        </p>
+        <div className="flex items-start gap-1.5 min-w-0">
+          {/* Khung GIỜ nổi bật (to ~1.4 lần, in đậm) đứng TRƯỚC nội dung, cùng dòng */}
+          <span className="inline-flex items-center gap-1 shrink-0 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[17px] font-bold leading-none text-red-700">
+            <Clock className="w-[18px] h-[18px] shrink-0" /> {timeLabel}
+          </span>
+          <p className={`text-[12px] font-semibold leading-snug text-slate-800 pt-0.5 ${entry.status === 'tu_choi' ? 'line-through' : ''}`}>
+            {entry.content}
+          </p>
+        </div>
         {(canEdit || canDuplicate) && (
           <span className="hidden group-hover:flex items-center gap-0.5 shrink-0 no-print">
             {canDuplicate && (
@@ -65,7 +71,6 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
           </p>
         ) : (
           <>
-            <p className="flex items-center gap-1 text-[12px] font-bold text-slate-800"><Clock className="w-3.5 h-3.5 shrink-0 text-red-600" /> {timeLabel}</p>
             <p className="flex items-start gap-1"><MapPin className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" /> <span>{entry.location || '—'}</span></p>
             {!brief && (
               <>
