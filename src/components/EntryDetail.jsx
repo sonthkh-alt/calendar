@@ -4,7 +4,7 @@ import StatusBadge from './StatusBadge';
 import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
 import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk, canAdmin } from '../lib/permissions';
-import { reviewEntries, updateEntries, assignVehicle, upsertLocation } from '../lib/api';
+import { reviewEntries, updateEntries, assignVehicle } from '../lib/api';
 import DateField from './DateField';
 
 /**
@@ -26,19 +26,6 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
 
-  // Admin: bỏ qua địa điểm này khỏi cảnh báo trùng (thêm vào danh mục Địa điểm
-  // loại trừ -> hệ thống không tính trùng cho địa điểm này nữa).
-  const ignoreLocation = async () => {
-    if (!entry.location) return;
-    if (!window.confirm(`Bỏ qua địa điểm "${entry.location}" khỏi cảnh báo trùng?\n\nĐịa điểm này sẽ được thêm vào danh mục "Địa điểm" và hệ thống KHÔNG cảnh báo trùng (tím/cam) cho nó nữa. Có thể chỉnh lại trong Quản trị → Địa điểm.`)) return;
-    setBusy(true);
-    const { error } = await upsertLocation({ name: entry.location });
-    setBusy(false);
-    if (error) { alert('Không lưu được: ' + error.message); return; }
-    alert('Đã bỏ qua. Hệ thống sẽ không cảnh báo trùng cho địa điểm này nữa.');
-    onChanged?.();
-  };
-
   // Gộp các mục trùng nội dung + ngày + thời gian (khác thành phần / đơn vị)
   const same = useMemo(
     () => (entries || []).filter((e) =>
@@ -51,6 +38,19 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
     [entries, entry]
   );
   const merged = same.length > 0 ? same : [entry];
+
+  // Admin: BỎ QUA / TÍNH LẠI cảnh báo trùng cho RIÊNG lịch này (đặt cờ dup_ignored
+  // trên các mục của sự kiện) — KHÔNG ảnh hưởng các lịch khác cùng địa điểm.
+  const setDupIgnored = async (val) => {
+    const ids = [...new Set(merged.map((x) => x.id))];
+    if (!ids.length) return;
+    if (val && !window.confirm(`Bỏ qua cảnh báo trùng địa điểm cho RIÊNG lịch này?\n\nChỉ lịch "${entry.content}" sẽ không bị tính/cảnh báo trùng nữa; các lịch khác cùng địa điểm vẫn cảnh báo bình thường.`)) return;
+    setBusy(true);
+    const { error } = await updateEntries(ids, { dup_ignored: val });
+    setBusy(false);
+    if (error) { alert('Không lưu được: ' + error.message); return; }
+    onChanged?.();
+  };
 
   const unitLabels = [...new Set(merged.map((e) => {
     const l = leaderById[e.leader_id];
@@ -171,11 +171,19 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                 ))}
               </ul>
               <p className="mt-1 italic">Đề nghị cân nhắc gộp đoàn hoặc điều phối chung xe.</p>
-              {canAdmin(profile) && entry.location && (
-                <button onClick={ignoreLocation} disabled={busy} className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold bg-white disabled:opacity-60 ${dupWeek ? 'text-red-800 border border-red-300 hover:bg-red-100' : 'text-amber-800 border border-amber-300 hover:bg-amber-100'}`}>
-                  <XCircle className="w-3.5 h-3.5" /> Bỏ qua địa điểm này (không cảnh báo trùng nữa)
+              {canAdmin(profile) && (
+                <button onClick={() => setDupIgnored(true)} disabled={busy} className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold bg-white disabled:opacity-60 ${dupWeek ? 'text-red-800 border border-red-300 hover:bg-red-100' : 'text-amber-800 border border-amber-300 hover:bg-amber-100'}`}>
+                  <XCircle className="w-3.5 h-3.5" /> Bỏ qua cảnh báo trùng cho RIÊNG lịch này
                 </button>
               )}
+            </div>
+          )}
+          {entry.dup_ignored && canAdmin(profile) && (
+            <div className="text-[12px] text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between gap-2">
+              <span className="italic">Lịch này đang được BỎ QUA cảnh báo trùng địa điểm.</span>
+              <button onClick={() => setDupIgnored(false)} disabled={busy} className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-60">
+                <Check className="w-3.5 h-3.5" /> Tính lại cảnh báo
+              </button>
             </div>
           )}
           {/* Nội dung */}

@@ -179,7 +179,7 @@ export default function App() {
     // dù nhiều lãnh đạo cùng group_id -> không tự cảnh báo lẫn nhau)
     const byLoc = {};
     for (const e of entries) {
-      if (e.status === 'tu_choi' || e.at_office || !e.location) continue;
+      if (e.status === 'tu_choi' || e.at_office || e.dup_ignored || !e.location) continue;
       const locN = norm(e.location);
       if (excludedSet.has(locN)) continue;
       (byLoc[locN] ||= new Map());

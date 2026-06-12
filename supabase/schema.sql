@@ -147,6 +147,10 @@ alter table schedule_entries add column if not exists at_office boolean not null
 -- mỗi đơn vị 1 mục nhưng đều ghi TÊN NHÓM thay cho tên đơn vị riêng lẻ.
 alter table schedule_entries add column if not exists group_label text;
 
+-- Nâng cấp: cờ BỎ QUA cảnh báo trùng địa điểm cho RIÊNG mục lịch này (admin đặt).
+-- Mục có dup_ignored = true sẽ không bị tính/cảnh báo trùng địa điểm.
+alter table schedule_entries add column if not exists dup_ignored boolean not null default false;
+
 -- 6) RLS: chỉ người ĐÃ ĐĂNG NHẬP mới đọc/ghi; phân quyền chi tiết do app xử lý.
 do $$ declare t text;
 begin
