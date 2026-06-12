@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-06-12 — SỬA LỖI đăng nhập "Database error querying schema"
+- Triệu chứng: nhập email+mật khẩu -> "Database error querying schema" (lỗi GoTrue, không phải app)
+- Nguyên nhân GỐC: migration tạo 5 tài khoản chèn thẳng vào auth.users nhưng bỏ trống các
+  cột token (confirmation_token, recovery_token, email_change, email_change_token_new/current,
+  reauthentication_token) -> mặc định NULL. GoTrue (Go) quét các cột này vào string non-nullable
+  -> gặp NULL thì ném lỗi khi đăng nhập.
+- Sửa 2026-06-12-tao-tai-khoan.sql: INSERT set các cột token = '' cho user mới + thêm khối
+  UPDATE auth.users coalesce(...,'') sửa mọi tài khoản đã tạo trước (idempotent, gồm cả khách)
+- Áp dụng: push -> GitHub Actions db-migrate tự chạy, HOẶC dán khối UPDATE vào Supabase SQL Editor
+
 ## 2026-06-12 — Khung hình theo thiết bị (Tự động/Máy tính/Điện thoại)
 - DeviceSelect.jsx: dropdown ở header chọn 'auto'|'desktop'|'mobile', lưu localStorage
 - App.jsx: matchMedia('(max-width:767px)') -> isMobile (ép thủ công hoặc auto+màn hẹp);

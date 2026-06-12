@@ -23,12 +23,17 @@ begin
     if not exists (select 1 from auth.users where email = u.email) then
       uid := gen_random_uuid();
       insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
-        email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+        email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+        confirmation_token, recovery_token, email_change,
+        email_change_token_new, email_change_token_current, reauthentication_token)
       values ('00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated',
         u.email, extensions.crypt(u.pw, extensions.gen_salt('bf')), now(),
         '{"provider":"email","providers":["email"]}'::jsonb,
         jsonb_build_object('pw_set', true, 'full_name', u.full_name, 'position', u.position),
-        now(), now());
+        now(), now(),
+        -- GoTrue (Go) quét các cột token vào kiểu string non-nullable; để NULL sẽ gây
+        -- lỗi "Database error querying schema" khi đăng nhập -> phải set chuỗi rỗng.
+        '', '', '', '', '', '');
       insert into auth.identities (id, user_id, provider_id, identity_data, provider,
         last_sign_in_at, created_at, updated_at)
       values (gen_random_uuid(), uid, uid::text,
@@ -50,3 +55,24 @@ begin
   update profiles set leader_id = (select id from leaders where leader_type = 'pct' and full_name ilike '%Tiến Lam%' limit 1)
     where email = 'lamlt@thanhhoa.gov.vn';
 end $$;
+
+-- =====================================================================
+--  SỬA LỖI "Database error querying schema" khi đăng nhập (idempotent).
+--  Nguyên nhân: tài khoản tạo trực tiếp bằng SQL để các cột token = NULL.
+--  GoTrue (dịch vụ Auth viết bằng Go) quét các cột này vào kiểu chuỗi
+--  non-nullable -> gặp NULL thì ném lỗi. Đặt tất cả về chuỗi rỗng.
+--  Áp dụng cho MỌI tài khoản (kể cả tài khoản khách user@thanhhoa.gov.vn).
+-- =====================================================================
+update auth.users set
+  confirmation_token         = coalesce(confirmation_token, ''),
+  recovery_token             = coalesce(recovery_token, ''),
+  email_change               = coalesce(email_change, ''),
+  email_change_token_new     = coalesce(email_change_token_new, ''),
+  email_change_token_current = coalesce(email_change_token_current, ''),
+  reauthentication_token     = coalesce(reauthentication_token, '')
+where confirmation_token is null
+   or recovery_token is null
+   or email_change is null
+   or email_change_token_new is null
+   or email_change_token_current is null
+   or reauthentication_token is null;
