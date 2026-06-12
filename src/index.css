@@ -64,7 +64,7 @@ body {
 @media print {
   /* Hướng giấy do nút In quyết định (lib/print.js chèn @page size khi in):
      lịch tuần = A4 dọc kiểu công văn, lịch điều xe = A4 ngang */
-  @page { margin: 10mm 8mm; }
+  @page { margin: 20mm 12mm; }
   body { background: #fff !important; }
   /* Ẩn mọi thứ ngoài vùng in */
   .no-print { display: none !important; }
@@ -87,9 +87,11 @@ body {
     background: #fff !important; color: #000 !important;
     word-wrap: break-word; overflow-wrap: break-word; vertical-align: top;
   }
-  /* Sang trang: lặp lại hàng tiêu đề của bảng, không cắt đôi một hàng */
+  /* Sang trang: lặp lại hàng tiêu đề của bảng. KHÔNG ép avoid trên hàng vì ô
+     "Ngày" dùng rowSpan -> ép avoid khiến cả khối ngày bị đẩy sang trang sau,
+     để lại khoảng trắng lớn. Để mặc định (auto) cho nội dung lấp đầy trang. */
   .print-root thead { display: table-header-group; }
-  .print-root tbody tr { page-break-inside: avoid; break-inside: avoid; }
+  .print-root tbody tr { break-inside: auto; page-break-inside: auto; }
   /* Hiện đầy đủ chữ — bỏ mọi giới hạn số dòng khi in */
   .print-root .line-clamp-2, .print-root .line-clamp-3 {
     display: block !important; -webkit-line-clamp: unset !important;

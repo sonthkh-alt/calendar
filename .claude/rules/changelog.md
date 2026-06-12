@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Sửa khoảng trắng lớn khi in + lề trên/dưới 2cm
+- Nguyên nhân khoảng trắng: .print-root tbody tr {break-inside: avoid} ép cả khối
+  ngày (ô Ngày dùng rowSpan) sang trang sau -> đổi thành auto để nội dung lấp đầy trang
+- Lề: @page margin 10mm 8mm -> 20mm 12mm (trên/dưới 2cm). Sửa CẢ index.css VÀ
+  lib/print.js (print.js chèn @page lúc in nên đè CSS)
+
 ## 2026-06-12 — Thứ tự sắp xếp lịch tuần + bản in: Sáng->Chiều rồi theo STT nhóm/lãnh đạo
 - constants.makeEntrySorter(leaders, groups): so sánh trong ngày -> (1) Sáng trước Chiều
   (ca_ngay đầu; gio theo mốc 12:00), (2) STT nhóm nếu có group_label, ngược lại STT lãnh đạo,
