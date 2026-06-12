@@ -3,7 +3,7 @@ import { Sun, Sunset } from 'lucide-react';
 import EntryCard from './EntryCard';
 import { canEditEntry, canSeeEntry, canCreateFor } from '../lib/permissions';
 import { toISODate } from '../lib/dates';
-import { isHqLocation, leaderInUnit } from '../lib/constants';
+import { isHqLocation, leaderInUnit, hidesDriver } from '../lib/constants';
 
 /**
  * Lịch ngày: 2 khối Sáng / Chiều, EntryCard đầy đủ thông tin.
@@ -49,7 +49,7 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
               key={e.id}
               entry={e}
               leader={l}
-              vehicle={(e.vehicle_id ? vehicleById[e.vehicle_id] : null) || ((l?.leader_type === 'pct' || !isHqLocation(e.location)) ? dedicatedByLeader[e.leader_id] : null) || null}
+              vehicle={hidesDriver(l?.leader_type) ? null : ((e.vehicle_id ? vehicleById[e.vehicle_id] : null) || (!isHqLocation(e.location) ? dedicatedByLeader[e.leader_id] : null) || null)}
               canEdit={canEditEntry(profile, e, l)}
               canDuplicate={canCreateFor(profile, l)}
               dupOthers={dupMap?.get(e.id)}

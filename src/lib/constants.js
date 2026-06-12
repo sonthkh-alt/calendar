@@ -61,6 +61,11 @@ export function leaderInUnit(leader, banId) {
   return leader?.ban_id === banId;
 }
 
+// Lịch của Lãnh đạo HĐND tỉnh (pct) và Đoàn ĐBQH (doan) LUÔN để trống ô Lái xe
+// (các đồng chí tự bố trí xe riêng — không hiển thị trên lịch công tác, kể cả khi
+// Văn phòng có gán xe thủ công). Áp dụng cho mọi nơi hiển thị + bản in.
+export const hidesDriver = (leaderType) => leaderType === 'pct' || leaderType === 'doan';
+
 // Làm việc TẠI CƠ QUAN -> không cần điều xe (bỏ khỏi danh sách chuyến cần xe,
 // không tự hiện lái xe riêng)
 export const isHqLocation = (loc) =>

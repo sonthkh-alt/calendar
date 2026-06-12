@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy, Check, XCircle, Zap } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation } from '../lib/constants';
+import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
 import { canReview, canAssignVehicle, entryNeedsVehicleOk } from '../lib/permissions';
 import { reviewEntry, assignVehicle } from '../lib/api';
@@ -47,9 +47,11 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
       .map((v) => [v.assigned_leader_id, v])
   );
   const mergedVehicles = [...new Map(
-    merged.map((e) => (e.vehicle_id
-      ? vehicleById[e.vehicle_id]
-      : ((leaderById[e.leader_id]?.leader_type === 'pct' || !isHqLocation(e.location)) ? dedicatedByLeader[e.leader_id] : null)))
+    merged.map((e) => (hidesDriver(leaderById[e.leader_id]?.leader_type)
+      ? null
+      : (e.vehicle_id
+        ? vehicleById[e.vehicle_id]
+        : (!isHqLocation(e.location) ? dedicatedByLeader[e.leader_id] : null))))
       .filter(Boolean).map((v) => [v.id, v])
   ).values()];
 
@@ -61,7 +63,9 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   // ===== Xử lý nhanh: duyệt / từ chối / điều xe ngay trong hộp chi tiết =====
   const leader = leaderById[entry.leader_id];
   const showReview = canReview(profile) && entry.status === 'cho_duyet';
-  const showVehicle = canAssignVehicle(profile) && entryNeedsVehicleOk(entry, leader) && !isHqLocation(entry.location);
+  // Lãnh đạo HĐND tỉnh / Đoàn ĐBQH: ô Lái xe luôn để trống -> không hiện cả khu gán xe nhanh
+  const showVehicle = canAssignVehicle(profile) && entryNeedsVehicleOk(entry, leader)
+    && !isHqLocation(entry.location) && !hidesDriver(leader?.leader_type);
   const activeVehicles = (vehicles || []).filter((v) => v.active);
   const vehicleOptions = [...activeVehicles].sort((a, b) => {
     const ap = a.assigned_leader_id === leader?.id ? 0 : a.vehicle_type === 'dung_chung' ? 1 : 2;

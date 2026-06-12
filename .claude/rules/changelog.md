@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Lãnh đạo HĐND tỉnh + Đoàn ĐBQH: ô Lái xe LUÔN để trống
+- Yêu cầu: lịch của pct/doan không hiển thị lái xe (các đ/c tự bố trí xe riêng),
+  kể cả khi Văn phòng có gán xe thủ công -> đảo lại quyết định "Xe riêng PCT mặc định"
+- constants.js: thêm hidesDriver(leaderType) = leaderType ∈ {pct, doan}
+- WeekView (Đầy đủ + Gọn), DayView, EntryDetail: hidesDriver -> vehicle = null ('—')
+- EntryDetail: ẩn luôn khu "gán xe nhanh" cho pct/doan (showVehicle += !hidesDriver)
+- KHÔNG đổi VehicleBoard (bảng điều xe nội bộ vẫn theo dõi xe riêng để tránh trùng);
+  WeekPrintSheet vốn đã bỏ cột Lái xe nên không ảnh hưởng
+
 ## 2026-06-12 — SỬA LỖI đăng nhập "Database error querying schema"
 - Triệu chứng: nhập email+mật khẩu -> "Database error querying schema" (lỗi GoTrue, không phải app)
 - Nguyên nhân GỐC: migration tạo 5 tài khoản chèn thẳng vào auth.users nhưng bỏ trống các
