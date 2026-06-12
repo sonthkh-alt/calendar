@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Nhóm ở trường Lãnh đạo dùng CHUNG định nghĩa với ô Thành phần
+- Bỏ định nghĩa riêng "Đơn vị thuộc nhóm" (UnitTicks + cột participant_groups.leader_ids)
+- Thành viên nhóm = các lãnh đạo được tick trong "Danh sách thành phần" (suy từ members):
+  constants.leaderLabel + groupLeaderIds(group, leaders) = leaders mà members chứa nhãn
+- ScheduleForm: chip nhóm ở trường Lãnh đạo dùng groupLeaderIds (lọc theo quyền) -> tạo
+  mục cho đúng các lãnh đạo + group_label + điền Thành phần; hai nơi luôn đồng nhất
+- AdminGroups: bỏ UnitTicks, dùng leaderLabel từ constants; cập nhật hướng dẫn
+- schema.sql/seed.sql: bỏ cột leader_ids; xóa migration 2026-06-12-gan-don-vi-cho-nhom.sql
+  (cột cũ trên DB nếu còn thì vô hại, không dùng tới)
+
 ## 2026-06-12 — Chọn Nhóm thành phần ở trường Lãnh đạo (lịch ghi theo tên nhóm)
 - schema.sql: participant_groups.leader_ids uuid[] (đơn vị thuộc nhóm) +
   schedule_entries.group_label text (nhãn nhóm hiển thị thay tên đơn vị)

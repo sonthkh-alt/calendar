@@ -61,6 +61,15 @@ export function leaderInUnit(leader, banId) {
   return leader?.ban_id === banId;
 }
 
+// Nhãn chèn vào "Danh sách thành phần" khi tick một lãnh đạo/đơn vị
+export const leaderLabel = (l) => `${l.full_name}${l.position ? ', ' + l.position : ''}`;
+
+// Các lãnh đạo/đơn vị THUỘC NHÓM = những người có nhãn xuất hiện trong members.
+// Dùng CHUNG cho ô tick ở Quản trị và cho việc chọn nhanh nhóm ở trường Lãnh đạo
+// -> nhóm ở hai nơi luôn gồm đúng các thành viên giống nhau.
+export const groupLeaderIds = (group, leaders) =>
+  (leaders || []).filter((l) => (group?.members || '').includes(leaderLabel(l))).map((l) => l.id);
+
 // Lịch của Lãnh đạo HĐND tỉnh (pct) và Đoàn ĐBQH (doan) LUÔN để trống ô Lái xe
 // (các đồng chí tự bố trí xe riêng — không hiển thị trên lịch công tác, kể cả khi
 // Văn phòng có gán xe thủ công). Áp dụng cho mọi nơi hiển thị + bản in.

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { X, Save, AlertTriangle, CalendarPlus } from 'lucide-react';
-import { SESSIONS, COMMON_LOCATIONS } from '../lib/constants';
+import { SESSIONS, COMMON_LOCATIONS, groupLeaderIds } from '../lib/constants';
 import { canCreateFor, initialStatus } from '../lib/permissions';
 import { createEntries, updateEntry } from '../lib/api';
 import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
@@ -38,16 +38,18 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
-  // Nhóm thành phần có gắn đơn vị -> chọn nhanh ở trường Lãnh đạo (lịch ghi theo tên nhóm)
+  // Nhóm thành phần -> chọn nhanh ở trường Lãnh đạo. Thành viên của nhóm chính là
+  // các lãnh đạo được tick trong "Danh sách thành phần" (suy ra từ members) — đồng
+  // nhất với nhóm ở ô Thành phần.
   const allowedIds = useMemo(() => new Set(allowed.map((l) => l.id)), [allowed]);
   const leaderGroups = useMemo(
-    () => (pGroups || []).filter((g) => (g.leader_ids || []).some((id) => allowedIds.has(id))),
-    [pGroups, allowedIds]
+    () => (pGroups || []).filter((g) => groupLeaderIds(g, leaders).some((id) => allowedIds.has(id))),
+    [pGroups, leaders, allowedIds]
   );
-  // Chọn nhóm ở trường Lãnh đạo: chọn các đơn vị + đặt nhãn nhóm + ĐIỀN THÀNH PHẦN
-  // bằng đúng danh sách thành viên của nhóm (giống hệt khi tick nhóm ở ô Thành phần)
+  // Chọn nhóm ở trường Lãnh đạo: chọn các lãnh đạo trong nhóm + đặt nhãn nhóm +
+  // ĐIỀN THÀNH PHẦN bằng đúng danh sách của nhóm (giống hệt tick nhóm ở ô Thành phần)
   const toggleLeaderGroup = (g) => {
-    const ids = (g.leader_ids || []).filter((id) => allowedIds.has(id));
+    const ids = groupLeaderIds(g, leaders).filter((id) => allowedIds.has(id));
     if (groupLabel === g.name) {
       setLeaderIds((prev) => prev.filter((id) => !ids.includes(id)));
       setGroupLabel('');
@@ -181,7 +183,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
                   <p className="text-[11px] font-bold text-amber-800 mb-1">Chọn nhanh theo nhóm <span className="font-normal text-amber-700">(lịch ghi theo tên nhóm, trải đủ các đơn vị):</span></p>
                   <div className="flex flex-wrap gap-1.5">
                     {leaderGroups.map((g) => (
-                      <label key={g.id} title={`Gồm: ${(g.leader_ids || []).map((id) => leaderById[id]?.full_name).filter(Boolean).join(', ')}`} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${groupLabel === g.name ? 'bg-amber-100 border-amber-400 text-amber-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'}`}>
+                      <label key={g.id} title={`Gồm: ${groupLeaderIds(g, leaders).map((id) => leaderById[id]?.full_name).filter(Boolean).join(', ')}`} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${groupLabel === g.name ? 'bg-amber-100 border-amber-400 text-amber-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'}`}>
                         <input type="checkbox" checked={groupLabel === g.name} onChange={() => toggleLeaderGroup(g)} className="accent-amber-600" />
                         {g.name}
                       </label>

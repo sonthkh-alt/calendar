@@ -59,22 +59,17 @@ insert into vehicles (id, plate, driver_name, driver_phone, vehicle_type, assign
   ('33333333-3333-3333-3333-333333333304', '36A-004.04', 'Lái xe 4', '0912000004', 'dung_chung', null, true);
 
 -- 3b) Nhóm thành phần dự họp — tick nhanh khi nhập lịch (sửa ở tab Quản trị)
-insert into participant_groups (name, members, leader_ids, sort_order) values
+insert into participant_groups (name, members, sort_order) values
   ('Thường trực HĐND tỉnh',
-   'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh',
-   (select array_agg(id) from leaders where leader_type = 'pct'), 1),
+   'Đ/c Lê Tiến Lam, Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh; Đ/c Nguyễn Quang Hải, Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh', 1),
   ('Lãnh đạo Đoàn ĐBQH tỉnh',
-   'Đ/c Lương Thị Hoa, Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh; Đ/c Bùi Văn Dũng, ĐBQH chuyên trách',
-   (select array_agg(id) from leaders where leader_type = 'doan'), 2),
+   'Đ/c Lương Thị Hoa, Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh; Đ/c Bùi Văn Dũng, ĐBQH chuyên trách', 2),
   ('Trưởng các Ban HĐND tỉnh',
-   'Các đ/c Trưởng Ban: Kinh tế Ngân sách, Pháp chế, Văn hóa Xã hội, Dân tộc',
-   (select array_agg(id) from leaders where leader_type = 'ban'), 3),
+   'Các đ/c Trưởng Ban: Kinh tế Ngân sách, Pháp chế, Văn hóa Xã hội, Dân tộc', 3),
   ('Lãnh đạo các Ban HĐND tỉnh',
-   'Lãnh đạo các Ban: Kinh tế Ngân sách, Pháp chế, Văn hóa Xã hội, Dân tộc',
-   (select array_agg(id) from leaders where leader_type = 'ban'), 4),
+   'Lãnh đạo các Ban: Kinh tế Ngân sách, Pháp chế, Văn hóa Xã hội, Dân tộc', 4),
   ('Lãnh đạo Văn phòng',
-   'Đ/c Trần Mạnh Long, Tỉnh ủy viên, Chánh Văn phòng; các đ/c Phó Chánh Văn phòng',
-   (select array_agg(id) from leaders where leader_type = 'vanphong'), 5);
+   'Đ/c Trần Mạnh Long, Tỉnh ủy viên, Chánh Văn phòng; các đ/c Phó Chánh Văn phòng', 5);
 
 -- 4) LỊCH TUẦN 24 NĂM 2026 (08/6 - 14/6/2026) — theo văn bản đã ban hành
 insert into schedule_entries (leader_id, date, session, start_time, end_time, content, location, participants, status) values

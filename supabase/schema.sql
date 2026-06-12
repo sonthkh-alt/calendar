@@ -80,12 +80,10 @@ create table if not exists vehicles (
 create table if not exists participant_groups (
   id uuid primary key default gen_random_uuid(),
   name text not null,                 -- tên nhóm hiển thị trên ô tick
-  members text not null,              -- chuỗi thành phần sẽ chèn vào ô Thành phần
-  leader_ids uuid[] default '{}',     -- các đơn vị/lãnh đạo thuộc nhóm (chọn ở trường Lãnh đạo)
+  members text not null,              -- danh sách thành phần (cũng là thành viên nhóm
+                                      -- khi chọn nhóm ở trường Lãnh đạo — suy từ members)
   sort_order int default 0
 );
--- Nâng cấp DB cũ: bổ sung cột leader_ids (an toàn chạy lại)
-alter table participant_groups add column if not exists leader_ids uuid[] default '{}';
 
 -- 5) Mục lịch công tác
 create table if not exists schedule_entries (
