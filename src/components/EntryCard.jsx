@@ -39,8 +39,8 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
         {/* Khung GIỜ nổi bật (to ~1.15 lần, in đậm) đứng TRƯỚC nội dung; nội dung
             chảy inline nên khi xuống dòng sẽ canh về cùng đầu hàng với icon đồng hồ. */}
         <p className="text-[12px] font-semibold leading-snug text-slate-800 min-w-0">
-          <span className="inline-flex items-center gap-1 align-middle mr-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[14px] font-bold leading-none text-red-700">
-            <Clock className="w-4 h-4 shrink-0" /> {timeLabel}
+          <span className="inline-flex items-center gap-1 align-bottom mr-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[13px] font-bold leading-none text-red-700">
+            <Clock className="w-[15px] h-[15px] shrink-0" /> {timeLabel}
           </span>
           <span className={entry.status === 'tu_choi' ? 'line-through' : ''}>{entry.content}</span>
         </p>
