@@ -104,6 +104,14 @@ export async function reviewEntries(ids, status, note, reviewerId) {
   }).in('id', ids);
 }
 
+// Cập nhật chung cho NHIỀU mục cùng lúc (vd: điều chỉnh cả nhóm)
+export async function updateEntries(ids, patch) {
+  if (!supabase) return NO_DB;
+  return supabase.from('schedule_entries')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .in('id', ids);
+}
+
 // Gán / bỏ gán xe
 export async function assignVehicle(id, vehicleId, note, assignerId) {
   return updateEntry(id, {

@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Cho phép Điều chỉnh / Từ chối lịch ĐÃ DUYỆT (trong chi tiết)
+- EntryDetail "Xử lý nhanh": canModerate cho cả cho_duyet/da_duyet/da_dieu_chinh
+  (trước chỉ cho_duyet). Đã duyệt -> ẩn nút Phê duyệt, hiện Điều chỉnh + Từ chối
+- Thêm form Điều chỉnh inline (nội dung/ngày/buổi/địa điểm + ghi chú bắt buộc) ->
+  trạng thái da_dieu_chinh; áp dụng cho CẢ NHÓM (mergedIds) qua api.updateEntries
+- Từ chối lịch đã duyệt -> tu_choi kèm lý do (cả nhóm)
+
 ## 2026-06-12 — Duyệt 1 thẻ (lịch tuần) = duyệt cả nhóm thành viên
 - api.reviewEntries(ids, ...): cập nhật trạng thái nhiều mục cùng lúc (.in('id', ids))
 - EntryDetail "Xử lý nhanh": doApprove/doReject áp dụng cho TẤT CẢ mục đã gộp
