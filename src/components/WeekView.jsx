@@ -179,12 +179,14 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                   return (
                   <tr key={dISO + sess} className={isToday ? 'bg-amber-50/60' : si === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                     {si === 0 && (
-                      <td rowSpan={2} className={`border-r-2 border-b-2 px-2 py-3 text-center align-middle ${isToday
-                        ? 'bg-gradient-to-b from-amber-300 to-amber-200 border-r-amber-500 border-b-amber-500 text-red-900'
-                        : 'bg-gradient-to-b from-red-800 to-red-600 border-r-red-900 border-b-white/40 text-white'}`}>
-                        <p className="text-[16px] font-extrabold leading-tight">{dayName(d)}</p>
-                        <p className={`text-[13px] font-semibold mt-0.5 ${isToday ? 'text-red-800' : 'text-amber-200'}`}>{fmtDM(d)}</p>
-                        {isToday && <span className="no-print inline-block mt-1.5 text-[9px] font-bold text-amber-900 bg-white/80 rounded px-1.5 py-0.5">HÔM NAY</span>}
+                      <td rowSpan={2} className={`relative border-r border-r-slate-200 border-b-2 px-2 py-3 text-center align-middle ${isToday
+                        ? 'bg-gradient-to-b from-amber-50 to-white border-b-amber-300'
+                        : 'bg-gradient-to-b from-red-50 to-white border-b-slate-200'}`}>
+                        {/* Dải nhấn dọc bên trái làm điểm nhấn cho khung ngày */}
+                        <span className={`absolute left-0 top-0 bottom-0 w-[5px] ${isToday ? 'bg-amber-400' : 'bg-gradient-to-b from-red-600 to-red-500'}`} />
+                        <p className={`text-[15px] font-extrabold leading-tight ${isToday ? 'text-amber-800' : 'text-red-800'}`}>{dayName(d)}</p>
+                        <p className={`inline-block mt-1.5 text-[12px] font-bold rounded-full px-2.5 py-0.5 ${isToday ? 'text-amber-900 bg-amber-200/80' : 'text-red-700 bg-red-100'}`}>{fmtDM(d)}</p>
+                        {isToday && <p className="no-print mt-1.5 text-[9px] font-bold text-amber-700 tracking-wide">● HÔM NAY</p>}
                       </td>
                     )}
                     <td className={`${vB} ${hB} px-1 py-1.5 text-center text-[11px] font-semibold text-slate-500`}>{sess === 'sang' ? 'Sáng' : 'Chiều'}</td>
