@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-12 — SỬA LỖI nghiêm trọng: migration ghi đè HỌ TÊN lãnh đạo Ban
+- Triệu chứng: sau mỗi lần deploy, họ tên thành viên Ban bị đổi thành tên Ban
+  (vd "Hoàng Anh Tuấn" -> "Ban Kinh tế Ngân sách"); người dùng sửa tay rồi lại bị đổi
+- Nguyên nhân: 2026-06-12-chuan-hoa-du-lieu.sql có bước "đồng bộ full_name dòng Ban =
+  tên Ban" (cho mô hình cũ mỗi Ban 1 dòng đơn vị). Nay mỗi Ban gồm nhiều thành viên
+  đích danh -> bước này GHI ĐÈ tên thành viên; Actions chạy lại mỗi deploy -> lặp lại
+- Sửa: XÓA hẳn bước đó. Migration không còn đụng vào họ tên lãnh đạo
+- (Dữ liệu lãnh đạo lưu ở bảng `leaders` trên Supabase Postgres)
+
 ## 2026-06-12 — Sửa khoảng trắng lớn khi in + lề trên/dưới 2cm
 - Nguyên nhân khoảng trắng: .print-root tbody tr {break-inside: avoid} ép cả khối
   ngày (ô Ngày dùng rowSpan) sang trang sau -> đổi thành auto để nội dung lấp đầy trang
