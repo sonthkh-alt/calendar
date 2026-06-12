@@ -76,6 +76,12 @@ export async function deleteEntry(id) {
   return supabase.from('schedule_entries').delete().eq('id', id);
 }
 
+// Xóa nhiều mục cùng lúc (vd: thẻ đã gộp nhiều đơn vị của một nhóm)
+export async function deleteEntries(ids) {
+  if (!supabase) return NO_DB;
+  return supabase.from('schedule_entries').delete().in('id', ids);
+}
+
 // Duyệt / điều chỉnh / từ chối
 export async function reviewEntry(id, status, note, reviewerId) {
   return updateEntry(id, {

@@ -7,7 +7,7 @@ import Login from './Login';
 import SetPassword from './SetPassword';
 import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
-import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, deleteEntry } from './lib/api';
+import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, deleteEntry, deleteEntries } from './lib/api';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS } from './lib/constants';
 import { canReview, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
 import FilterBar from './components/FilterBar';
@@ -120,6 +120,14 @@ export default function App() {
   const onDelete = async (entry) => {
     if (!window.confirm(`Xóa mục lịch "${entry.content}"?`)) return;
     const { error } = await deleteEntry(entry.id);
+    if (error) { alert('Không xóa được: ' + error.message); return; }
+    refresh();
+  };
+  // Xóa thẻ đã gộp nhiều mục (nhóm nhiều đơn vị cùng nội dung) — xóa tất cả
+  const onDeleteMany = async (ids, content) => {
+    if (!ids || ids.length <= 1) return onDelete({ id: ids?.[0], content });
+    if (!window.confirm(`Xóa mục lịch "${content}" (gồm ${ids.length} đơn vị)?`)) return;
+    const { error } = await deleteEntries(ids);
     if (error) { alert('Không xóa được: ' + error.message); return; }
     refresh();
   };
@@ -259,13 +267,13 @@ export default function App() {
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
 
         {tab === 'week' && (
-          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} filters={filters} dupMap={dupMap} isMobile={isMobile} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onView={setViewing} />
+          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} filters={filters} dupMap={dupMap} isMobile={isMobile} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'month' && (
           <MonthView profile={profile} anchor={anchor} entries={entries} leaders={leaders} filters={filters} onPickDay={(d) => { setAnchor(d); setTab('day'); }} />
         )}
         {tab === 'day' && (
-          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} dupMap={dupMap} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onView={setViewing} />
+          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} dupMap={dupMap} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'approve' && canReview(profile) && (
           <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupMap={dupMap} onChanged={refresh} />

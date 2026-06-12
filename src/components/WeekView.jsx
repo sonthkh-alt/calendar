@@ -14,7 +14,7 @@ import { printPage } from '../lib/print';
  * - Chế độ "Đầy đủ": bảng ngày × (Sáng/Chiều) × cột đơn vị.
  * - Chế độ "Gọn": mỗi ngày 1 khối (hợp mobile).
  */
-export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDuplicate, onView }) {
+export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView }) {
   const [mode, setMode] = useState(isMobile ? 'compact' : 'full'); // full | compact
   // Điện thoại: luôn dùng chế độ Gọn (khối từng ngày, kéo dọc) cho dễ xem
   useEffect(() => { if (isMobile) setMode('compact'); }, [isMobile]);
@@ -75,26 +75,6 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
   const cellEntries = (unit, dISO, sess) =>
     visible.filter((e) => unit.leaderIds.includes(e.leader_id) && e.date === dISO && inSession(e, sess));
 
-  const renderCard = (e) => {
-    const leader = leaderById[e.leader_id];
-    return (
-      <EntryCard
-        key={e.id}
-        entry={e}
-        leader={leader}
-        vehicle={hidesDriver(leader?.leader_type) ? null : ((e.vehicle_id ? vehicleById[e.vehicle_id] : null) || (!isHqLocation(e.location) ? dedicatedByLeader[e.leader_id] : null) || null)}
-        canEdit={canEditEntry(profile, e, leader)}
-        canDuplicate={canCreateFor(profile, leader)}
-        dupOthers={dupMap?.get(e.id)}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onDuplicate={onDuplicate}
-        onView={onView}
-        compact={mode === 'full'}
-      />
-    );
-  };
-
   const allUnitLeaderIds = units.flatMap((u) => u.leaderIds);
 
   // Chế độ GỌN: gộp các mục giống nhau (cùng nội dung + buổi/giờ + địa điểm,
@@ -106,9 +86,10 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
       const key = `${e.content}|${e.session}|${e.start_time || ''}|${(e.location || '').trim().toLowerCase()}`;
       const m = map.get(key);
       if (!m) {
-        const item = { orig: e, leaderIds: [e.leader_id], parts: e.participants ? [e.participants] : [], vehicleIds: e.vehicle_id ? [e.vehicle_id] : [] };
+        const item = { orig: e, ids: [e.id], leaderIds: [e.leader_id], parts: e.participants ? [e.participants] : [], vehicleIds: e.vehicle_id ? [e.vehicle_id] : [] };
         map.set(key, item); out.push(item);
       } else {
+        m.ids.push(e.id);
         if (!m.leaderIds.includes(e.leader_id)) m.leaderIds.push(e.leader_id);
         if (e.participants && !m.parts.includes(e.participants)) m.parts.push(e.participants);
         if (e.vehicle_id && !m.vehicleIds.includes(e.vehicle_id)) m.vehicleIds.push(e.vehicle_id);
@@ -117,7 +98,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     return out;
   };
 
-  const renderMergedCard = (m) => {
+  const renderMergedCard = (m, compact) => {
     const orig = m.orig;
     const lead = leaderById[orig.leader_id];
     const names = m.leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean);
@@ -132,9 +113,10 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
         canDuplicate={canCreateFor(profile, lead)}
         dupOthers={dupMap?.get(orig.id)}
         onEdit={() => onEdit?.(orig)}
-        onDelete={() => onDelete?.(orig)}
+        onDelete={() => (m.ids.length > 1 && onDeleteMany ? onDeleteMany(m.ids, orig.content) : onDelete?.(orig))}
         onDuplicate={() => onDuplicate?.(orig)}
         onView={() => onView?.(orig)}
+        compact={compact}
       />
     );
   };
@@ -208,7 +190,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                       return (
                         <td key={u.key} className={`${vB} ${hB} px-1 py-1 align-top`} style={{ minWidth: 150 }}>
                           <div className="space-y-1">
-                            {list.map(renderCard)}
+                            {mergeEntries(list).map((m) => renderMergedCard(m, true))}
                             {addable.length > 0 && (
                               <button
                                 onClick={() => onAdd?.({ date: d, session: sess, leaderId: addable.length === 1 ? addable[0] : null, leaderIds: u.leaderIds })}
@@ -244,7 +226,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                 </div>
                 <div className={`p-2.5 grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
                   {dayEntries.length === 0 && <p className="text-[12px] text-slate-400 italic col-span-full">Không có lịch.</p>}
-                  {mergeEntries(dayEntries).map(renderMergedCard)}
+                  {mergeEntries(dayEntries).map((m) => renderMergedCard(m, false))}
                 </div>
               </div>
             );

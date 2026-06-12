@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Gộp mục trùng (nhóm nhiều đơn vị cùng cột) -> 1 thẻ trên lịch
+- Vấn đề: chọn nhóm (vd Ban Pháp chế) gồm nhiều thành viên cùng 1 cột -> tạo nhiều
+  mục giống hệt -> hiện nhiều thẻ trùng trong cùng cột
+- WeekView chế độ Đầy đủ: dùng mergeEntries + renderMergedCard (như chế độ Gọn) để
+  gộp mục cùng nội dung+buổi/giờ+địa điểm thành 1 thẻ (bỏ renderCard cũ)
+- DayView: gộp tương tự trong mỗi khối Sáng/Chiều; MonthView: đếm theo SỰ KIỆN (dedupe)
+- Xóa thẻ đã gộp -> xóa CẢ NHÓM mục: api.deleteEntries(ids) + App.onDeleteMany
+  (truyền vào WeekView/DayView); mergeEntries thu thập ids các mục con
+- Lưu ý: ApprovalQueue vẫn liệt kê từng mục (duyệt từng cái / "Duyệt cả tuần")
+
 ## 2026-06-12 — Nhóm ở trường Lãnh đạo dùng CHUNG định nghĩa với ô Thành phần
 - Bỏ định nghĩa riêng "Đơn vị thuộc nhóm" (UnitTicks + cột participant_groups.leader_ids)
 - Thành viên nhóm = các lãnh đạo được tick trong "Danh sách thành phần" (suy từ members):

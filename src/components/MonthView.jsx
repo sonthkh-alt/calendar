@@ -42,7 +42,13 @@ export default function MonthView({ profile, anchor, entries, leaders, filters, 
             const dISO = toISODate(d);
             const inMonth = isSameMonth(d, anchor);
             const isToday = dISO === toISODate(new Date());
-            const list = byDate[dISO] || [];
+            // Gộp các mục giống nhau (nhóm nhiều đơn vị) -> đếm theo SỰ KIỆN, không trùng
+            const seen = new Set();
+            const list = (byDate[dISO] || []).filter((e) => {
+              const k = `${e.content}|${e.session}|${e.start_time || ''}|${(e.location || '').trim().toLowerCase()}`;
+              if (seen.has(k)) return false;
+              seen.add(k); return true;
+            });
             const counts = {};
             for (const e of list) counts[e.status] = (counts[e.status] || 0) + 1;
             return (
