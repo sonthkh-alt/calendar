@@ -9,7 +9,7 @@ import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, deleteEntry, deleteEntries } from './lib/api';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS } from './lib/constants';
-import { canReview, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
+import { canReview, canReviewEntry, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
 import FilterBar from './components/FilterBar';
 import WeekView from './components/WeekView';
 import MonthView from './components/MonthView';
@@ -132,7 +132,10 @@ export default function App() {
     refresh();
   };
 
-  const pendingCount = useMemo(() => entries.filter((e) => e.status === 'cho_duyet').length, [entries]);
+  const pendingCount = useMemo(() => {
+    const lbi = Object.fromEntries(leaders.map((l) => [l.id, l]));
+    return entries.filter((e) => e.status === 'cho_duyet' && canReviewEntry(profile, e, lbi[e.leader_id])).length;
+  }, [entries, leaders, profile]);
 
   // CẢNH BÁO TRÙNG ĐỊA ĐIỂM trong CẢ NĂM: >= 2 lịch của các Ban tới cùng một
   // địa điểm (bỏ qua địa điểm mặc định) -> dupMap: id -> danh sách mục trùng

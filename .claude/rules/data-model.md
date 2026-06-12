@@ -15,15 +15,21 @@
 | role | quyền |
 |---|---|
 | quan_tri | toàn quyền (bootstrap: sonthkh@gmail.com) |
-| pct | xem tất cả; duyệt/điều chỉnh/từ chối lịch Ban |
+| pct | xem tất cả; duyệt/điều chỉnh/từ chối MỌI lịch (Ban + Đoàn) |
+| pho_truong_doan | Phó Trưởng Đoàn ĐBQH: duyệt/điều chỉnh/từ chối CHỈ lịch Đoàn ĐBQH (doan) — đ/c Lương Thị Hoa |
 | cb_ban | CRUD lịch lãnh đạo thuộc ban_ids; chỉ sửa khi cho_duyet/tu_choi |
-| cb_tonghop | CRUD lịch PCT → khởi tạo da_duyet (hiện ngay) |
+| cb_tonghop | CRUD lịch PCT/Đoàn → khởi tạo da_duyet (hiện ngay) |
+| cb_ctqh | Cán bộ Công tác Quốc hội: CRUD lịch Đoàn ĐBQH → khởi tạo cho_duyet (Phó Trưởng Đoàn duyệt) |
 | van_phong_xe | gán xe cho lịch đã duyệt / lịch PCT |
 | nguoi_xem | xem tất cả lịch (kể cả chờ duyệt/từ chối — phân biệt bằng màu), không sửa |
 
+permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_doan) để hiện tab Chờ duyệt;
+`canReviewEntry(profile, entry, leader)` = duyệt ĐÚNG mục (pct/quan_tri: mọi; pho_truong_doan: chỉ doan).
+
 ## Trạng thái & luồng
-- `cho_duyet` (amber) → PCT xử lý → `da_duyet` (emerald) | `da_dieu_chinh` (sky, ghi chú bắt buộc) | `tu_choi` (rose, lý do bắt buộc)
-- Lịch PCT (cb_tonghop nhập): vào thẳng `da_duyet`
+- `cho_duyet` (amber) → người duyệt xử lý → `da_duyet` (emerald) | `da_dieu_chinh` (sky, ghi chú bắt buộc) | `tu_choi` (rose, lý do bắt buộc)
+- Lịch PCT/Đoàn (cb_tonghop nhập): vào thẳng `da_duyet`
+- Lịch Đoàn ĐBQH do cb_ctqh nhập: `cho_duyet` → Phó Trưởng Đoàn (pho_truong_doan) duyệt
 - Sửa lịch `tu_choi` → tự quay về `cho_duyet`, xóa review_note
 - Nhịp nghiệp vụ: thứ Sáu nhập lịch TUẦN SAU (nút "Tuần sau →" trên FilterBar)
 

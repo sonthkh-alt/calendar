@@ -10,12 +10,17 @@ export function canCreateFor(profile, leader) {
     return leader.leader_type === 'ban' && (profile.ban_ids || []).includes(leader.ban_id);
   if (profile.role === 'cb_tonghop')
     return leader.leader_type === 'pct' || leader.leader_type === 'doan';
+  // Cán bộ Công tác Quốc hội: nhập lịch cho lãnh đạo Đoàn ĐBQH (cần Phó Trưởng Đoàn duyệt)
+  if (profile.role === 'cb_ctqh')
+    return leader.leader_type === 'doan';
   return false;
 }
 
 // Trạng thái khởi tạo khi tạo lịch cho đối tượng này
-// (lịch lãnh đạo HĐND / Đoàn ĐBQH do phòng TH-TT-DN nhập hiển thị ngay, không qua duyệt)
-export function initialStatus(leader) {
+// - Cán bộ Công tác Quốc hội nhập lịch Đoàn -> CHỜ DUYỆT (Phó Trưởng Đoàn duyệt)
+// - Lịch lãnh đạo HĐND / Đoàn ĐBQH do phòng TH-TT-DN nhập hiển thị ngay, không qua duyệt
+export function initialStatus(leader, profile) {
+  if (profile?.role === 'cb_ctqh') return 'cho_duyet';
   return leader?.leader_type === 'pct' || leader?.leader_type === 'doan' ? 'da_duyet' : 'cho_duyet';
 }
 
@@ -29,9 +34,18 @@ export function canEditEntry(profile, entry, leader) {
   return entry.status === 'cho_duyet' || entry.status === 'tu_choi';
 }
 
-// Được duyệt / điều chỉnh / từ chối lịch không? (PCT và Quản trị)
+// Có phải người duyệt (để hiện tab "Chờ duyệt" / khu xử lý nhanh) không?
+// PCT + Quản trị: duyệt mọi lịch. Phó Trưởng Đoàn: chỉ duyệt lịch Đoàn ĐBQH.
 export function canReview(profile) {
-  return profile?.role === 'pct' || profile?.role === 'quan_tri';
+  return profile?.role === 'pct' || profile?.role === 'quan_tri' || profile?.role === 'pho_truong_doan';
+}
+
+// Được duyệt / điều chỉnh / từ chối ĐÚNG mục lịch này không (phân theo loại đối tượng)?
+export function canReviewEntry(profile, entry, leader) {
+  if (!profile || !entry) return false;
+  if (profile.role === 'quan_tri' || profile.role === 'pct') return true;
+  if (profile.role === 'pho_truong_doan') return leader?.leader_type === 'doan';
+  return false;
 }
 
 // Được gán xe không?

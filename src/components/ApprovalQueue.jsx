@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Check, CheckCheck, XCircle, SlidersHorizontal, Inbox, MapPin, Users, Clock } from 'lucide-react';
 import { reviewEntry, updateEntry } from '../lib/api';
+import { canReviewEntry } from '../lib/permissions';
 import { SESSIONS } from '../lib/constants';
 import { fmtTime, parseISO, fmtDMY, dayName, weekStart, weekEnd, toISODate } from '../lib/dates';
 
@@ -24,9 +25,9 @@ export default function ApprovalQueue({ profile, anchor, entries, leaders, bans,
 
   const pending = useMemo(
     () => (entries || [])
-      .filter((e) => e.status === 'cho_duyet')
+      .filter((e) => e.status === 'cho_duyet' && canReviewEntry(profile, e, leaderById[e.leader_id]))
       .sort((a, b) => a.date.localeCompare(b.date)),
-    [entries]
+    [entries, profile, leaderById]
   );
   const pendingThisWeek = pending.filter((e) => e.date >= ws && e.date <= we);
 

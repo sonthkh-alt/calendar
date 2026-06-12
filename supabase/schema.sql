@@ -46,11 +46,15 @@ create table if not exists profiles (
   full_name text,
   position text,
   role text not null default 'nguoi_xem'
-    check (role in ('quan_tri','pct','cb_ban','cb_tonghop','van_phong_xe','nguoi_xem')),
+    check (role in ('quan_tri','pct','pho_truong_doan','cb_ban','cb_tonghop','cb_ctqh','van_phong_xe','nguoi_xem')),
   ban_ids uuid[] default '{}',          -- cb_ban: các Ban được phân công theo dõi
-  leader_id uuid references leaders(id),-- pct: trỏ tới dòng leaders của chính mình
+  leader_id uuid references leaders(id),-- pct/Phó Trưởng Đoàn: trỏ tới dòng leaders của chính mình
   created_at timestamptz default now()
 );
+-- Nâng cấp DB cũ: mở rộng vai trò (pho_truong_doan, cb_ctqh). An toàn chạy lại.
+alter table profiles drop constraint if exists profiles_role_check;
+alter table profiles add constraint profiles_role_check
+  check (role in ('quan_tri','pct','pho_truong_doan','cb_ban','cb_tonghop','cb_ctqh','van_phong_xe','nguoi_xem'));
 
 create or replace function handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$

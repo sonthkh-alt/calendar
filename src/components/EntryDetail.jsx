@@ -3,7 +3,7 @@ import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Buildi
 import StatusBadge from './StatusBadge';
 import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
-import { canReview, canAssignVehicle, entryNeedsVehicleOk } from '../lib/permissions';
+import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk } from '../lib/permissions';
 import { reviewEntries, updateEntries, assignVehicle } from '../lib/api';
 
 /**
@@ -68,7 +68,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   // ===== Xử lý nhanh: duyệt / điều chỉnh / từ chối / điều xe ngay trong hộp chi tiết =====
   const leader = leaderById[entry.leader_id];
   // Cho phép xử lý cả khi đã duyệt: điều chỉnh / từ chối lịch đã phê duyệt
-  const canModerate = canReview(profile) && ['cho_duyet', 'da_duyet', 'da_dieu_chinh'].includes(entry.status);
+  const canModerate = canReviewEntry(profile, entry, leader) && ['cho_duyet', 'da_duyet', 'da_dieu_chinh'].includes(entry.status);
   const canApproveNow = entry.status !== 'da_duyet'; // đã duyệt rồi thì không cần nút Phê duyệt
   // Lãnh đạo HĐND tỉnh / Đoàn ĐBQH: ô Lái xe luôn để trống -> không hiện cả khu gán xe nhanh
   const showVehicle = canAssignVehicle(profile) && entryNeedsVehicleOk(entry, leader)

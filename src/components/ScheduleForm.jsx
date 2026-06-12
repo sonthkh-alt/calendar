@@ -123,13 +123,13 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       const leader = leaders.find((l) => l.id === editing.leader_id);
       const patch = { ...base };
       if (atOffice) { patch.status = 'da_duyet'; patch.review_note = null; }
-      else if (editing.status === 'tu_choi') { patch.status = initialStatus(leader); patch.review_note = null; }
+      else if (editing.status === 'tu_choi') { patch.status = initialStatus(leader, profile); patch.review_note = null; }
       res = await updateEntry(editing.id, patch);
     } else {
       const pairs = leaderIds.map((leaderId) => ({
         leaderId,
         // "Làm việc tại cơ quan" -> vào thẳng đã duyệt, không cần thẩm quyền phê duyệt
-        status: atOffice ? 'da_duyet' : initialStatus(leaders.find((l) => l.id === leaderId)),
+        status: atOffice ? 'da_duyet' : initialStatus(leaders.find((l) => l.id === leaderId), profile),
       }));
       res = await createEntries(base, pairs);
     }

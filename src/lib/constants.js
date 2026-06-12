@@ -10,8 +10,10 @@ export const APP_NAME = 'Lịch công tác tuần';
 export const ROLES = {
   quan_tri: 'Quản trị hệ thống',
   pct: 'Phó Chủ tịch HĐND tỉnh',
+  pho_truong_doan: 'Phó Trưởng Đoàn ĐBQH (duyệt lịch Đoàn)',
   cb_ban: 'Cán bộ theo dõi Ban',
   cb_tonghop: 'Cán bộ TH-TT-Dân nguyện',
+  cb_ctqh: 'Cán bộ Công tác Quốc hội (nhập lịch Đoàn)',
   van_phong_xe: 'Văn phòng (điều xe)',
   nguoi_xem: 'Người xem',
 };

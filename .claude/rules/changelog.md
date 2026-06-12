@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Luồng duyệt lịch Đoàn ĐBQH: cb_ctqh nhập -> Phó Trưởng Đoàn duyệt
+- 2 vai trò mới: pho_truong_doan (duyệt CHỈ lịch doan) + cb_ctqh (nhập lịch doan -> cho_duyet)
+- permissions: canCreateFor(cb_ctqh->doan); initialStatus(leader, profile) (cb_ctqh->cho_duyet);
+  canReview thêm pho_truong_doan; thêm canReviewEntry(profile,entry,leader) phân loại theo doan
+- ApprovalQueue lọc theo canReviewEntry; EntryDetail.canModerate dùng canReviewEntry;
+  App.pendingCount đếm theo quyền; ScheduleForm truyền profile vào initialStatus
+- schema: profiles role check thêm pho_truong_doan/cb_ctqh (+ALTER idempotent)
+- Migration 2026-06-12-tai-khoan-ctqh-doan.sql: hoalt@thanhhoa.gov.vn (mk 6, Lương Thị Hoa,
+  pho_truong_doan, gắn leader doan) + ctqh@thanhhoa.gov.vn (mk 7, cb_ctqh); token = '' (tránh lỗi GoTrue)
+
 ## 2026-06-12 — Nhóm thành phần: cột TT tự đánh số 1..N (như tab Lãnh đạo)
 - AdminGroups: TT thành số thứ tự dòng tự động (đọc-only) + nút ↑↓ hoán đổi sort_order;
   bỏ ô nhập "Thứ tự" thủ công (form thêm + dòng sửa); thêm mới tự lấy sort_order = max+1
