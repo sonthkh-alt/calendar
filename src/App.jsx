@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarRange, CalendarDays, CalendarClock, ClipboardCheck, Car, Settings,
-  LogOut, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History,
+  LogOut, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin,
 } from 'lucide-react';
 import Login from './Login';
 import SetPassword from './SetPassword';
 import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
-import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, deleteEntry, deleteEntries } from './lib/api';
+import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, deleteEntry, deleteEntries } from './lib/api';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS } from './lib/constants';
 import { canReview, canReviewEntry, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
 import FilterBar from './components/FilterBar';
@@ -22,6 +22,7 @@ import AdminVehicles from './components/AdminVehicles';
 import AdminGroups from './components/AdminGroups';
 import AdminBackup from './components/AdminBackup';
 import AdminLog from './components/AdminLog';
+import AdminLocations from './components/AdminLocations';
 import ScheduleForm from './components/ScheduleForm';
 import EntryDetail from './components/EntryDetail';
 import DeviceSelect from './components/DeviceSelect';
@@ -62,6 +63,7 @@ export default function App() {
   const [leaders, setLeaders] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [pGroups, setPGroups] = useState([]);
+  const [pLocations, setPLocations] = useState([]);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -98,9 +100,15 @@ export default function App() {
   }), [anchor]);
 
   const loadCatalogs = useCallback(async () => {
-    const [b, l, v, g] = await Promise.all([fetchBans(), fetchLeaders(), fetchVehicles(), fetchParticipantGroups()]);
-    setBans(b.data || []); setLeaders(l.data || []); setVehicles(v.data || []); setPGroups(g.data || []);
+    const [b, l, v, g, loc] = await Promise.all([fetchBans(), fetchLeaders(), fetchVehicles(), fetchParticipantGroups(), fetchLocations()]);
+    setBans(b.data || []); setLeaders(l.data || []); setVehicles(v.data || []); setPGroups(g.data || []); setPLocations(loc.data || []);
   }, []);
+
+  // Tên địa điểm gợi ý (dùng cho ô gợi ý + bỏ qua cảnh báo trùng); rỗng -> mặc định
+  const locationNames = useMemo(
+    () => (pLocations.length ? pLocations.map((x) => x.name) : COMMON_LOCATIONS),
+    [pLocations]
+  );
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
@@ -125,6 +133,7 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leaders' }, bumpCatalogs)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicles' }, bumpCatalogs)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participant_groups' }, bumpCatalogs)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'locations' }, bumpCatalogs)
       .subscribe();
     return () => { clearTimeout(tE); clearTimeout(tC); supabase.removeChannel(ch); };
   }, [session, profile, loadEntries, loadCatalogs]);
@@ -160,7 +169,7 @@ export default function App() {
   // kèm ngày tháng + đơn vị, để người duyệt biết chi tiết và cân nhắc gộp đoàn.
   const dupMap = useMemo(() => {
     const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    const commonSet = new Set(COMMON_LOCATIONS.map(norm));
+    const commonSet = new Set(locationNames.map(norm));
     const leaderById = Object.fromEntries(leaders.map((l) => [l.id, l]));
     const groups = {};
     for (const e of entries) {
@@ -198,7 +207,7 @@ export default function App() {
       }
     }
     return map;
-  }, [entries, leaders]);
+  }, [entries, leaders, locationNames]);
 
   // ===== Các cổng vào =====
   if (!supabase) {
@@ -327,6 +336,7 @@ export default function App() {
                 { key: 'leaders', label: 'Lãnh đạo', icon: UserSquare2 },
                 { key: 'vehicles', label: 'Xe công vụ', icon: Car },
                 { key: 'groups', label: 'Nhóm thành phần', icon: ListChecks },
+                { key: 'locations', label: 'Địa điểm', icon: MapPin },
                 { key: 'log', label: 'Nhật ký', icon: History },
                 { key: 'backup', label: 'Sao lưu', icon: DatabaseBackup },
               ].map((t) => (
@@ -339,6 +349,7 @@ export default function App() {
             {adminTab === 'leaders' && <AdminLeaders leaders={leaders} bans={bans} onChanged={loadCatalogs} />}
             {adminTab === 'vehicles' && <AdminVehicles vehicles={vehicles} leaders={leaders} onChanged={loadCatalogs} />}
             {adminTab === 'groups' && <AdminGroups groups={pGroups} leaders={leaders} onChanged={loadCatalogs} />}
+            {adminTab === 'locations' && <AdminLocations locations={pLocations} onChanged={loadCatalogs} />}
             {adminTab === 'log' && <AdminLog />}
             {adminTab === 'backup' && <AdminBackup onRestored={() => { loadCatalogs(); loadEntries(); }} />}
           </div>
@@ -356,6 +367,7 @@ export default function App() {
           leaders={leaders}
           entries={entries}
           groups={pGroups}
+          locations={locationNames}
           editing={editing}
           duplicating={duplicating}
           prefill={prefill}

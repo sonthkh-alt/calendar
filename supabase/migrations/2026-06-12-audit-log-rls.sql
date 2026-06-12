@@ -85,7 +85,7 @@ $$;
 do $$ declare t text;
 begin
   -- 4a) Danh mục + profiles: đọc=authenticated, ghi=admin
-  foreach t in array array['bans','leaders','vehicles','participant_groups','profiles'] loop
+  foreach t in array array['bans','leaders','vehicles','participant_groups','profiles','locations'] loop
     execute format('drop policy if exists "%s_auth_all" on %I', t, t);
     execute format('drop policy if exists "%s_sel" on %I', t, t);
     execute format('drop policy if exists "%s_admin_write" on %I', t, t);

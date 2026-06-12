@@ -89,6 +89,25 @@ create table if not exists participant_groups (
   sort_order int default 0
 );
 
+-- 4c) Địa điểm gợi ý (quản trị thêm/bớt) — hiện trong ô gợi ý khi nhập Địa điểm
+--     và được BỎ QUA khi cảnh báo trùng địa điểm (nơi công cộng nhiều đơn vị hay tới).
+create table if not exists locations (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  sort_order int default 0
+);
+-- Nạp danh sách mặc định KHI bảng còn rỗng (an toàn chạy lại; không ghi đè dữ liệu đã sửa)
+insert into locations (name, sort_order)
+select v.name, v.so from (values
+  ('Trụ sở Tỉnh ủy', 1),
+  ('Trụ sở UBND tỉnh', 2),
+  ('Trụ sở Đoàn ĐBQH và HĐND tỉnh', 3),
+  ('UBND phường Hạc Thành', 4),
+  ('Trụ sở Tiếp công dân tỉnh', 5),
+  ('Hội trường 25B', 6)
+) as v(name, so)
+where not exists (select 1 from locations);
+
 -- 5) Mục lịch công tác
 create table if not exists schedule_entries (
   id uuid primary key default gen_random_uuid(),
@@ -131,7 +150,7 @@ alter table schedule_entries add column if not exists group_label text;
 -- 6) RLS: chỉ người ĐÃ ĐĂNG NHẬP mới đọc/ghi; phân quyền chi tiết do app xử lý.
 do $$ declare t text;
 begin
-  foreach t in array array['bans','leaders','profiles','vehicles','schedule_entries','participant_groups'] loop
+  foreach t in array array['bans','leaders','profiles','vehicles','schedule_entries','participant_groups','locations'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "%s_auth_all" on %I', t, t);
     execute format(
@@ -150,7 +169,7 @@ begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
     create publication supabase_realtime;
   end if;
-  foreach t in array array['schedule_entries','leaders','vehicles','participant_groups','bans'] loop
+  foreach t in array array['schedule_entries','leaders','vehicles','participant_groups','bans','locations'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t

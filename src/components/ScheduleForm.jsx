@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { X, Save, AlertTriangle, CalendarPlus } from 'lucide-react';
 import { SESSIONS, COMMON_LOCATIONS, groupLeaderIds } from '../lib/constants';
+// `locations` (prop) là danh sách địa điểm gợi ý quản trị được; rỗng -> mặc định COMMON_LOCATIONS
 import { canCreateFor, initialStatus } from '../lib/permissions';
 import { createEntries, updateEntry, deleteEntry } from '../lib/api';
 import DateField from './DateField';
@@ -15,7 +16,8 @@ import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
  *  - prefill: { date, session, leaderId, leaderIds } khi click ô trống
  *  - onClose, onSaved
  */
-export default function ScheduleForm({ profile, leaders, entries, groups: pGroups, editing, duplicating, prefill, onClose, onSaved }) {
+export default function ScheduleForm({ profile, leaders, entries, groups: pGroups, locations, editing, duplicating, prefill, onClose, onSaved }) {
+  const locOptions = (locations && locations.length) ? locations : COMMON_LOCATIONS;
   const src = editing || duplicating; // nguồn dữ liệu điền sẵn
   // Danh sách được chọn: theo quyền. Mở từ ô của một cột (prefill.leaderIds)
   // thì nhóm lãnh đạo của cột đó được ĐƯA LÊN ĐẦU, các nhóm khác vẫn chọn được.
@@ -280,7 +282,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm <span className="text-rose-600">*</span></label>
               <input type="text" list="goi-y-dia-diem" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chọn gợi ý hoặc gõ tự do — VD: UBND huyện Thọ Xuân" className={`${input} mt-1.5`} />
               <datalist id="goi-y-dia-diem">
-                {COMMON_LOCATIONS.map((loc) => <option key={loc} value={loc} />)}
+                {locOptions.map((loc) => <option key={loc} value={loc} />)}
               </datalist>
             </div>
           )}

@@ -29,6 +29,20 @@ export async function fetchParticipantGroups() {
   return supabase.from('participant_groups').select('*').order('sort_order');
 }
 
+// ===== Địa điểm gợi ý =====
+export async function fetchLocations() {
+  if (!supabase) return NO_DB;
+  return supabase.from('locations').select('*').order('sort_order');
+}
+export async function upsertLocation(row) {
+  if (!supabase) return NO_DB;
+  return supabase.from('locations').upsert(row).select();
+}
+export async function deleteLocation(id) {
+  if (!supabase) return NO_DB;
+  return supabase.from('locations').delete().eq('id', id);
+}
+
 // Nhật ký thao tác (audit log) — mới nhất trước
 export async function fetchActivityLog(limit = 300) {
   if (!supabase) return NO_DB;
