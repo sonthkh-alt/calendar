@@ -27,10 +27,10 @@ end $$;
 
 -- 1) Bốn Ban của HĐND tỉnh
 insert into bans (id, name, short_name, sort_order) values
-  ('11111111-1111-1111-1111-111111111101', 'Ban Kinh tế - Ngân sách', 'KT-NS', 1),
-  ('11111111-1111-1111-1111-111111111102', 'Ban Pháp chế',            'PC',    2),
-  ('11111111-1111-1111-1111-111111111103', 'Ban Văn hóa - Xã hội',    'VH-XH', 3),
-  ('11111111-1111-1111-1111-111111111104', 'Ban Dân tộc',             'DT',    4);
+  ('11111111-1111-1111-1111-111111111101', 'Ban Kinh tế Ngân sách', 'Kinh tế Ngân sách', 1),
+  ('11111111-1111-1111-1111-111111111102', 'Ban Pháp chế',          'Pháp chế',          2),
+  ('11111111-1111-1111-1111-111111111103', 'Ban Văn hóa Xã hội',    'Văn hóa Xã hội',    3),
+  ('11111111-1111-1111-1111-111111111104', 'Ban Dân tộc',           'Dân tộc',           4);
 
 -- 2) Đối tượng có lịch:
 --    - Lãnh đạo HĐND tỉnh (đích danh, gộp 1 cột) + Đoàn ĐBQH tỉnh (đích danh, 1 cột)
@@ -38,18 +38,18 @@ insert into bans (id, name, short_name, sort_order) values
 --    - Lãnh đạo Văn phòng (cột trực lãnh đạo Văn phòng cuối tuần)
 insert into leaders (id, full_name, position, leader_type, ban_id, sort_order, active) values
   -- Lãnh đạo HĐND tỉnh
-  ('22222222-2222-2222-2222-222222222201', 'Đ/c Lê Tiến Lam',      'Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh', 'pct',  null, 1, true),
-  ('22222222-2222-2222-2222-222222222202', 'Đ/c Nguyễn Quang Hải', 'Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh',                              'pct',  null, 2, true),
+  ('22222222-2222-2222-2222-222222222201', 'Lê Tiến Lam',      'Ủy viên Ban Thường vụ Tỉnh ủy, Phó Chủ tịch Thường trực HĐND tỉnh', 'pct',  null, 1, true),
+  ('22222222-2222-2222-2222-222222222202', 'Nguyễn Quang Hải', 'Tỉnh ủy viên, Phó Chủ tịch HĐND tỉnh',                              'pct',  null, 2, true),
   -- Đoàn ĐBQH tỉnh
-  ('22222222-2222-2222-2222-222222222203', 'Đ/c Lương Thị Hoa',    'Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh',                           'doan', null, 3, true),
-  ('22222222-2222-2222-2222-222222222204', 'Đ/c Bùi Văn Dũng',     'ĐBQH chuyên trách',                                                  'doan', null, 4, true),
+  ('22222222-2222-2222-2222-222222222203', 'Lương Thị Hoa',    'Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh',                           'doan', null, 3, true),
+  ('22222222-2222-2222-2222-222222222204', 'Bùi Văn Dũng',     'ĐBQH chuyên trách',                                                  'doan', null, 4, true),
   -- Các Ban
-  ('22222222-2222-2222-2222-222222222210', 'Ban Kinh tế - Ngân sách', '', 'ban', '11111111-1111-1111-1111-111111111101', 11, true),
-  ('22222222-2222-2222-2222-222222222220', 'Ban Pháp chế',            '', 'ban', '11111111-1111-1111-1111-111111111102', 21, true),
-  ('22222222-2222-2222-2222-222222222230', 'Ban Văn hóa - Xã hội',    '', 'ban', '11111111-1111-1111-1111-111111111103', 31, true),
-  ('22222222-2222-2222-2222-222222222240', 'Ban Dân tộc',             '', 'ban', '11111111-1111-1111-1111-111111111104', 41, true),
+  ('22222222-2222-2222-2222-222222222210', 'Ban Kinh tế Ngân sách', '', 'ban', '11111111-1111-1111-1111-111111111101', 5, true),
+  ('22222222-2222-2222-2222-222222222220', 'Ban Pháp chế',          '', 'ban', '11111111-1111-1111-1111-111111111102', 6, true),
+  ('22222222-2222-2222-2222-222222222230', 'Ban Văn hóa Xã hội',    '', 'ban', '11111111-1111-1111-1111-111111111103', 7, true),
+  ('22222222-2222-2222-2222-222222222240', 'Ban Dân tộc',           '', 'ban', '11111111-1111-1111-1111-111111111104', 8, true),
   -- Văn phòng (hiển thị mục trực lãnh đạo Văn phòng)
-  ('22222222-2222-2222-2222-222222222250', 'Lãnh đạo Văn phòng',      '', 'vanphong', null, 51, true);
+  ('22222222-2222-2222-2222-222222222250', 'Lãnh đạo Văn phòng',    '', 'vanphong', null, 9, true);
 
 -- 3) Bốn xe công vụ (biển số/lái xe MẪU — sửa trong tab Quản trị)
 insert into vehicles (id, plate, driver_name, driver_phone, vehicle_type, assigned_leader_id, active) values
@@ -65,9 +65,9 @@ insert into participant_groups (name, members, sort_order) values
   ('Lãnh đạo Đoàn ĐBQH tỉnh',
    'Đ/c Lương Thị Hoa, Tỉnh ủy viên, Phó Trưởng Đoàn ĐBQH tỉnh; Đ/c Bùi Văn Dũng, ĐBQH chuyên trách', 2),
   ('Trưởng các Ban HĐND tỉnh',
-   'Các đ/c Trưởng Ban: KT-NS, Pháp chế, VH-XH, Dân tộc', 3),
+   'Các đ/c Trưởng Ban: Kinh tế Ngân sách, Pháp chế, Văn hóa Xã hội, Dân tộc', 3),
   ('Lãnh đạo các Ban HĐND tỉnh',
-   'Lãnh đạo các Ban: KT-NS, Pháp chế, VH-XH, Dân tộc', 4),
+   'Lãnh đạo các Ban: Kinh tế Ngân sách, Pháp chế, Văn hóa Xã hội, Dân tộc', 4),
   ('Lãnh đạo Văn phòng',
    'Đ/c Trần Mạnh Long, Tỉnh ủy viên, Chánh Văn phòng; các đ/c Phó Chánh Văn phòng', 5);
 

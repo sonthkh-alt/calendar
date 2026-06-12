@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Chuẩn hóa dữ liệu: STT tự động, bỏ "Đ/c" tên, tên Ban đầy đủ
+- Migration 2026-06-12-chuan-hoa-du-lieu.sql (idempotent): bỏ tiền tố Đ/c/Đồng chí
+  trong leaders.full_name; đổi tên 4 Ban đầy đủ (giữ "Ban", bỏ viết tắt/gạch ngang):
+  Ban Kinh tế Ngân sách / Ban Pháp chế / Ban Văn hóa Xã hội / Ban Dân tộc
+  (short_name = phần không có "Ban"); sort_order đánh lại liền mạch 1..N
+- AdminLeaders: cột TT TỰ đánh số 1,2,3 (đọc-only) + nút ↑↓ hoán đổi sort_order;
+  "Thêm lãnh đạo" tự lấy sort_order = max+1 (bỏ ô nhập thứ tự thủ công)
+- seed.sql đồng bộ chuẩn mới (tên không Đ/c, Ban đầy đủ, sort_order 1..9, nhóm TP bỏ viết tắt)
+- Nội dung/Thành phần lịch VẪN ghi "Đ/c" tự do (không đụng) — chỉ chuẩn hóa danh mục lãnh đạo
+
 ## 2026-06-12 — Cờ "Làm việc tại cơ quan" (at_office)
 - schema.sql: ALTER ADD COLUMN at_office boolean not null default false (idempotent)
 - ScheduleForm: checkbox "Làm việc tại cơ quan"; tick -> ẩn + bỏ bắt buộc Địa điểm/Thành phần,
