@@ -4,7 +4,7 @@ import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
 import { canCreateFor, canEditEntry, canSeeEntry } from '../lib/permissions';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
-import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation, hidesDriver } from '../lib/constants';
+import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation, hidesDriver, makeEntrySorter } from '../lib/constants';
 import { printPage } from '../lib/print';
 
 /**
@@ -23,6 +23,8 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
 
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
+  // Sắp xếp trong ngày: Sáng->Chiều, rồi theo STT nhóm/lãnh đạo (xem makeEntrySorter)
+  const entrySorter = useMemo(() => makeEntrySorter(leaders, groups), [leaders, groups]);
   // Xe riêng theo lãnh đạo (PCT / Phó Trưởng Đoàn): hiện lái xe mặc định khi entry chưa gán xe
   const dedicatedByLeader = useMemo(() => Object.fromEntries(
     (vehicles || []).filter((v) => v.active && v.vehicle_type === 'rieng' && v.assigned_leader_id)
@@ -191,7 +193,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                       return (
                         <td key={u.key} className={`${vB} ${hB} px-1 py-1 align-top`} style={{ minWidth: 150 }}>
                           <div className="space-y-1">
-                            {mergeEntries(list).map((m) => renderMergedCard(m, true))}
+                            {mergeEntries([...list].sort(entrySorter)).map((m) => renderMergedCard(m, true))}
                             {addable.length > 0 && (
                               <button
                                 onClick={() => onAdd?.({ date: d, session: sess, leaderId: addable.length === 1 ? addable[0] : null, leaderIds: u.leaderIds })}
@@ -218,7 +220,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
             const isToday = dISO === toISODate(new Date());
             const dayEntries = visible
               .filter((e) => e.date === dISO && allUnitLeaderIds.includes(e.leader_id))
-              .sort((a, b) => (a.session === b.session ? (a.start_time || '').localeCompare(b.start_time || '') : a.session.localeCompare(b.session)));
+              .sort(entrySorter);
             return (
               <div key={dISO} className={`rounded-xl border bg-white shadow-sm overflow-hidden ${isToday ? 'border-amber-300 ring-1 ring-amber-200' : 'border-slate-200'}`}>
                 <div className={`px-3 py-2 flex items-center justify-between ${isToday ? 'bg-amber-50' : 'bg-slate-50'}`}>

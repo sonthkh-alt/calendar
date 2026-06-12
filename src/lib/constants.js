@@ -63,6 +63,30 @@ export function leaderInUnit(leader, banId) {
   return leader?.ban_id === banId;
 }
 
+// Bộ so sánh sắp xếp lịch trong NGÀY (lịch tuần + bản in):
+//  1) Sáng trước Chiều (cả ngày lên đầu; "theo giờ" xếp sáng/chiều theo mốc 12:00)
+//  2) Ưu tiên theo SỐ THỨ TỰ: nếu lịch có Tên nhóm (group_label thuộc Nhóm thành
+//     phần) -> dùng STT của nhóm; nếu không -> STT của lãnh đạo. Đều tăng dần.
+export const makeEntrySorter = (leaders, groups) => {
+  const leaderSort = Object.fromEntries((leaders || []).map((l) => [l.id, l.sort_order ?? 999]));
+  const groupSort = Object.fromEntries((groups || []).map((g) => [g.name, g.sort_order ?? 999]));
+  const sessRank = (e) => {
+    if (e.session === 'ca_ngay') return 0;
+    if (e.session === 'chieu') return 2;
+    if (e.session === 'gio') return (e.start_time || '08:00') < '12:00' ? 1 : 2;
+    return 1; // sang
+  };
+  const prio = (e) => (e.group_label != null && groupSort[e.group_label] != null)
+    ? groupSort[e.group_label]
+    : (leaderSort[e.leader_id] ?? 999);
+  return (a, b) =>
+    sessRank(a) - sessRank(b)
+    || prio(a) - prio(b)
+    || (leaderSort[a.leader_id] ?? 999) - (leaderSort[b.leader_id] ?? 999)
+    || (a.start_time || '').localeCompare(b.start_time || '')
+    || (a.content || '').localeCompare(b.content || '');
+};
+
 // Nhãn chèn vào "Danh sách thành phần" khi tick một lãnh đạo/đơn vị
 export const leaderLabel = (l) => `${l.full_name}${l.position ? ', ' + l.position : ''}`;
 

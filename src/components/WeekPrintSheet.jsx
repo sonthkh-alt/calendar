@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { UNIT_NAME } from '../lib/constants';
+import { UNIT_NAME, makeEntrySorter } from '../lib/constants';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY, fmtTime, weekStart, weekEnd, getISOWeek } from '../lib/dates';
 
 /**
@@ -15,12 +15,8 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
 
   const ws = weekStart(anchor), we = weekEnd(anchor);
 
-  // Sắp xếp trong ngày: cả ngày -> sáng -> chiều (theo giờ nếu có)
-  const sortKey = (e) => {
-    if (e.session === 'ca_ngay') return '0';
-    if (e.session === 'gio') return e.start_time || '08:00';
-    return e.session === 'sang' ? '08:00' : '14:00';
-  };
+  // Sắp xếp trong ngày: Sáng->Chiều, rồi theo STT nhóm/lãnh đạo (xem makeEntrySorter)
+  const entrySorter = useMemo(() => makeEntrySorter(leaders, groups), [leaders, groups]);
 
   // Gộp mục giống nhau (cùng nội dung + buổi/giờ + địa điểm) thành 1 hàng
   const mergeDay = (list) => {
@@ -37,7 +33,7 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
         if (e.participants && !m._parts.includes(e.participants)) m._parts.push(e.participants);
       }
     }
-    return out.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+    return out.sort(entrySorter);
   };
 
   const timeLabel = (e) => {

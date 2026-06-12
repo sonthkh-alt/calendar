@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Thứ tự sắp xếp lịch tuần + bản in: Sáng->Chiều rồi theo STT nhóm/lãnh đạo
+- constants.makeEntrySorter(leaders, groups): so sánh trong ngày -> (1) Sáng trước Chiều
+  (ca_ngay đầu; gio theo mốc 12:00), (2) STT nhóm nếu có group_label, ngược lại STT lãnh đạo,
+  tăng dần; tie-break: STT lãnh đạo -> start_time -> nội dung
+- WeekView: cả Đầy đủ (sort trước khi gộp ô) và Gọn (sort dayEntries) dùng entrySorter
+- WeekPrintSheet: mergeDay sort theo entrySorter (bỏ sortKey theo giờ cũ)
+
 ## 2026-06-12 — Ô nhập NGÀY định dạng dd/mm/yyyy (không theo locale trình duyệt)
 - Lỗi: <input type="date"> hiện mm/dd/yyyy (kiểu Mỹ) theo locale trình duyệt, không ép được
 - DateField.jsx: ô text dd/mm/yyyy + nút lịch (mở showPicker của input date ẩn);
