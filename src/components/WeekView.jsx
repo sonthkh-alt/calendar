@@ -158,7 +158,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
           <table className="w-full border-collapse min-w-[860px]">
             <thead>
               <tr className="bg-red-800 text-white">
-                <th className="border border-red-900/40 px-2 py-2.5 text-[12px] font-bold w-[90px]">Thứ / Ngày</th>
+                <th className="border border-red-900/40 px-2 py-2.5 text-[13px] font-bold w-[116px]">Thứ / Ngày</th>
                 <th className="border border-red-900/40 px-1 py-2.5 text-[12px] font-bold w-[52px]">Buổi</th>
                 {units.map((u) => (
                   <th key={u.key} className="border border-red-900/40 px-2 py-2.5 text-[12px] font-bold" style={{ minWidth: 150 }}>{u.label}</th>
@@ -179,10 +179,12 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                   return (
                   <tr key={dISO + sess} className={isToday ? 'bg-amber-50/60' : si === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                     {si === 0 && (
-                      <td rowSpan={2} className={`${vB} border-b-2 px-2 py-2 text-center align-middle ${isToday ? 'bg-amber-100/70 border-b-amber-300' : 'bg-slate-50 border-b-slate-300'}`}>
-                        <p className="text-[12px] font-bold text-red-800">{dayName(d)}</p>
-                        <p className="text-[12px] text-slate-600">{fmtDM(d)}</p>
-                        {isToday && <span className="no-print inline-block mt-1 text-[9px] font-bold text-amber-700 bg-amber-200 rounded px-1">HÔM NAY</span>}
+                      <td rowSpan={2} className={`border-r-2 border-b-2 px-2 py-3 text-center align-middle ${isToday
+                        ? 'bg-gradient-to-b from-amber-300 to-amber-200 border-r-amber-500 border-b-amber-500 text-red-900'
+                        : 'bg-gradient-to-b from-red-800 to-red-600 border-r-red-900 border-b-white/40 text-white'}`}>
+                        <p className="text-[16px] font-extrabold leading-tight">{dayName(d)}</p>
+                        <p className={`text-[13px] font-semibold mt-0.5 ${isToday ? 'text-red-800' : 'text-amber-200'}`}>{fmtDM(d)}</p>
+                        {isToday && <span className="no-print inline-block mt-1.5 text-[9px] font-bold text-amber-900 bg-white/80 rounded px-1.5 py-0.5">HÔM NAY</span>}
                       </td>
                     )}
                     <td className={`${vB} ${hB} px-1 py-1.5 text-center text-[11px] font-semibold text-slate-500`}>{sess === 'sang' ? 'Sáng' : 'Chiều'}</td>
