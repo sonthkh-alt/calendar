@@ -165,12 +165,14 @@ export default function App() {
     return entries.filter((e) => e.status === 'cho_duyet' && canReviewEntry(profile, e, lbi[e.leader_id])).length;
   }, [entries, leaders, profile]);
 
-  // CẢNH BÁO TRÙNG ĐỊA ĐIỂM: >= 2 nhóm/đoàn KHÁC NHAU tới CÙNG một địa điểm
-  // (bỏ qua địa điểm trong danh mục loại trừ). dupMap: id -> { severity, others }.
+  // CẢNH BÁO TRÙNG ĐỊA ĐIỂM: >= 2 nhóm/đoàn KHÁC NHAU tới CÙNG một địa điểm là
+  // XÃ / PHƯỜNG / THỊ TRẤN (các địa điểm khác KHÔNG cảnh báo; bỏ qua danh mục
+  // loại trừ và mục đã đặt dup_ignored). dupMap: id -> { severity, others }.
   //   - severity 'week' (ĐỎ): có nhóm khác cùng địa điểm trong CÙNG TUẦN.
   //   - severity 'year' (VÀNG): chỉ trùng ở tuần khác trong năm.
   const dupMap = useMemo(() => {
     const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const isCW = (loc) => /(^|[\s,.])(xã|phường|thị trấn)([\s,.]|$)/i.test(norm(loc));
     const excludedSet = new Set(locationNames.map(norm));
     const leaderById = Object.fromEntries(leaders.map((l) => [l.id, l]));
     const eventKey = (e) => e.group_id || `${e.content}|${e.date}|${e.session}|${e.start_time || ''}`;
@@ -180,6 +182,7 @@ export default function App() {
     const byLoc = {};
     for (const e of entries) {
       if (e.status === 'tu_choi' || e.at_office || e.dup_ignored || !e.location) continue;
+      if (!isCW(e.location)) continue; // CHỈ cảnh báo địa điểm xã/phường/thị trấn
       const locN = norm(e.location);
       if (excludedSet.has(locN)) continue;
       (byLoc[locN] ||= new Map());
