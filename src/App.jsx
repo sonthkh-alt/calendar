@@ -8,6 +8,7 @@ import SetPassword from './SetPassword';
 import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, deleteEntry, deleteEntries } from './lib/api';
+import { weekStart, parseISO, toISODate } from './lib/dates';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS } from './lib/constants';
 import { canReview, canReviewEntry, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
 import FilterBar from './components/FilterBar';
@@ -164,83 +165,40 @@ export default function App() {
     return entries.filter((e) => e.status === 'cho_duyet' && canReviewEntry(profile, e, lbi[e.leader_id])).length;
   }, [entries, leaders, profile]);
 
-  // CẢNH BÁO TRÙNG ĐỊA ĐIỂM trong CẢ NĂM: >= 2 lịch của các Ban tới cùng một
-  // địa điểm (bỏ qua địa điểm mặc định) -> dupMap: id -> danh sách mục trùng
-  // kèm ngày tháng + đơn vị, để người duyệt biết chi tiết và cân nhắc gộp đoàn.
+  // CẢNH BÁO TRÙNG ĐỊA ĐIỂM: >= 2 nhóm/đoàn KHÁC NHAU tới CÙNG một địa điểm
+  // (bỏ qua địa điểm trong danh mục loại trừ). dupMap: id -> { severity, others }.
+  //   - severity 'week' (ĐỎ): có nhóm khác cùng địa điểm trong CÙNG TUẦN.
+  //   - severity 'year' (VÀNG): chỉ trùng ở tuần khác trong năm.
   const dupMap = useMemo(() => {
     const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    const commonSet = new Set(locationNames.map(norm));
-    const leaderById = Object.fromEntries(leaders.map((l) => [l.id, l]));
-    const groups = {};
-    for (const e of entries) {
-      if (e.status === 'tu_choi' || !e.location) continue;
-      if (leaderById[e.leader_id]?.leader_type !== 'ban') continue;
-      // Lịch nhập theo NHÓM (chọn nhanh theo nhóm) là chủ đích -> không tính trùng địa điểm
-      if (e.group_label) continue;
-      const loc = norm(e.location);
-      if (commonSet.has(loc)) continue;
-      (groups[loc] ||= []).push(e);
-    }
-    // CHỈ tính là trùng khi có >= 2 SỰ KIỆN KHÁC NHAU cùng địa điểm. Một sự kiện
-    // có nhiều lãnh đạo Ban -> nhiều dòng cùng group_id (nội dung+ngày+buổi) =>
-    // KHÔNG tự cảnh báo lẫn nhau.
-    const eventKey = (e) => e.group_id || `${e.content}|${e.date}|${e.session}|${e.start_time || ''}`;
-    const map = new Map();
-    for (const g of Object.values(groups)) {
-      // Gom các dòng theo sự kiện
-      const events = new Map();
-      for (const e of g) {
-        const k = eventKey(e);
-        if (!events.has(k)) events.set(k, { date: e.date, names: [], ids: [] });
-        const ev = events.get(k);
-        ev.ids.push(e.id);
-        const nm = leaderById[e.leader_id]?.full_name;
-        if (nm && !ev.names.includes(nm)) ev.names.push(nm);
-      }
-      const eventList = [...events.values()];
-      if (eventList.length < 2) continue; // chỉ 1 sự kiện tại địa điểm này -> không trùng
-      for (const e of g) {
-        const others = eventList
-          .filter((ev) => !ev.ids.includes(e.id))
-          .map((ev) => ({ date: ev.date, name: ev.names.join(', ') }));
-        if (others.length) map.set(e.id, others);
-      }
-    }
-    return map;
-  }, [entries, leaders, locationNames]);
-
-  // CẢNH BÁO ĐI CƠ SỞ: trong CÙNG MỘT THÁNG có >= 2 NHÓM/ĐOÀN đi làm việc TRÙNG
-  // một xã / phường / thị trấn -> communeMap: id -> [{date, location, name}] các nhóm
-  // KHÁC cùng địa điểm đó trong tháng. Bỏ qua địa điểm nằm trong danh mục loại trừ.
-  const communeMap = useMemo(() => {
-    const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    const isCW = (loc) => /(^|[\s,.])(xã|phường|thị trấn)([\s,.]|$)/i.test(norm(loc));
     const excludedSet = new Set(locationNames.map(norm));
     const leaderById = Object.fromEntries(leaders.map((l) => [l.id, l]));
     const eventKey = (e) => e.group_id || `${e.content}|${e.date}|${e.session}|${e.start_time || ''}`;
-    // Gom theo (tháng + địa điểm xã/phường đã chuẩn hóa) -> các sự kiện khác nhau
-    const buckets = {};
+    const weekKey = (d) => { try { return toISODate(weekStart(parseISO(d))); } catch { return d; } };
+    // Gom theo địa điểm (cả năm) -> các SỰ KIỆN khác nhau (1 sự kiện = 1 nhóm,
+    // dù nhiều lãnh đạo cùng group_id -> không tự cảnh báo lẫn nhau)
+    const byLoc = {};
     for (const e of entries) {
       if (e.status === 'tu_choi' || e.at_office || !e.location) continue;
       const locN = norm(e.location);
-      if (!isCW(e.location) || excludedSet.has(locN)) continue;
-      const bk = `${(e.date || '').slice(0, 7)}|${locN}`;
-      (buckets[bk] ||= new Map());
+      if (excludedSet.has(locN)) continue;
+      (byLoc[locN] ||= new Map());
       const k = eventKey(e);
-      let ev = buckets[bk].get(k);
-      if (!ev) { ev = { date: e.date, location: e.location, ids: [], names: new Set() }; buckets[bk].set(k, ev); }
+      let ev = byLoc[locN].get(k);
+      if (!ev) { ev = { date: e.date, week: weekKey(e.date), ids: [], names: new Set() }; byLoc[locN].set(k, ev); }
       ev.ids.push(e.id);
       const nm = e.group_label || leaderById[e.leader_id]?.full_name;
       if (nm) ev.names.add(nm);
     }
     const map = new Map();
-    for (const bk of Object.keys(buckets)) {
-      const events = [...buckets[bk].values()];
-      if (events.length < 2) continue; // chỉ cảnh báo khi >= 2 nhóm cùng địa điểm trong tháng
+    for (const locN of Object.keys(byLoc)) {
+      const events = [...byLoc[locN].values()];
+      if (events.length < 2) continue; // chỉ 1 nhóm tại địa điểm -> không trùng
       for (const ev of events) {
-        const others = events.filter((o) => o !== ev)
-          .map((o) => ({ date: o.date, location: o.location, name: [...o.names].join(', ') }));
-        for (const id of ev.ids) map.set(id, others);
+        const others = events.filter((o) => o !== ev);
+        const severity = others.some((o) => o.week === ev.week) ? 'week' : 'year';
+        const list = others.map((o) => ({ date: o.date, name: [...o.names].join(', ') }));
+        for (const id of ev.ids) map.set(id, { severity, others: list });
       }
     }
     return map;
@@ -351,16 +309,16 @@ export default function App() {
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
 
         {tab === 'week' && (
-          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} filters={filters} dupMap={dupMap} communeMap={communeMap} isMobile={isMobile} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} />
+          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} filters={filters} dupMap={dupMap} isMobile={isMobile} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'month' && (
           <MonthView profile={profile} anchor={anchor} entries={entries} leaders={leaders} filters={filters} onPickDay={(d) => { setAnchor(d); setTab('day'); }} />
         )}
         {tab === 'day' && (
-          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} dupMap={dupMap} communeMap={communeMap} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} />
+          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} dupMap={dupMap} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} />
         )}
         {tab === 'approve' && canReview(profile) && (
-          <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupMap={dupMap} communeMap={communeMap} onChanged={refresh} />
+          <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupMap={dupMap} onChanged={refresh} />
         )}
         {tab === 'vehicles' && canAssignVehicle(profile) && (
           <VehicleBoard profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} onChanged={refresh} />
@@ -422,8 +380,7 @@ export default function App() {
           onChanged={refresh}
           canEdit={canEditEntry(profile, viewing, leaders.find((l) => l.id === viewing.leader_id))}
           canDuplicate={canDup(viewing)}
-          dupOthers={dupMap.get(viewing.id)}
-          communeOthers={communeMap.get(viewing.id)}
+          dupInfo={dupMap.get(viewing.id)}
           onEdit={onEdit}
           onDelete={onDelete}
           onDuplicate={onDuplicate}

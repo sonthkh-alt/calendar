@@ -9,14 +9,12 @@ import { fmtTime, fmtDM, parseISO } from '../lib/dates';
  * `vehicle` do cha truyền vào: xe đã gán, hoặc xe riêng của lãnh đạo (PCT /
  * Phó Trưởng Đoàn) nếu chưa gán. Bấm vào ô để mở chi tiết đầy đủ.
  */
-export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, dupOthers, communeOthers, onEdit, onDelete, onDuplicate, onView, compact, brief }) {
+export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, dupInfo, onEdit, onDelete, onDuplicate, onView, compact, brief }) {
+  const dupOthers = dupInfo?.others;
   const dupWarn = dupOthers?.length > 0;
+  const dupWeek = dupInfo?.severity === 'week'; // cùng tuần -> ĐỎ; cả năm -> VÀNG
   const dupDetail = dupWarn
-    ? dupOthers.map((o) => `${fmtDM(parseISO(o.date))} (${o.name})`).join(', ')
-    : '';
-  const communeWarn = communeOthers?.length > 0;
-  const communeDetail = communeWarn
-    ? communeOthers.map((o) => `${fmtDM(parseISO(o.date))}${o.name ? ` (${o.name})` : ''}`).join(', ')
+    ? dupOthers.map((o) => `${fmtDM(parseISO(o.date))}${o.name ? ` (${o.name})` : ''}`).join(', ')
     : '';
   const s = STATUS[entry.status] || STATUS.cho_duyet;
   const timeLabel = entry.session === 'gio'
@@ -31,20 +29,17 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
       onClick={() => onView?.(entry)}
       title="Bấm để xem đầy đủ thông tin"
       className={`group relative rounded-lg border px-2 py-1.5 text-left ${entry.status === 'tu_choi' ? 'opacity-75' : ''} ${onView ? 'cursor-pointer transition' : ''}
-        ${dupWarn ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-300 shadow-md shadow-violet-200'
-          : communeWarn ? `border-orange-400 bg-orange-50 ring-1 ring-orange-300 ${onView ? 'hover:ring-2 hover:ring-orange-300' : ''}`
+        ${dupWarn
+          ? (dupWeek
+              ? 'border-red-500 bg-red-50 ring-2 ring-red-300 shadow-md shadow-red-200'
+              : 'border-amber-400 bg-amber-50 ring-2 ring-amber-300 shadow-md shadow-amber-200')
           : `${s.border} ${s.bg} ${onView ? 'hover:ring-2 hover:ring-red-200' : ''}`}`}
     >
       {dupWarn && (
-        <p className="flex items-start gap-1 text-[10px] font-bold text-white bg-violet-600 rounded px-1.5 py-0.5 mb-1 -mx-0.5" title={`Trùng địa điểm với: ${dupDetail} — cân nhắc gộp đoàn`}>
+        <p className={`flex items-start gap-1 text-[10px] font-bold text-white rounded px-1.5 py-0.5 mb-1 -mx-0.5 ${dupWeek ? 'bg-red-600' : 'bg-amber-500'}`}
+           title={`${dupWeek ? 'TRÙNG ĐỊA ĐIỂM trong TUẦN' : 'Trùng địa điểm trong năm'}: ${dupDetail} — cân nhắc gộp đoàn / điều phối chung xe`}>
           <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
-          <span className={compact ? 'line-clamp-2' : ''}>TRÙNG ĐỊA ĐIỂM với: {dupDetail}</span>
-        </p>
-      )}
-      {communeWarn && (
-        <p className="flex items-start gap-1 text-[10px] font-bold text-white bg-orange-500 rounded px-1.5 py-0.5 mb-1 -mx-0.5" title={`Trong tháng có ≥2 nhóm đến "${entry.location}": ${communeDetail} — cân nhắc điều phối/gộp đoàn`}>
-          <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
-          <span className={compact ? 'line-clamp-2' : ''}>≥2 NHÓM ĐẾN "{entry.location}" trong tháng: {communeDetail}</span>
+          <span className={compact ? 'line-clamp-2' : ''}>{dupWeek ? 'TRÙNG ĐỊA ĐIỂM TRONG TUẦN' : 'Trùng địa điểm trong năm'}: {dupDetail}</span>
         </p>
       )}
       <div className="flex items-start justify-between gap-1">

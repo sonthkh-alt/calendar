@@ -11,7 +11,7 @@ import { fmtTime, parseISO, fmtDMY, dayName, weekStart, weekEnd, toISODate } fro
  * Hiển thị mục 'cho_duyet' trong khoảng đang xem, nhóm theo Ban.
  * Hành động: Duyệt / Điều chỉnh (sửa + ghi chú) / Từ chối (ghi chú bắt buộc).
  */
-export default function ApprovalQueue({ profile, anchor, entries, leaders, bans, dupMap, communeMap, onChanged }) {
+export default function ApprovalQueue({ profile, anchor, entries, leaders, bans, dupMap, onChanged }) {
   const [busy, setBusy] = useState(null); // id đang xử lý
   const [adjusting, setAdjusting] = useState(null); // entry đang điều chỉnh
   const [rejecting, setRejecting] = useState(null); // entry đang từ chối
@@ -114,16 +114,13 @@ export default function ApprovalQueue({ profile, anchor, entries, leaders, bans,
             {items.map((e) => {
               const l = leaderById[e.leader_id];
               const timeLabel = e.session === 'gio' ? `${fmtTime(e.start_time)} - ${fmtTime(e.end_time)}` : SESSIONS[e.session];
+              const dup = dupMap?.get(e.id);
+              const dupWeek = dup?.severity === 'week';
               return (
-                <div key={e.id} className={`p-4 ${dupMap?.has(e.id) ? 'bg-violet-50 border-l-4 border-violet-500' : communeMap?.has(e.id) ? 'bg-orange-50 border-l-4 border-orange-400' : ''}`}>
-                  {dupMap?.has(e.id) && (
-                    <p className="inline-flex items-start gap-1.5 text-[11px] font-bold text-white bg-violet-600 rounded-md px-2 py-1 mb-2">
-                      ⚠ TRÙNG ĐỊA ĐIỂM "{e.location}" với: {dupMap.get(e.id).map((o) => `${fmtDMY(parseISO(o.date))} (${o.name})`).join('; ')} — cân nhắc gộp đoàn / điều phối chung xe
-                    </p>
-                  )}
-                  {communeMap?.has(e.id) && (
-                    <p className="inline-flex items-start gap-1.5 text-[11px] font-bold text-white bg-orange-500 rounded-md px-2 py-1 mb-2">
-                      ⚠ ≥2 NHÓM ĐẾN "{e.location}" trong tháng: {communeMap.get(e.id).map((o) => `${fmtDMY(parseISO(o.date))}${o.name ? ` (${o.name})` : ''}`).join('; ')} — cân nhắc điều phối / gộp đoàn
+                <div key={e.id} className={`p-4 ${dup ? (dupWeek ? 'bg-red-50 border-l-4 border-red-500' : 'bg-amber-50 border-l-4 border-amber-400') : ''}`}>
+                  {dup && (
+                    <p className={`inline-flex items-start gap-1.5 text-[11px] font-bold text-white rounded-md px-2 py-1 mb-2 ${dupWeek ? 'bg-red-600' : 'bg-amber-500'}`}>
+                      ⚠ {dupWeek ? 'TRÙNG ĐỊA ĐIỂM TRONG TUẦN' : 'Trùng địa điểm trong năm'} "{e.location}": {dup.others.map((o) => `${fmtDMY(parseISO(o.date))}${o.name ? ` (${o.name})` : ''}`).join('; ')} — cân nhắc gộp đoàn / điều phối chung xe
                     </p>
                   )}
                   <div className="flex flex-wrap items-start justify-between gap-3">

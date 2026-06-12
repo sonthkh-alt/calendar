@@ -9,7 +9,7 @@ import { isHqLocation, leaderInUnit, hidesDriver } from '../lib/constants';
  * Lịch ngày: 2 khối Sáng / Chiều, EntryCard đầy đủ thông tin.
  * props: profile, anchor, entries, leaders, vehicles, filters, onEdit, onDelete
  */
-export default function DayView({ profile, anchor, entries, leaders, vehicles, filters, dupMap, communeMap, onEdit, onDelete, onDeleteMany, onDuplicate, onView }) {
+export default function DayView({ profile, anchor, entries, leaders, vehicles, filters, dupMap, onEdit, onDelete, onDeleteMany, onDuplicate, onView }) {
   const dISO = toISODate(anchor);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
@@ -72,8 +72,7 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
               vehicle={hidesDriver(l?.leader_type) ? null : ((e.vehicle_id ? vehicleById[e.vehicle_id] : null) || (!isHqLocation(e.location) ? dedicatedByLeader[e.leader_id] : null) || null)}
               canEdit={canEditEntry(profile, e, l)}
               canDuplicate={canCreateFor(profile, l)}
-              dupOthers={dupMap?.get(e.id)}
-              communeOthers={communeMap?.get(e.id)}
+              dupInfo={dupMap?.get(e.id)}
               onEdit={() => onEdit?.(e)}
               onDelete={() => (m.ids.length > 1 && onDeleteMany ? onDeleteMany(m.ids, e.content) : onDelete?.(e))}
               onDuplicate={() => onDuplicate?.(e)}

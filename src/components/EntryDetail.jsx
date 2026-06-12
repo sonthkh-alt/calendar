@@ -12,7 +12,9 @@ import DateField from './DateField';
  * Các mục TRÙNG nội dung + thời gian được GỘP: thành phần nối lại với nhau.
  * Khu "Xử lý nhanh": Duyệt/Từ chối (PCT, Quản trị) + chọn xe (Văn phòng, Quản trị).
  */
-export default function EntryDetail({ entry, entries, leaders, vehicles, profile, canEdit, canDuplicate, dupOthers, communeOthers, onEdit, onDelete, onDuplicate, onChanged, onClose }) {
+export default function EntryDetail({ entry, entries, leaders, vehicles, profile, canEdit, canDuplicate, dupInfo, onEdit, onDelete, onDuplicate, onChanged, onClose }) {
+  const dupOthers = dupInfo?.others;
+  const dupWeek = dupInfo?.severity === 'week';
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
@@ -157,33 +159,21 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
 
         <div className="p-5 space-y-4">
           {dupOthers?.length > 0 && (
-            <div className="text-[13px] text-violet-900 bg-violet-50 border border-violet-300 rounded-xl p-3">
-              <p className="font-bold">⚠️ Trùng địa điểm "{entry.location}" với các lịch khác của các Ban trong năm:</p>
+            <div className={`text-[13px] rounded-xl p-3 border ${dupWeek ? 'text-red-900 bg-red-50 border-red-300' : 'text-amber-900 bg-amber-50 border-amber-300'}`}>
+              <p className="font-bold">
+                {dupWeek
+                  ? `⚠️ TRÙNG ĐỊA ĐIỂM TRONG TUẦN: có nhóm khác cùng đến "${entry.location}" trong tuần này:`
+                  : `⚠️ Trùng địa điểm "${entry.location}" với các lịch khác trong năm:`}
+              </p>
               <ul className="mt-1 list-disc list-inside space-y-0.5">
                 {dupOthers.map((o, i) => (
-                  <li key={i}>{dayName(parseISO(o.date))}, ngày {fmtDMY(parseISO(o.date))} — {o.name}</li>
+                  <li key={i}>{dayName(parseISO(o.date))}, ngày {fmtDMY(parseISO(o.date))}{o.name ? ` — ${o.name}` : ''}</li>
                 ))}
               </ul>
               <p className="mt-1 italic">Đề nghị cân nhắc gộp đoàn hoặc điều phối chung xe.</p>
               {canAdmin(profile) && entry.location && (
-                <button onClick={ignoreLocation} disabled={busy} className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold text-violet-800 bg-white border border-violet-300 hover:bg-violet-100 disabled:opacity-60">
+                <button onClick={ignoreLocation} disabled={busy} className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold bg-white disabled:opacity-60 ${dupWeek ? 'text-red-800 border border-red-300 hover:bg-red-100' : 'text-amber-800 border border-amber-300 hover:bg-amber-100'}`}>
                   <XCircle className="w-3.5 h-3.5" /> Bỏ qua địa điểm này (không cảnh báo trùng nữa)
-                </button>
-              )}
-            </div>
-          )}
-          {communeOthers?.length > 0 && (
-            <div className="text-[13px] text-orange-900 bg-orange-50 border border-orange-300 rounded-xl p-3">
-              <p className="font-bold">⚠️ Trong tháng có ≥2 nhóm đến cùng địa điểm "{entry.location}":</p>
-              <ul className="mt-1 list-disc list-inside space-y-0.5">
-                {communeOthers.map((o, i) => (
-                  <li key={i}>{dayName(parseISO(o.date))}, ngày {fmtDMY(parseISO(o.date))}{o.name ? ` — ${o.name}` : ''}</li>
-                ))}
-              </ul>
-              <p className="mt-1 italic">Đề nghị cân nhắc điều phối, gộp đoàn đi cơ sở.</p>
-              {canAdmin(profile) && entry.location && (
-                <button onClick={ignoreLocation} disabled={busy} className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold text-orange-800 bg-white border border-orange-300 hover:bg-orange-100 disabled:opacity-60">
-                  <XCircle className="w-3.5 h-3.5" /> Bỏ qua địa điểm này (không cảnh báo nữa)
                 </button>
               )}
             </div>
