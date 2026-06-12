@@ -166,24 +166,22 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
               </tr>
             </thead>
             <tbody>
-              {days.map((d) => {
+              {days.map((d, di) => {
                 const dISO = toISODate(d);
                 const isToday = dISO === toISODate(new Date());
-                return ['sang', 'chieu'].map((sess, si) => {
+                const rows = ['sang', 'chieu'].map((sess, si) => {
                   // Đường ngăn: dọc giữa cột = nhạt; ngang giữa Sáng/Chiều = rất nhạt;
                   // ngang giữa các NGÀY (đáy dòng Chiều) = ĐẬM 2px để tách khối ngày.
                   const vB = 'border-r border-r-slate-200';
-                  const hB = si === 0
-                    ? 'border-b border-b-slate-100'
-                    : `border-b-2 ${isToday ? 'border-b-amber-300' : 'border-b-slate-300'}`;
+                  // Trong NGÀY: ngăn Sáng/Chiều rất nhạt. Giữa các NGÀY: KHÔNG viền —
+                  // dùng thanh kẻ đỏ có bóng đổ (hàng spacer bên dưới) để tách khung.
+                  const hB = si === 0 ? 'border-b border-b-slate-100' : '';
                   return (
                   <tr key={dISO + sess} className={isToday ? 'bg-amber-50/60' : si === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                     {si === 0 && (
-                      <td rowSpan={2} className={`relative border-r border-r-slate-200 border-b-2 px-2 py-3 text-center align-middle ${isToday
-                        ? 'bg-gradient-to-b from-amber-50 to-white border-b-amber-300'
-                        : 'bg-gradient-to-b from-red-50 to-white border-b-slate-200'}`}>
-                        {/* Dải nhấn dọc bên trái làm điểm nhấn cho khung ngày */}
-                        <span className={`absolute left-0 top-0 bottom-0 w-[5px] ${isToday ? 'bg-amber-400' : 'bg-gradient-to-b from-red-600 to-red-500'}`} />
+                      <td rowSpan={2} className={`border-r border-r-slate-200 px-2 py-3 text-center align-middle ${isToday
+                        ? 'bg-gradient-to-b from-amber-50 to-white'
+                        : 'bg-gradient-to-b from-red-50 to-white'}`}>
                         <p className={`text-[15px] font-extrabold leading-tight ${isToday ? 'text-amber-800' : 'text-red-800'}`}>{dayName(d)}</p>
                         <p className={`inline-block mt-1.5 text-[12px] font-bold rounded-full px-2.5 py-0.5 ${isToday ? 'text-amber-900 bg-amber-200/80' : 'text-red-700 bg-red-100'}`}>{fmtDM(d)}</p>
                         {isToday && <p className="no-print mt-1.5 text-[9px] font-bold text-amber-700 tracking-wide">● HÔM NAY</p>}
@@ -212,6 +210,19 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                   </tr>
                   );
                 });
+                // Thanh kẻ ĐỎ có bóng đổ ngang -> tách khung từng ngày (không kẻ sau ngày cuối)
+                if (di < days.length - 1) {
+                  rows.push(
+                    <tr key={dISO + '-sep'} aria-hidden="true">
+                      <td colSpan={2 + units.length} className="p-0 bg-white">
+                        <div className="h-2.5 flex items-center">
+                          <div className="h-[3px] w-full bg-gradient-to-r from-red-700 via-red-500 to-red-400 shadow-[0_4px_7px_-1px_rgba(220,38,38,0.5)]" />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+                return rows;
               })}
             </tbody>
           </table>
