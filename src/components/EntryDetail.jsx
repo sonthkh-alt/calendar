@@ -3,8 +3,8 @@ import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Buildi
 import StatusBadge from './StatusBadge';
 import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
-import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk } from '../lib/permissions';
-import { reviewEntries, updateEntries, assignVehicle } from '../lib/api';
+import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk, canAdmin } from '../lib/permissions';
+import { reviewEntries, updateEntries, assignVehicle, upsertLocation } from '../lib/api';
 import DateField from './DateField';
 
 /**
@@ -23,6 +23,19 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   const [adjLocation, setAdjLocation] = useState('');
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
+
+  // Admin: bỏ qua địa điểm này khỏi cảnh báo trùng (thêm vào danh mục Địa điểm
+  // loại trừ -> hệ thống không tính trùng cho địa điểm này nữa).
+  const ignoreLocation = async () => {
+    if (!entry.location) return;
+    if (!window.confirm(`Bỏ qua địa điểm "${entry.location}" khỏi cảnh báo trùng?\n\nĐịa điểm này sẽ được thêm vào danh mục "Địa điểm" và hệ thống KHÔNG cảnh báo trùng (tím/cam) cho nó nữa. Có thể chỉnh lại trong Quản trị → Địa điểm.`)) return;
+    setBusy(true);
+    const { error } = await upsertLocation({ name: entry.location });
+    setBusy(false);
+    if (error) { alert('Không lưu được: ' + error.message); return; }
+    alert('Đã bỏ qua. Hệ thống sẽ không cảnh báo trùng cho địa điểm này nữa.');
+    onChanged?.();
+  };
 
   // Gộp các mục trùng nội dung + ngày + thời gian (khác thành phần / đơn vị)
   const same = useMemo(
@@ -152,17 +165,27 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                 ))}
               </ul>
               <p className="mt-1 italic">Đề nghị cân nhắc gộp đoàn hoặc điều phối chung xe.</p>
+              {canAdmin(profile) && entry.location && (
+                <button onClick={ignoreLocation} disabled={busy} className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold text-violet-800 bg-white border border-violet-300 hover:bg-violet-100 disabled:opacity-60">
+                  <XCircle className="w-3.5 h-3.5" /> Bỏ qua địa điểm này (không cảnh báo trùng nữa)
+                </button>
+              )}
             </div>
           )}
           {communeOthers?.length > 0 && (
             <div className="text-[13px] text-orange-900 bg-orange-50 border border-orange-300 rounded-xl p-3">
-              <p className="font-bold">⚠️ Trong tháng có nhiều nhóm đi làm việc tại xã/phường/thị trấn:</p>
+              <p className="font-bold">⚠️ Trong tháng có ≥2 nhóm đến cùng địa điểm "{entry.location}":</p>
               <ul className="mt-1 list-disc list-inside space-y-0.5">
                 {communeOthers.map((o, i) => (
-                  <li key={i}>{dayName(parseISO(o.date))}, ngày {fmtDMY(parseISO(o.date))} — {o.location}{o.name ? ` (${o.name})` : ''}</li>
+                  <li key={i}>{dayName(parseISO(o.date))}, ngày {fmtDMY(parseISO(o.date))}{o.name ? ` — ${o.name}` : ''}</li>
                 ))}
               </ul>
               <p className="mt-1 italic">Đề nghị cân nhắc điều phối, gộp đoàn đi cơ sở.</p>
+              {canAdmin(profile) && entry.location && (
+                <button onClick={ignoreLocation} disabled={busy} className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold text-orange-800 bg-white border border-orange-300 hover:bg-orange-100 disabled:opacity-60">
+                  <XCircle className="w-3.5 h-3.5" /> Bỏ qua địa điểm này (không cảnh báo nữa)
+                </button>
+              )}
             </div>
           )}
           {/* Nội dung */}

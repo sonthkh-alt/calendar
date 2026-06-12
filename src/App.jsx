@@ -209,29 +209,34 @@ export default function App() {
     return map;
   }, [entries, leaders, locationNames]);
 
-  // CẢNH BÁO ĐI CƠ SỞ: trong CÙNG MỘT THÁNG có > 1 nhóm/đoàn đi làm việc tại
-  // xã / phường / thị trấn -> communeMap: id -> [{date, location, name}] các nhóm
-  // KHÁC trong tháng (để Văn phòng/lãnh đạo cân nhắc điều phối, gộp đoàn).
+  // CẢNH BÁO ĐI CƠ SỞ: trong CÙNG MỘT THÁNG có >= 2 NHÓM/ĐOÀN đi làm việc TRÙNG
+  // một xã / phường / thị trấn -> communeMap: id -> [{date, location, name}] các nhóm
+  // KHÁC cùng địa điểm đó trong tháng. Bỏ qua địa điểm nằm trong danh mục loại trừ.
   const communeMap = useMemo(() => {
-    const isCW = (loc) => /(^|[\s,.])(xã|phường|thị trấn)([\s,.]|$)/i.test((loc || '').toLowerCase());
+    const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const isCW = (loc) => /(^|[\s,.])(xã|phường|thị trấn)([\s,.]|$)/i.test(norm(loc));
+    const excludedSet = new Set(locationNames.map(norm));
     const leaderById = Object.fromEntries(leaders.map((l) => [l.id, l]));
     const eventKey = (e) => e.group_id || `${e.content}|${e.date}|${e.session}|${e.start_time || ''}`;
-    const byMonth = {};
+    // Gom theo (tháng + địa điểm xã/phường đã chuẩn hóa) -> các sự kiện khác nhau
+    const buckets = {};
     for (const e of entries) {
-      if (e.status === 'tu_choi' || e.at_office || !isCW(e.location)) continue;
-      const ym = (e.date || '').slice(0, 7);
-      (byMonth[ym] ||= new Map());
+      if (e.status === 'tu_choi' || e.at_office || !e.location) continue;
+      const locN = norm(e.location);
+      if (!isCW(e.location) || excludedSet.has(locN)) continue;
+      const bk = `${(e.date || '').slice(0, 7)}|${locN}`;
+      (buckets[bk] ||= new Map());
       const k = eventKey(e);
-      let ev = byMonth[ym].get(k);
-      if (!ev) { ev = { date: e.date, location: e.location, ids: [], names: new Set() }; byMonth[ym].set(k, ev); }
+      let ev = buckets[bk].get(k);
+      if (!ev) { ev = { date: e.date, location: e.location, ids: [], names: new Set() }; buckets[bk].set(k, ev); }
       ev.ids.push(e.id);
       const nm = e.group_label || leaderById[e.leader_id]?.full_name;
       if (nm) ev.names.add(nm);
     }
     const map = new Map();
-    for (const ym of Object.keys(byMonth)) {
-      const events = [...byMonth[ym].values()];
-      if (events.length < 2) continue; // chỉ cảnh báo khi > 1 nhóm trong tháng
+    for (const bk of Object.keys(buckets)) {
+      const events = [...buckets[bk].values()];
+      if (events.length < 2) continue; // chỉ cảnh báo khi >= 2 nhóm cùng địa điểm trong tháng
       for (const ev of events) {
         const others = events.filter((o) => o !== ev)
           .map((o) => ({ date: o.date, location: o.location, name: [...o.names].join(', ') }));
@@ -239,7 +244,7 @@ export default function App() {
       }
     }
     return map;
-  }, [entries, leaders]);
+  }, [entries, leaders, locationNames]);
 
   // ===== Các cổng vào =====
   if (!supabase) {

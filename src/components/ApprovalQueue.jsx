@@ -123,7 +123,7 @@ export default function ApprovalQueue({ profile, anchor, entries, leaders, bans,
                   )}
                   {communeMap?.has(e.id) && (
                     <p className="inline-flex items-start gap-1.5 text-[11px] font-bold text-white bg-orange-500 rounded-md px-2 py-1 mb-2">
-                      ⚠ NHIỀU NHÓM ĐI CƠ SỞ trong tháng: {communeMap.get(e.id).map((o) => `${fmtDMY(parseISO(o.date))} ${o.location || ''}`.trim()).join('; ')} — cân nhắc điều phối / gộp đoàn
+                      ⚠ ≥2 NHÓM ĐẾN "{e.location}" trong tháng: {communeMap.get(e.id).map((o) => `${fmtDMY(parseISO(o.date))}${o.name ? ` (${o.name})` : ''}`).join('; ')} — cân nhắc điều phối / gộp đoàn
                     </p>
                   )}
                   <div className="flex flex-wrap items-start justify-between gap-3">

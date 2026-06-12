@@ -16,7 +16,7 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
     : '';
   const communeWarn = communeOthers?.length > 0;
   const communeDetail = communeWarn
-    ? communeOthers.map((o) => `${fmtDM(parseISO(o.date))} ${o.location || ''}${o.name ? ` (${o.name})` : ''}`.trim()).join('; ')
+    ? communeOthers.map((o) => `${fmtDM(parseISO(o.date))}${o.name ? ` (${o.name})` : ''}`).join(', ')
     : '';
   const s = STATUS[entry.status] || STATUS.cho_duyet;
   const timeLabel = entry.session === 'gio'
@@ -42,9 +42,9 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
         </p>
       )}
       {communeWarn && (
-        <p className="flex items-start gap-1 text-[10px] font-bold text-white bg-orange-500 rounded px-1.5 py-0.5 mb-1 -mx-0.5" title={`Trong tháng còn nhóm khác đi cơ sở: ${communeDetail} — cân nhắc điều phối/gộp đoàn`}>
+        <p className="flex items-start gap-1 text-[10px] font-bold text-white bg-orange-500 rounded px-1.5 py-0.5 mb-1 -mx-0.5" title={`Trong tháng có ≥2 nhóm đến "${entry.location}": ${communeDetail} — cân nhắc điều phối/gộp đoàn`}>
           <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
-          <span className={compact ? 'line-clamp-2' : ''}>NHIỀU NHÓM ĐI CƠ SỞ trong tháng: {communeDetail}</span>
+          <span className={compact ? 'line-clamp-2' : ''}>≥2 NHÓM ĐẾN "{entry.location}" trong tháng: {communeDetail}</span>
         </p>
       )}
       <div className="flex items-start justify-between gap-1">
