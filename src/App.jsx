@@ -172,8 +172,16 @@ export default function App() {
   //   - severity 'year' (VÀNG): chỉ trùng ở tuần khác trong năm.
   const dupMap = useMemo(() => {
     const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    const isCW = (loc) => /(^|[\s,.])(xã|phường|thị trấn)([\s,.]|$)/i.test(norm(loc));
-    const excludedSet = new Set(locationNames.map(norm));
+    // Trích "đơn vị + TÊN xã/phường/thị trấn" từ địa điểm (bỏ phần mô tả xung quanh)
+    // để các cách ghi KHÁC NHAU của CÙNG một xã vẫn gom chung. Ví dụ:
+    // "Mỏ vật liệu xây dựng tại xã Biện Thượng" và "Xã Biện Thượng" -> "xã biện thượng".
+    const communeKey = (loc) => {
+      const m = norm(loc).match(/(?:^|[\s,.])(xã|phường|thị trấn)\s+([a-zà-ỹ]+(?:\s+[a-zà-ỹ]+){0,2})/u);
+      if (!m) return null;
+      const name = m[2].replace(/\s+(huyện|tỉnh|thành phố|thị xã)[\s\S]*$/u, '').trim();
+      return `${m[1]} ${name}`;
+    };
+    const excludedCommunes = new Set(locationNames.map((n) => communeKey(n)).filter(Boolean));
     const leaderById = Object.fromEntries(leaders.map((l) => [l.id, l]));
     const eventKey = (e) => e.group_id || `${e.content}|${e.date}|${e.session}|${e.start_time || ''}`;
     const weekKey = (d) => { try { return toISODate(weekStart(parseISO(d))); } catch { return d; } };
@@ -182,13 +190,12 @@ export default function App() {
     const byLoc = {};
     for (const e of entries) {
       if (e.status === 'tu_choi' || e.at_office || e.dup_ignored || !e.location) continue;
-      if (!isCW(e.location)) continue; // CHỈ cảnh báo địa điểm xã/phường/thị trấn
-      const locN = norm(e.location);
-      if (excludedSet.has(locN)) continue;
-      (byLoc[locN] ||= new Map());
+      const key = communeKey(e.location); // CHỈ cảnh báo địa điểm xã/phường/thị trấn
+      if (!key || excludedCommunes.has(key)) continue;
+      (byLoc[key] ||= new Map());
       const k = eventKey(e);
-      let ev = byLoc[locN].get(k);
-      if (!ev) { ev = { date: e.date, week: weekKey(e.date), ids: [], names: new Set() }; byLoc[locN].set(k, ev); }
+      let ev = byLoc[key].get(k);
+      if (!ev) { ev = { date: e.date, week: weekKey(e.date), ids: [], names: new Set() }; byLoc[key].set(k, ev); }
       ev.ids.push(e.id);
       const nm = e.group_label || leaderById[e.leader_id]?.full_name;
       if (nm) ev.names.add(nm);
