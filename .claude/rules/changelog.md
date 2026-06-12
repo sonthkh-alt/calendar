@@ -1,5 +1,9 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Nhóm thành phần: cột TT tự đánh số 1..N (như tab Lãnh đạo)
+- AdminGroups: TT thành số thứ tự dòng tự động (đọc-only) + nút ↑↓ hoán đổi sort_order;
+  bỏ ô nhập "Thứ tự" thủ công (form thêm + dòng sửa); thêm mới tự lấy sort_order = max+1
+
 ## 2026-06-12 — Tinh gọn thẻ lịch tuần + bỏ dòng "Gồm:" trong chi tiết
 - EntryCard: thêm prop brief -> thẻ lịch tuần BỎ dòng TP và Lái xe, in ĐẬM + rõ Giờ
   (icon đỏ, font-bold). WeekView truyền brief; DayView vẫn hiện đầy đủ

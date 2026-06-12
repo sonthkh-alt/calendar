@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Save, Trash2, Info } from 'lucide-react';
+import { Plus, Save, Trash2, Info, ChevronUp, ChevronDown } from 'lucide-react';
 import { upsertParticipantGroup, deleteParticipantGroup } from '../lib/api';
 import { leaderLabel } from '../lib/constants';
 
@@ -41,10 +41,23 @@ export default function AdminGroups({ groups, leaders, onChanged }) {
   const [editing, setEditing] = useState({});
   const [busy, setBusy] = useState(null);
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ name: '', members: '', sort_order: 99 });
+  const [draft, setDraft] = useState({ name: '', members: '' });
 
   const change = (g, field, value) =>
     setEditing((prev) => ({ ...prev, [g.id]: { ...g, ...prev[g.id], [field]: value } }));
+
+  // Đổi thứ tự: hoán đổi sort_order với dòng liền kề (TT tự đánh số theo thứ tự này)
+  const move = async (idx, dir) => {
+    const list = groups || [];
+    const j = dir === 'up' ? idx - 1 : idx + 1;
+    if (j < 0 || j >= list.length) return;
+    const a = list[idx], b = list[j];
+    setBusy(a.id);
+    await upsertParticipantGroup({ ...a, sort_order: b.sort_order });
+    await upsertParticipantGroup({ ...b, sort_order: a.sort_order });
+    setBusy(null);
+    onChanged?.();
+  };
 
   const save = async (g) => {
     const row = editing[g.id];
@@ -67,12 +80,14 @@ export default function AdminGroups({ groups, leaders, onChanged }) {
   const addNew = async () => {
     if (!draft.name.trim() || !draft.members.trim()) { alert('Nhập đủ Tên nhóm và Danh sách thành phần.'); return; }
     setBusy('new');
+    // Số thứ tự tự nhảy: lấy số lớn nhất hiện có + 1
+    const nextSort = Math.max(0, ...(groups || []).map((x) => Number(x.sort_order) || 0)) + 1;
     await upsertParticipantGroup({
       name: draft.name.trim(), members: draft.members.trim(),
-      sort_order: Number(draft.sort_order) || 99,
+      sort_order: nextSort,
     });
     setBusy(null); setAdding(false);
-    setDraft({ name: '', members: '', sort_order: 99 });
+    setDraft({ name: '', members: '' });
     onChanged?.();
   };
 
@@ -93,10 +108,7 @@ export default function AdminGroups({ groups, leaders, onChanged }) {
 
       {adding && (
         <div className="rounded-xl border border-red-200 bg-red-50/50 p-3 space-y-2">
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_90px] gap-2">
-            <div><label className="text-[11px] font-bold text-slate-600">Tên nhóm</label><input className={input} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="VD: Lãnh đạo các Ban HĐND tỉnh" /></div>
-            <div><label className="text-[11px] font-bold text-slate-600">Thứ tự</label><input type="number" className={input} value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: e.target.value })} /></div>
-          </div>
+          <div><label className="text-[11px] font-bold text-slate-600">Tên nhóm</label><input className={input} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="VD: Lãnh đạo các Ban HĐND tỉnh" /></div>
           <div><label className="text-[11px] font-bold text-slate-600">Danh sách thành phần (tick lãnh đạo để chèn nhanh, hoặc gõ tự do)</label>
             <div className="mt-1">
               <LeaderTicks leaders={leaders} value={draft.members} onChange={(v) => setDraft({ ...draft, members: v })} />
@@ -115,19 +127,28 @@ export default function AdminGroups({ groups, leaders, onChanged }) {
         <table className="w-full min-w-[720px]">
           <thead>
             <tr className="bg-red-800 text-white text-[12px]">
-              <th className="px-3 py-2.5 text-left font-bold w-[60px]">TT</th>
+              <th className="px-3 py-2.5 text-center font-bold w-[78px]">TT</th>
               <th className="px-3 py-2.5 text-left font-bold w-[220px]">Tên nhóm</th>
               <th className="px-3 py-2.5 text-left font-bold">Danh sách thành phần</th>
               <th className="px-3 py-2.5 text-center font-bold w-[110px]">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {(groups || []).map((g) => {
+            {(groups || []).map((g, idx) => {
               const row = editing[g.id] || g;
               const dirty = !!editing[g.id];
+              const last = (groups || []).length - 1;
               return (
                 <tr key={g.id} className="align-top">
-                  <td className="px-3 py-2"><input type="number" className={`${input} !w-16 text-center`} value={row.sort_order ?? 0} onChange={(e) => change(g, 'sort_order', e.target.value)} /></td>
+                  <td className="px-2 py-2">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="w-5 text-center text-[13px] font-bold text-slate-700">{idx + 1}</span>
+                      <div className="flex flex-col">
+                        <button onClick={() => move(idx, 'up')} disabled={idx === 0 || busy === g.id} title="Lên trên" className="text-slate-400 hover:text-red-700 disabled:opacity-30 disabled:hover:text-slate-400"><ChevronUp className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => move(idx, 'down')} disabled={idx === last || busy === g.id} title="Xuống dưới" className="text-slate-400 hover:text-red-700 disabled:opacity-30 disabled:hover:text-slate-400"><ChevronDown className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </div>
+                  </td>
                   <td className="px-3 py-2"><input className={input} value={row.name} onChange={(e) => change(g, 'name', e.target.value)} /></td>
                   <td className="px-3 py-2">
                     <LeaderTicks leaders={leaders} value={row.members} onChange={(v) => change(g, 'members', v)} />
