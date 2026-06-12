@@ -1,5 +1,9 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Lịch nhập theo nhóm KHÔNG cảnh báo trùng địa điểm
+- App.dupMap: bỏ qua entry có group_label -> chọn nhanh theo nhóm là chủ đích, không
+  tự cảnh báo trùng địa điểm lẫn nhau và không gây cảnh báo cho mục khác
+
 ## 2026-06-12 — Gộp mục trùng (nhóm nhiều đơn vị cùng cột) -> 1 thẻ trên lịch
 - Vấn đề: chọn nhóm (vd Ban Pháp chế) gồm nhiều thành viên cùng 1 cột -> tạo nhiều
   mục giống hệt -> hiện nhiều thẻ trùng trong cùng cột

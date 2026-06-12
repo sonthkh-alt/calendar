@@ -145,6 +145,8 @@ export default function App() {
     for (const e of entries) {
       if (e.status === 'tu_choi' || !e.location) continue;
       if (leaderById[e.leader_id]?.leader_type !== 'ban') continue;
+      // Lịch nhập theo NHÓM (chọn nhanh theo nhóm) là chủ đích -> không tính trùng địa điểm
+      if (e.group_label) continue;
       const loc = norm(e.location);
       if (commonSet.has(loc)) continue;
       (groups[loc] ||= []).push(e);
