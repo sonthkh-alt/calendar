@@ -34,8 +34,26 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const [location, setLocation] = useState(src?.location || '');
   const [participants, setParticipants] = useState(src?.participants || '');
   const [atOffice, setAtOffice] = useState(src?.at_office || false);
+  const [groupLabel, setGroupLabel] = useState(src?.group_label || '');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+
+  // Nhóm thành phần có gắn đơn vị -> chọn nhanh ở trường Lãnh đạo (lịch ghi theo tên nhóm)
+  const allowedIds = useMemo(() => new Set(allowed.map((l) => l.id)), [allowed]);
+  const leaderGroups = useMemo(
+    () => (pGroups || []).filter((g) => (g.leader_ids || []).some((id) => allowedIds.has(id))),
+    [pGroups, allowedIds]
+  );
+  const toggleLeaderGroup = (g) => {
+    const ids = (g.leader_ids || []).filter((id) => allowedIds.has(id));
+    if (groupLabel === g.name) {
+      setLeaderIds((prev) => prev.filter((id) => !ids.includes(id)));
+      setGroupLabel('');
+    } else {
+      setLeaderIds((prev) => [...new Set([...prev, ...ids])]);
+      setGroupLabel(g.name);
+    }
+  };
 
   // Cảnh báo mềm: lãnh đạo đích danh (PCT / Đoàn ĐBQH) đã có lịch giao nhau cùng ngày
   // (các Ban có thể có nhiều hoạt động cùng buổi do nhiều thành viên — không cảnh báo)
@@ -88,6 +106,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       location: atOffice ? null : (location.trim() || null),
       participants: atOffice ? null : (participants.trim() || null),
       at_office: atOffice,
+      group_label: groupLabel.trim() || null,
       created_by: profile.id,
     };
 
@@ -151,6 +170,19 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
           {!editing && (
             <div>
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Lãnh đạo <span className="text-rose-600">*</span></label>
+              {leaderGroups.length > 0 && (
+                <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50/60 p-2.5">
+                  <p className="text-[11px] font-bold text-amber-800 mb-1">Chọn nhanh theo nhóm <span className="font-normal text-amber-700">(lịch ghi theo tên nhóm, trải đủ các đơn vị):</span></p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {leaderGroups.map((g) => (
+                      <label key={g.id} title={`Gồm: ${(g.leader_ids || []).map((id) => leaderById[id]?.full_name).filter(Boolean).join(', ')}`} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${groupLabel === g.name ? 'bg-amber-100 border-amber-400 text-amber-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'}`}>
+                        <input type="checkbox" checked={groupLabel === g.name} onChange={() => toggleLeaderGroup(g)} className="accent-amber-600" />
+                        {g.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="mt-1.5 space-y-2 max-h-44 overflow-y-auto border border-slate-200 rounded-lg p-2.5 bg-slate-50/50">
                 {groups.length === 0 && <p className="text-[13px] text-slate-500">Bạn chưa được phân quyền nhập lịch cho lãnh đạo nào.</p>}
                 {groups.map((g) => (

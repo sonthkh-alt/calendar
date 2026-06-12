@@ -1,5 +1,17 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Chọn Nhóm thành phần ở trường Lãnh đạo (lịch ghi theo tên nhóm)
+- schema.sql: participant_groups.leader_ids uuid[] (đơn vị thuộc nhóm) +
+  schedule_entries.group_label text (nhãn nhóm hiển thị thay tên đơn vị)
+- Migration 2026-06-12-gan-don-vi-cho-nhom.sql: tự gán leader_ids cho các nhóm
+  sẵn có theo tên (Thường trực->pct, Đoàn->doan, Ban->ban, Văn phòng->vanphong); idempotent
+- AdminGroups: thêm UnitTicks (ô vàng) gán đơn vị/lãnh đạo thuộc nhóm -> leader_ids
+- ScheduleForm: trường Lãnh đạo có chip "Chọn nhanh theo nhóm"; chọn nhóm -> thêm
+  các leader_ids (lọc theo quyền) + đặt group_label; lưu group_label vào từng mục
+- Hiển thị: EntryCard/EntryDetail/WeekPrintSheet -> ghi group_label thay tên đơn vị
+  (mỗi đơn vị 1 ô đều ghi tên nhóm; chi tiết liệt kê "Gồm:" các đơn vị)
+- seed.sql: participant_groups có leader_ids theo leader_type
+
 ## 2026-06-12 — Chuẩn hóa dữ liệu: STT tự động, bỏ "Đ/c" tên, tên Ban đầy đủ
 - Migration 2026-06-12-chuan-hoa-du-lieu.sql (idempotent): bỏ tiền tố Đ/c/Đồng chí
   trong leaders.full_name; đổi tên 4 Ban đầy đủ (giữ "Ban", bỏ viết tắt/gạch ngang):

@@ -56,7 +56,7 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
 
       <div className="mt-1 space-y-0.5 text-[11px] text-slate-600">
         <p className="flex items-start gap-1 font-medium text-red-800">
-          <UserRound className="w-3 h-3 shrink-0 mt-0.5" /> <span>{leader?.full_name || '—'}</span>
+          <UserRound className="w-3 h-3 shrink-0 mt-0.5" /> <span>{entry.group_label || leader?.full_name || '—'}</span>
         </p>
         {entry.at_office ? (
           /* Làm việc tại cơ quan: chỉ Nội dung (ở trên) + dòng chữ in đậm nổi bật */

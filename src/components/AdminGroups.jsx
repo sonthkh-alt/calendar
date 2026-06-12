@@ -11,6 +11,23 @@ import { upsertParticipantGroup, deleteParticipantGroup } from '../lib/api';
 // Nhãn chèn vào danh sách khi tick một lãnh đạo/đơn vị
 const leaderLabel = (l) => `${l.full_name}${l.position ? ', ' + l.position : ''}`;
 
+// Dải ô tick ĐƠN VỊ/LÃNH ĐẠO thuộc nhóm — lưu danh sách id (leader_ids).
+// Dùng cho trường "Lãnh đạo" khi nhập lịch: chọn nhóm -> tạo mục cho từng đơn vị.
+function UnitTicks({ leaders, value, onChange }) {
+  const ids = value || [];
+  const toggle = (id) => onChange(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+  return (
+    <div className="flex flex-wrap gap-1 mb-1">
+      {(leaders || []).filter((l) => l.active).map((l) => (
+        <label key={l.id} title={l.full_name} className={`flex items-center gap-1 text-[11px] rounded px-1.5 py-0.5 cursor-pointer border transition ${ids.includes(l.id) ? 'bg-amber-50 border-amber-300 text-amber-900 font-semibold' : 'bg-white border-slate-200 text-slate-500 hover:border-amber-200'}`}>
+          <input type="checkbox" checked={ids.includes(l.id)} onChange={() => toggle(l.id)} className="accent-amber-600 w-3 h-3" />
+          {l.full_name}
+        </label>
+      ))}
+    </div>
+  );
+}
+
 // Dải ô tick lãnh đạo: tick -> chèn vào chuỗi; bỏ tick -> gỡ khỏi chuỗi
 function LeaderTicks({ leaders, value, onChange }) {
   const toggle = (l) => {
@@ -42,7 +59,7 @@ export default function AdminGroups({ groups, leaders, onChanged }) {
   const [editing, setEditing] = useState({});
   const [busy, setBusy] = useState(null);
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ name: '', members: '', sort_order: 99 });
+  const [draft, setDraft] = useState({ name: '', members: '', leader_ids: [], sort_order: 99 });
 
   const change = (g, field, value) =>
     setEditing((prev) => ({ ...prev, [g.id]: { ...g, ...prev[g.id], [field]: value } }));
@@ -70,10 +87,11 @@ export default function AdminGroups({ groups, leaders, onChanged }) {
     setBusy('new');
     await upsertParticipantGroup({
       name: draft.name.trim(), members: draft.members.trim(),
+      leader_ids: draft.leader_ids || [],
       sort_order: Number(draft.sort_order) || 99,
     });
     setBusy(null); setAdding(false);
-    setDraft({ name: '', members: '', sort_order: 99 });
+    setDraft({ name: '', members: '', leader_ids: [], sort_order: 99 });
     onChanged?.();
   };
 
@@ -83,7 +101,7 @@ export default function AdminGroups({ groups, leaders, onChanged }) {
     <div className="space-y-3">
       <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3.5 text-[13px] text-sky-900 flex items-start gap-2">
         <Info className="w-4 h-4 mt-0.5 shrink-0" />
-        <p>Nhóm thành phần hiện thành các <b>ô tick</b> trong form nhập lịch — tick một nhóm sẽ tự chèn danh sách thành phần vào ô "Thành phần". Ví dụ nhóm <b>"Thường trực HĐND tỉnh"</b> gồm các đ/c Phó Chủ tịch.</p>
+        <p>Nhóm thành phần hiện thành các <b>ô tick</b> trong form nhập lịch. Tick ở ô <b>"Thành phần"</b> để chèn danh sách thành phần. Nếu gán thêm <b>Đơn vị/lãnh đạo thuộc nhóm</b> (ô màu vàng) thì nhóm cũng xuất hiện ở trường <b>"Lãnh đạo"</b>: chọn nhóm sẽ tạo mục cho từng đơn vị và lịch ghi <b>theo tên nhóm</b>.</p>
       </div>
 
       <div className="flex justify-end">
@@ -103,6 +121,11 @@ export default function AdminGroups({ groups, leaders, onChanged }) {
               <LeaderTicks leaders={leaders} value={draft.members} onChange={(v) => setDraft({ ...draft, members: v })} />
             </div>
             <textarea rows={2} className={`${input} resize-y`} value={draft.members} onChange={(e) => setDraft({ ...draft, members: e.target.value })} placeholder="Đ/c Nguyễn Văn A, Trưởng ban ...; Đ/c Trần Thị B, Phó ban ..." />
+          </div>
+          <div><label className="text-[11px] font-bold text-slate-600">Đơn vị/lãnh đạo thuộc nhóm <span className="font-normal text-slate-400">(để chọn nhanh ở trường "Lãnh đạo" — có thể bỏ trống)</span></label>
+            <div className="mt-1">
+              <UnitTicks leaders={leaders} value={draft.leader_ids} onChange={(v) => setDraft({ ...draft, leader_ids: v })} />
+            </div>
           </div>
           <div className="flex justify-end">
             <button onClick={addNew} disabled={busy === 'new'} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60">
@@ -133,6 +156,8 @@ export default function AdminGroups({ groups, leaders, onChanged }) {
                   <td className="px-3 py-2">
                     <LeaderTicks leaders={leaders} value={row.members} onChange={(v) => change(g, 'members', v)} />
                     <textarea rows={2} className={`${input} resize-y`} value={row.members} onChange={(e) => change(g, 'members', e.target.value)} />
+                    <p className="text-[10px] font-bold text-amber-700 mt-1.5 mb-0.5 uppercase tracking-wide">Đơn vị thuộc nhóm (cho trường Lãnh đạo)</p>
+                    <UnitTicks leaders={leaders} value={row.leader_ids} onChange={(v) => change(g, 'leader_ids', v)} />
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-center gap-1">

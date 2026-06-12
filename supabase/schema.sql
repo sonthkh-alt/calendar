@@ -81,8 +81,11 @@ create table if not exists participant_groups (
   id uuid primary key default gen_random_uuid(),
   name text not null,                 -- tên nhóm hiển thị trên ô tick
   members text not null,              -- chuỗi thành phần sẽ chèn vào ô Thành phần
+  leader_ids uuid[] default '{}',     -- các đơn vị/lãnh đạo thuộc nhóm (chọn ở trường Lãnh đạo)
   sort_order int default 0
 );
+-- Nâng cấp DB cũ: bổ sung cột leader_ids (an toàn chạy lại)
+alter table participant_groups add column if not exists leader_ids uuid[] default '{}';
 
 -- 5) Mục lịch công tác
 create table if not exists schedule_entries (
@@ -118,6 +121,10 @@ create index if not exists idx_entries_vehicle_date on schedule_entries(vehicle_
 -- "Làm việc tại cơ quan", vào thẳng trạng thái đã duyệt (không cần phê duyệt).
 -- An toàn chạy lại trên DB cũ.
 alter table schedule_entries add column if not exists at_office boolean not null default false;
+
+-- Nâng cấp: nhãn nhóm — khi nhập lịch theo "Nhóm thành phần" ở trường Lãnh đạo,
+-- mỗi đơn vị 1 mục nhưng đều ghi TÊN NHÓM thay cho tên đơn vị riêng lẻ.
+alter table schedule_entries add column if not exists group_label text;
 
 -- 6) RLS: chỉ người ĐÃ ĐĂNG NHẬP mới đọc/ghi; phân quyền chi tiết do app xử lý.
 do $$ declare t text;
