@@ -151,14 +151,29 @@ export default function App() {
       if (commonSet.has(loc)) continue;
       (groups[loc] ||= []).push(e);
     }
+    // CHỈ tính là trùng khi có >= 2 SỰ KIỆN KHÁC NHAU cùng địa điểm. Một sự kiện
+    // có nhiều lãnh đạo Ban -> nhiều dòng cùng group_id (nội dung+ngày+buổi) =>
+    // KHÔNG tự cảnh báo lẫn nhau.
+    const eventKey = (e) => e.group_id || `${e.content}|${e.date}|${e.session}|${e.start_time || ''}`;
     const map = new Map();
     for (const g of Object.values(groups)) {
-      if (g.length < 2) continue;
+      // Gom các dòng theo sự kiện
+      const events = new Map();
       for (const e of g) {
-        map.set(e.id, g.filter((x) => x.id !== e.id).map((x) => ({
-          date: x.date,
-          name: leaderById[x.leader_id]?.full_name || '',
-        })));
+        const k = eventKey(e);
+        if (!events.has(k)) events.set(k, { date: e.date, names: [], ids: [] });
+        const ev = events.get(k);
+        ev.ids.push(e.id);
+        const nm = leaderById[e.leader_id]?.full_name;
+        if (nm && !ev.names.includes(nm)) ev.names.push(nm);
+      }
+      const eventList = [...events.values()];
+      if (eventList.length < 2) continue; // chỉ 1 sự kiện tại địa điểm này -> không trùng
+      for (const e of g) {
+        const others = eventList
+          .filter((ev) => !ev.ids.includes(e.id))
+          .map((ev) => ({ date: ev.date, name: ev.names.join(', ') }));
+        if (others.length) map.set(e.id, others);
       }
     }
     return map;

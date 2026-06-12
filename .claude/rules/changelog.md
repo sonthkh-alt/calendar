@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Sửa cảnh báo trùng địa điểm SAI với sự kiện nhiều lãnh đạo
+- Lỗi: 1 sự kiện có nhiều lãnh đạo Ban -> nhiều dòng cùng địa điểm -> tự cảnh báo
+  "TRÙNG ĐỊA ĐIỂM" lẫn nhau (dù là cùng một sự kiện)
+- App.dupMap: gom theo SỰ KIỆN (group_id, hoặc nội dung+ngày+buổi) trước khi đếm;
+  chỉ cảnh báo khi có >= 2 SỰ KIỆN KHÁC NHAU cùng địa điểm; danh sách "trùng với"
+  gộp tên các lãnh đạo của sự kiện kia
+
 ## 2026-06-12 — Sửa: "Làm việc tại cơ quan" KHÔNG in được Thành phần
 - ScheduleForm: tick at_office trước đây lưu participants=null + ẩn ô Thành phần
   -> Sửa: ô Thành phần LUÔN hiện (chỉ ẩn Địa điểm); lưu participants bình thường
