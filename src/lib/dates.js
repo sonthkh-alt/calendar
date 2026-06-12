@@ -26,6 +26,21 @@ export const dayName = (d) => {
 export const fmtDM = (d) => format(d, 'dd/MM');
 export const fmtDMY = (d) => format(d, 'dd/MM/yyyy');
 
+// Chuyển đổi giữa ISO ('yyyy-MM-dd' — định dạng lưu DB) và hiển thị 'dd/MM/yyyy'
+export const isoToDMY = (iso) => {
+  const [y, m, d] = (iso || '').split('-');
+  return y && m && d ? `${d}/${m}/${y}` : '';
+};
+// 'dd/MM/yyyy' (chấp nhận d/M/yyyy, ngăn cách / - .) -> 'yyyy-MM-dd'; null nếu sai
+export const dmyToISO = (s) => {
+  const m = (s || '').trim().match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
+  if (!m) return null;
+  const d = +m[1], mo = +m[2], y = +m[3];
+  const dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+};
+
 // Nhãn tuần: 'Tuần 24: 08/06 – 14/06/2026'
 export const weekLabel = (d) => {
   const ws = weekStart(d), we = weekEnd(d);

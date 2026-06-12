@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Check, CheckCheck, XCircle, SlidersHorizontal, Inbox, MapPin, Users, Clock } from 'lucide-react';
 import { reviewEntry, updateEntry } from '../lib/api';
 import { canReviewEntry } from '../lib/permissions';
+import DateField from './DateField';
 import { SESSIONS } from '../lib/constants';
 import { fmtTime, parseISO, fmtDMY, dayName, weekStart, weekEnd, toISODate } from '../lib/dates';
 
@@ -149,7 +150,7 @@ export default function ApprovalQueue({ profile, anchor, entries, leaders, bans,
                       <p className="text-[12px] font-bold text-sky-800">Điều chỉnh nội dung lịch (sẽ chuyển trạng thái "Đã điều chỉnh")</p>
                       <textarea rows={2} value={adjContent} onChange={(ev) => setAdjContent(ev.target.value)} className={input} />
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <input type="date" value={adjDate} onChange={(ev) => setAdjDate(ev.target.value)} className={input} />
+                        <DateField value={adjDate} onChange={setAdjDate} className={input} />
                         <select value={adjSession} onChange={(ev) => setAdjSession(ev.target.value)} className={input}>
                           {Object.entries(SESSIONS).filter(([k]) => k !== 'gio').map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                         </select>

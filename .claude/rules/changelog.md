@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Ô nhập NGÀY định dạng dd/mm/yyyy (không theo locale trình duyệt)
+- Lỗi: <input type="date"> hiện mm/dd/yyyy (kiểu Mỹ) theo locale trình duyệt, không ép được
+- DateField.jsx: ô text dd/mm/yyyy + nút lịch (mở showPicker của input date ẩn);
+  parse/format qua dates.isoToDMY / dmyToISO (giá trị vẫn lưu ISO yyyy-MM-dd)
+- Thay 3 ô type=date: ScheduleForm (Ngày), ApprovalQueue + EntryDetail (điều chỉnh)
+- Các nơi HIỂN THỊ ngày vốn đã dd/MM/yyyy (date-fns locale vi)
+
 ## 2026-06-12 — Luồng duyệt lịch Đoàn ĐBQH: cb_ctqh nhập -> Phó Trưởng Đoàn duyệt
 - 2 vai trò mới: pho_truong_doan (duyệt CHỈ lịch doan) + cb_ctqh (nhập lịch doan -> cho_duyet)
 - permissions: canCreateFor(cb_ctqh->doan); initialStatus(leader, profile) (cb_ctqh->cho_duyet);

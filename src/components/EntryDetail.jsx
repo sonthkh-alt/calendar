@@ -5,6 +5,7 @@ import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver } from '../lib/c
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
 import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk } from '../lib/permissions';
 import { reviewEntries, updateEntries, assignVehicle } from '../lib/api';
+import DateField from './DateField';
 
 /**
  * Modal chi tiết 1 mục lịch — hiển thị ĐẦY ĐỦ, không cắt chữ.
@@ -263,7 +264,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                   <p className="text-[12px] font-bold text-sky-800">Điều chỉnh nội dung lịch (chuyển trạng thái "Đã điều chỉnh", áp dụng cho cả nhóm)</p>
                   <textarea rows={2} value={adjContent} onChange={(e) => setAdjContent(e.target.value)} placeholder="Nội dung" className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <input type="date" value={adjDate} onChange={(e) => setAdjDate(e.target.value)} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
+                    <DateField value={adjDate} onChange={setAdjDate} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
                     <select value={adjSession} onChange={(e) => setAdjSession(e.target.value)} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
                       {Object.entries(SESSIONS).filter(([k]) => k !== 'gio').map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                     </select>

@@ -3,6 +3,7 @@ import { X, Save, AlertTriangle, CalendarPlus } from 'lucide-react';
 import { SESSIONS, COMMON_LOCATIONS, groupLeaderIds } from '../lib/constants';
 import { canCreateFor, initialStatus } from '../lib/permissions';
 import { createEntries, updateEntry } from '../lib/api';
+import DateField from './DateField';
 import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
 
 /**
@@ -213,7 +214,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Ngày <span className="text-rose-600">*</span></label>
-              <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={`${input} mt-1.5`} />
+              <div className="mt-1.5"><DateField value={date} onChange={setDate} required className={input} /></div>
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Buổi</label>
