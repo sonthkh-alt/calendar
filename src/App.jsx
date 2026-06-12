@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarRange, CalendarDays, CalendarClock, ClipboardCheck, Car, Settings,
-  LogOut, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup,
+  LogOut, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History,
 } from 'lucide-react';
 import Login from './Login';
 import SetPassword from './SetPassword';
@@ -21,6 +21,7 @@ import AdminLeaders from './components/AdminLeaders';
 import AdminVehicles from './components/AdminVehicles';
 import AdminGroups from './components/AdminGroups';
 import AdminBackup from './components/AdminBackup';
+import AdminLog from './components/AdminLog';
 import ScheduleForm from './components/ScheduleForm';
 import EntryDetail from './components/EntryDetail';
 import DeviceSelect from './components/DeviceSelect';
@@ -326,6 +327,7 @@ export default function App() {
                 { key: 'leaders', label: 'Lãnh đạo', icon: UserSquare2 },
                 { key: 'vehicles', label: 'Xe công vụ', icon: Car },
                 { key: 'groups', label: 'Nhóm thành phần', icon: ListChecks },
+                { key: 'log', label: 'Nhật ký', icon: History },
                 { key: 'backup', label: 'Sao lưu', icon: DatabaseBackup },
               ].map((t) => (
                 <button key={t.key} onClick={() => setAdminTab(t.key)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold transition ${adminTab === t.key ? 'bg-red-700 text-white shadow' : 'bg-white/90 border border-slate-200 text-slate-600 hover:bg-red-50'}`}>
@@ -337,6 +339,7 @@ export default function App() {
             {adminTab === 'leaders' && <AdminLeaders leaders={leaders} bans={bans} onChanged={loadCatalogs} />}
             {adminTab === 'vehicles' && <AdminVehicles vehicles={vehicles} leaders={leaders} onChanged={loadCatalogs} />}
             {adminTab === 'groups' && <AdminGroups groups={pGroups} leaders={leaders} onChanged={loadCatalogs} />}
+            {adminTab === 'log' && <AdminLog />}
             {adminTab === 'backup' && <AdminBackup onRestored={() => { loadCatalogs(); loadEntries(); }} />}
           </div>
         )}

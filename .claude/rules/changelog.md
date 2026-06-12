@@ -1,5 +1,21 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Nâng cấp hạ tầng: PWA, sao lưu tự động, realtime, audit log + RLS
+- **#7 PWA:** public/manifest.webmanifest + public/sw.js (network-first cho điều hướng &
+  Supabase REST GET, cache-first cho asset) + đăng ký SW trong main.jsx + meta iOS trong
+  index.html. Cài lên màn hình điện thoại, xem lịch offline (bản đã tải gần nhất).
+- **#8 Sao lưu tự động:** .github/workflows/db-backup.yml — cron 22:00 UTC hằng ngày,
+  psql xuất từng bảng ra JSON + backup-full.json, lưu artifact (90 ngày). Chỉ đọc.
+- **#5 Realtime:** schema.sql đưa schedule_entries + danh mục vào publication
+  supabase_realtime (idempotent). App.jsx subscribe postgres_changes, gom 400ms rồi
+  refetch — lịch tự cập nhật khi người khác sửa, không cần tải lại trang.
+- **#4 Audit log + RLS:** migration 2026-06-12-audit-log-rls.sql — bảng activity_log +
+  trigger log_schedule_change (bọc EXCEPTION để lỗi log không làm hỏng thao tác lịch);
+  helper is_app_admin()/is_app_writer() SECURITY DEFINER; SIẾT RLS: SELECT mở cho
+  authenticated, GHI danh mục/profiles=admin, GHI lịch=mọi vai trò trừ nguoi_xem
+  (chốt admin gốc qua email JWT). Tab Quản trị "Nhật ký" (AdminLog.jsx) xem 300 thao
+  tác gần nhất. GỠ: xóa file migration -> schema.sql tự khôi phục policy mở.
+
 ## 2026-06-12 — Sửa lịch: cho phép sửa cả danh sách "Lãnh đạo"
 - ScheduleForm: hiện phần chọn Lãnh đạo + chip nhóm CẢ KHI SỬA (trước chỉ khi thêm mới);
   điền sẵn tất cả lãnh đạo của sự kiện (cùng group_id) + group_label

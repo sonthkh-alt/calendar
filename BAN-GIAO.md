@@ -118,6 +118,18 @@ Toàn bộ nhật ký chi tiết: **`.claude/rules/changelog.md`**. Tóm tắt c
   còn dòng nào đang bị sai tên thì sửa tay & Lưu **một lần**.
 - [ ] **Đăng nhập thử** `hoalt@`(6) và `ctqh@`(7) sau khi Actions deploy xong (cần migration mới chạy).
 
+## 5a-bis. Nâng cấp hạ tầng phiên 12/06 (ĐÃ LÀM — kiểm chứng khi rảnh)
+- [x] **PWA** — cài lên màn hình điện thoại, xem offline. KIỂM: mở web trên điện thoại →
+  "Thêm vào màn hình chính"; tắt mạng → vẫn xem được lịch đã tải.
+- [x] **Sao lưu tự động** — Actions "Sao luu du lieu" chạy hằng ngày. KIỂM: GitHub → Actions →
+  chạy thử (workflow_dispatch) → tải artifact `backup-*` xem có JSON các bảng không.
+- [x] **Realtime** — lịch tự cập nhật. KIỂM: mở 2 trình duyệt, sửa ở cái này → cái kia tự đổi.
+  (Cần publication supabase_realtime đã thêm bảng — schema.sql tự làm khi deploy.)
+- [x] **Audit log + siết RLS** — tab Quản trị "Nhật ký" + bảng `activity_log`.
+  ⚠️ KIỂM SAU DEPLOY: đăng nhập từng vai trò thử TẠO/SỬA/DUYỆT lịch xem có bị chặn nhầm không.
+  Nếu writer nào bị chặn: xem `is_app_writer()` trong `migrations/2026-06-12-audit-log-rls.sql`.
+  GỠ NHANH toàn bộ siết RLS: **xóa file migration đó** → deploy lại → schema.sql khôi phục policy mở.
+
 ## 5b. Việc CÒN LẠI / có thể làm tiếp
 - [ ] **Xuất Word/Excel (G6)** — chưa làm (dự kiến lazy-import `docx` + `xlsx`, mẫu `HDNDKPI/src/lib/exporters.js`).
 - [ ] Cấu hình **Site URL + Redirect URLs** trong Supabase Auth nếu email xác thực còn trỏ về `localhost`.

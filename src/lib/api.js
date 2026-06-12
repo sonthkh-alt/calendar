@@ -29,6 +29,12 @@ export async function fetchParticipantGroups() {
   return supabase.from('participant_groups').select('*').order('sort_order');
 }
 
+// Nhật ký thao tác (audit log) — mới nhất trước
+export async function fetchActivityLog(limit = 300) {
+  if (!supabase) return NO_DB;
+  return supabase.from('activity_log').select('*').order('at', { ascending: false }).limit(limit);
+}
+
 export async function upsertParticipantGroup(row) {
   if (!supabase) return NO_DB;
   return supabase.from('participant_groups').upsert(row).select();
