@@ -4,7 +4,7 @@ import StatusBadge from './StatusBadge';
 import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
 import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk, canAdmin } from '../lib/permissions';
-import { reviewEntries, updateEntries, assignVehicle } from '../lib/api';
+import { reviewEntries, updateEntries } from '../lib/api';
 import DateField from './DateField';
 
 /**
@@ -68,12 +68,12 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
       .map((v) => [v.assigned_leader_id, v])
   );
   const mergedVehicles = [...new Map(
-    merged.map((e) => (hidesDriver(leaderById[e.leader_id]?.leader_type)
-      ? null
-      : (e.vehicle_id
-        ? vehicleById[e.vehicle_id]
-        : (!isHqLocation(e.location) ? dedicatedByLeader[e.leader_id] : null))))
-      .filter(Boolean).map((v) => [v.id, v])
+    merged.flatMap((e) => {
+      if (hidesDriver(leaderById[e.leader_id]?.leader_type)) return [];
+      const ids = (e.vehicle_ids && e.vehicle_ids.length) ? e.vehicle_ids : (e.vehicle_id ? [e.vehicle_id] : []);
+      if (ids.length) return ids.map((id) => vehicleById[id]).filter(Boolean);
+      return (!e.no_vehicle && !isHqLocation(e.location) && dedicatedByLeader[e.leader_id]) ? [dedicatedByLeader[e.leader_id]] : [];
+    }).map((v) => [v.id, v])
   ).values()];
 
   const d = parseISO(entry.date);
@@ -96,7 +96,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
     return ap - bp;
   });
   const findConflicts = (vehId) => (entries || []).filter((x) =>
-    x.vehicle_id === vehId && x.id !== entry.id && x.date === entry.date &&
+    (x.vehicle_ids || []).includes(vehId) && x.id !== entry.id && x.date === entry.date &&
     (!entry.group_id || x.group_id !== entry.group_id) &&
     x.status !== 'tu_choi' && sessionsOverlap(x, entry)
   );
@@ -139,7 +139,11 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
       }
     }
     setBusy(true);
-    await assignVehicle(entry.id, vehId || null, null, profile.id);
+    const ids = [...new Set(merged.map((x) => x.id))];
+    const patch = vehId
+      ? { vehicle_ids: [vehId], vehicle_id: vehId, no_vehicle: false, vehicle_assigned_by: profile.id, vehicle_assigned_at: new Date().toISOString() }
+      : { vehicle_ids: [], vehicle_id: null };
+    await updateEntries(ids, patch);
     setBusy(false); onChanged?.(); onClose?.();
   };
 

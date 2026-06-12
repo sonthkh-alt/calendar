@@ -151,6 +151,14 @@ alter table schedule_entries add column if not exists group_label text;
 -- Mục có dup_ignored = true sẽ không bị tính/cảnh báo trùng địa điểm.
 alter table schedule_entries add column if not exists dup_ignored boolean not null default false;
 
+-- Nâng cấp ĐIỀU XE: một chuyến có thể đặt NHIỀU xe (vehicle_ids) hoặc đánh dấu
+-- KHÔNG CẦN XE (no_vehicle). vehicle_id (1 xe) vẫn giữ = xe đầu để hiển thị/in.
+alter table schedule_entries add column if not exists vehicle_ids uuid[] not null default '{}';
+alter table schedule_entries add column if not exists no_vehicle boolean not null default false;
+-- Nạp vehicle_ids từ vehicle_id cũ khi mảng còn rỗng (an toàn chạy lại, không ghi đè)
+update schedule_entries set vehicle_ids = array[vehicle_id]
+  where vehicle_id is not null and array_length(vehicle_ids, 1) is null;
+
 -- 6) RLS: chỉ người ĐÃ ĐĂNG NHẬP mới đọc/ghi; phân quyền chi tiết do app xử lý.
 do $$ declare t text;
 begin
