@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-12 — Duyệt 1 thẻ (lịch tuần) = duyệt cả nhóm thành viên
+- api.reviewEntries(ids, ...): cập nhật trạng thái nhiều mục cùng lúc (.in('id', ids))
+- EntryDetail "Xử lý nhanh": doApprove/doReject áp dụng cho TẤT CẢ mục đã gộp
+  (mergedIds = các mục cùng nội dung+ngày+buổi/giờ) -> duyệt/từ chối cả nhóm 1 lần
+- ApprovalQueue giữ nguyên (duyệt từng mục / "Duyệt cả tuần")
+
 ## 2026-06-12 — Lịch nhập theo nhóm KHÔNG cảnh báo trùng địa điểm
 - App.dupMap: bỏ qua entry có group_label -> chọn nhanh theo nhóm là chủ đích, không
   tự cảnh báo trùng địa điểm lẫn nhau và không gây cảnh báo cho mục khác

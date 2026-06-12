@@ -4,7 +4,7 @@ import StatusBadge from './StatusBadge';
 import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
 import { canReview, canAssignVehicle, entryNeedsVehicleOk } from '../lib/permissions';
-import { reviewEntry, assignVehicle } from '../lib/api';
+import { reviewEntries, assignVehicle } from '../lib/api';
 
 /**
  * Modal chi tiết 1 mục lịch — hiển thị ĐẦY ĐỦ, không cắt chữ.
@@ -78,15 +78,17 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
     x.status !== 'tu_choi' && sessionsOverlap(x, entry)
   );
 
+  // Duyệt/từ chối áp dụng cho TẤT CẢ mục đã gộp (mọi đơn vị/thành viên của sự kiện)
+  const mergedIds = [...new Set(merged.map((e) => e.id))];
   const doApprove = async () => {
     setBusy(true);
-    await reviewEntry(entry.id, 'da_duyet', null, profile.id);
+    await reviewEntries(mergedIds, 'da_duyet', null, profile.id);
     setBusy(false); onChanged?.(); onClose?.();
   };
   const doReject = async () => {
     if (!note.trim()) { alert('Vui lòng nhập lý do từ chối.'); return; }
     setBusy(true);
-    await reviewEntry(entry.id, 'tu_choi', note.trim(), profile.id);
+    await reviewEntries(mergedIds, 'tu_choi', note.trim(), profile.id);
     setBusy(false); onChanged?.(); onClose?.();
   };
   const doAssign = async (vehId) => {

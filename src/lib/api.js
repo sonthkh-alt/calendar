@@ -92,6 +92,18 @@ export async function reviewEntry(id, status, note, reviewerId) {
   });
 }
 
+// Duyệt / từ chối NHIỀU mục cùng lúc (vd: cả nhóm nhiều đơn vị của một sự kiện)
+export async function reviewEntries(ids, status, note, reviewerId) {
+  if (!supabase) return NO_DB;
+  return supabase.from('schedule_entries').update({
+    status,
+    review_note: note || null,
+    reviewed_by: reviewerId,
+    reviewed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).in('id', ids);
+}
+
 // Gán / bỏ gán xe
 export async function assignVehicle(id, vehicleId, note, assignerId) {
   return updateEntry(id, {
