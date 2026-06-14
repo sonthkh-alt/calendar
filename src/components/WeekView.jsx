@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Printer, Plus, LayoutGrid, Rows3, CalendarDays } from 'lucide-react';
+import { Printer, Plus, LayoutGrid, Rows3, CalendarDays, CheckCheck } from 'lucide-react';
 import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
-import { canCreateFor, canEditEntry, canSeeEntry } from '../lib/permissions';
+import { canCreateFor, canEditEntry, canSeeEntry, canReview, canReviewEntry } from '../lib/permissions';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
 import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation, hidesDriver, makeEntrySorter } from '../lib/constants';
+import { reviewEntries } from '../lib/api';
 import { printPage } from '../lib/print';
 
 /**
@@ -14,7 +15,7 @@ import { printPage } from '../lib/print';
  * - Chế độ "Đầy đủ": bảng ngày × (Sáng/Chiều) × cột đơn vị.
  * - Chế độ "Gọn": mỗi ngày 1 khối (hợp mobile).
  */
-export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView }) {
+export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
   const [mode, setMode] = useState(isMobile ? 'compact' : 'full'); // full | compact
   // Điện thoại: luôn dùng chế độ Gọn (khối từng ngày, kéo dọc) cho dễ xem
   useEffect(() => { if (isMobile) setMode('compact'); }, [isMobile]);
@@ -78,6 +79,55 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     visible.filter((e) => unit.leaderIds.includes(e.leader_id) && e.date === dISO && inSession(e, sess));
 
   const allUnitLeaderIds = units.flatMap((u) => u.leaderIds);
+
+  // ===== PHÊ DUYỆT THEO NGÀY (ngay trên màn hình lịch) =====
+  // Người duyệt (pct/quan_tri: mọi lịch; pho_truong_doan: chỉ lịch Đoàn) thấy nút
+  // "Duyệt ngày (N)" trên mỗi ngày có lịch CHỜ DUYỆT mà mình có quyền duyệt.
+  const reviewer = canReview(profile);
+  const [approving, setApproving] = useState(null); // dISO đang xử lý
+  const pendingByDay = useMemo(() => {
+    const m = {};
+    if (!reviewer) return m;
+    for (const e of entries || []) {
+      if (e.status !== 'cho_duyet') continue;
+      if (!allUnitLeaderIds.includes(e.leader_id)) continue;
+      if (!canReviewEntry(profile, e, leaderById[e.leader_id])) continue;
+      (m[e.date] ||= []).push(e.id);
+    }
+    return m;
+  }, [entries, reviewer, allUnitLeaderIds, profile, leaderById]);
+
+  const approveDay = async (d) => {
+    const dISO = toISODate(d);
+    const ids = pendingByDay[dISO];
+    if (!ids || !ids.length || approving) return;
+    if (!window.confirm(`Phê duyệt TẤT CẢ ${ids.length} lịch chờ duyệt của ${dayName(d)}, ${fmtDMY(d)}?`)) return;
+    setApproving(dISO);
+    const { error } = await reviewEntries(ids, 'da_duyet', null, profile.id);
+    setApproving(null);
+    if (error) { alert('Không phê duyệt được: ' + error.message); return; }
+    onChanged?.();
+  };
+
+  // Nút "Duyệt ngày (N)" — dùng chung cho cả 2 chế độ; size theo ngữ cảnh.
+  const ApproveDayBtn = ({ d, variant }) => {
+    const n = pendingByDay[toISODate(d)]?.length || 0;
+    if (!reviewer || n === 0) return null;
+    const busy = approving === toISODate(d);
+    const base = variant === 'band'
+      ? 'px-3 py-1.5 text-[12px] rounded-lg shadow-sm'
+      : 'mt-2 px-2 py-1 text-[10.5px] rounded-md w-full justify-center';
+    return (
+      <button
+        onClick={(ev) => { ev.stopPropagation(); approveDay(d); }}
+        disabled={busy}
+        className={`no-print inline-flex items-center gap-1 font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 transition ${base}`}
+        title={`Phê duyệt tất cả ${n} lịch chờ duyệt trong ngày`}
+      >
+        <CheckCheck className="w-3.5 h-3.5 shrink-0" /> {busy ? 'Đang duyệt…' : `Duyệt ngày (${n})`}
+      </button>
+    );
+  };
 
   // Chế độ GỌN: gộp các mục giống nhau (cùng nội dung + buổi/giờ + địa điểm,
   // khác lãnh đạo/thành phần) thành MỘT thẻ — lãnh đạo và thành phần nối lại.
@@ -185,6 +235,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                         <p className={`text-[15px] font-extrabold leading-tight ${isToday ? 'text-amber-800' : 'text-red-800'}`}>{dayName(d)}</p>
                         <p className={`inline-block mt-1.5 text-[12px] font-bold rounded-full px-2.5 py-0.5 ${isToday ? 'text-amber-900 bg-amber-200/80' : 'text-red-700 bg-red-100'}`}>{fmtDM(d)}</p>
                         {isToday && <p className="no-print mt-1.5 text-[9px] font-bold text-amber-700 tracking-wide">● HÔM NAY</p>}
+                        <ApproveDayBtn d={d} variant="cell" />
                       </td>
                     )}
                     <td className={`${vB} ${hB} px-1 py-1.5 text-center text-[11px] font-semibold text-slate-500`}>{sess === 'sang' ? 'Sáng' : 'Chiều'}</td>
@@ -244,7 +295,10 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                     {dayName(d)}
                     <span className={`text-[15px] font-bold ${isToday ? 'text-red-700' : 'text-amber-200'}`}>· {fmtDMY(d)}</span>
                   </p>
-                  {isToday && <span className="text-[11px] font-extrabold text-amber-900 bg-white/80 rounded-full px-2.5 py-1 shadow-sm">HÔM NAY</span>}
+                  <div className="flex items-center gap-2">
+                    {isToday && <span className="text-[11px] font-extrabold text-amber-900 bg-white/80 rounded-full px-2.5 py-1 shadow-sm">HÔM NAY</span>}
+                    <ApproveDayBtn d={d} variant="band" />
+                  </div>
                 </div>
                 <div className={`p-2.5 grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
                   {dayEntries.length === 0 && <p className="text-[12px] text-slate-400 italic col-span-full">Không có lịch.</p>}

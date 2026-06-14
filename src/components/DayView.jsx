@@ -1,15 +1,16 @@
-import { useMemo } from 'react';
-import { Sun, Sunset } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Sun, Sunset, CheckCheck } from 'lucide-react';
 import EntryCard from './EntryCard';
-import { canEditEntry, canSeeEntry, canCreateFor } from '../lib/permissions';
-import { toISODate } from '../lib/dates';
+import { canEditEntry, canSeeEntry, canCreateFor, canReview, canReviewEntry } from '../lib/permissions';
+import { reviewEntries } from '../lib/api';
+import { toISODate, dayName, fmtDMY } from '../lib/dates';
 import { isHqLocation, leaderInUnit, hidesDriver } from '../lib/constants';
 
 /**
  * Lịch ngày: 2 khối Sáng / Chiều, EntryCard đầy đủ thông tin.
  * props: profile, anchor, entries, leaders, vehicles, filters, onEdit, onDelete
  */
-export default function DayView({ profile, anchor, entries, leaders, vehicles, filters, dupMap, onEdit, onDelete, onDeleteMany, onDuplicate, onView }) {
+export default function DayView({ profile, anchor, entries, leaders, vehicles, filters, dupMap, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
   const dISO = toISODate(anchor);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
@@ -31,6 +32,30 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
     }),
     [entries, dISO, profile, leaderById, filters]
   );
+
+  // PHÊ DUYỆT THEO NGÀY: lịch chờ duyệt trong ngày mà người đang xem có quyền duyệt
+  // (bỏ qua bộ lọc trạng thái để luôn bắt được mục chờ duyệt).
+  const reviewer = canReview(profile);
+  const [approving, setApproving] = useState(false);
+  const pendingIds = useMemo(() => {
+    if (!reviewer) return [];
+    return (entries || [])
+      .filter((e) => e.date === dISO && e.status === 'cho_duyet'
+        && leaderInUnit(leaderById[e.leader_id], filters.banId)
+        && (!filters.leaderId || e.leader_id === filters.leaderId)
+        && canReviewEntry(profile, e, leaderById[e.leader_id]))
+      .map((e) => e.id);
+  }, [entries, dISO, reviewer, profile, leaderById, filters.banId, filters.leaderId]);
+
+  const approveDay = async () => {
+    if (!pendingIds.length || approving) return;
+    if (!window.confirm(`Phê duyệt TẤT CẢ ${pendingIds.length} lịch chờ duyệt của ${dayName(anchor)}, ${fmtDMY(anchor)}?`)) return;
+    setApproving(true);
+    const { error } = await reviewEntries(pendingIds, 'da_duyet', null, profile.id);
+    setApproving(false);
+    if (error) { alert('Không phê duyệt được: ' + error.message); return; }
+    onChanged?.();
+  };
 
   const morning = dayEntries.filter((e) =>
     e.session === 'sang' || e.session === 'ca_ngay' || (e.session === 'gio' && (e.start_time || '08:00') < '12:00'));
@@ -85,6 +110,20 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
 
   return (
     <div className="space-y-4">
+      {reviewer && pendingIds.length > 0 && (
+        <div className="no-print flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
+          <p className="text-[13px] font-semibold text-emerald-800">
+            Có <b>{pendingIds.length}</b> lịch chờ duyệt trong ngày {fmtDMY(anchor)}.
+          </p>
+          <button
+            onClick={approveDay}
+            disabled={approving}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 shadow-sm transition"
+          >
+            <CheckCheck className="w-4 h-4" /> {approving ? 'Đang duyệt…' : `Duyệt cả ngày (${pendingIds.length})`}
+          </button>
+        </div>
+      )}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="bg-gradient-to-r from-amber-500 to-amber-400 text-white px-4 py-2 flex items-center gap-2 text-[13px] font-bold">
           <Sun className="w-4 h-4" /> Buổi sáng

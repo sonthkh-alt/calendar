@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-06-14 — Phê duyệt lịch THEO NGÀY ngay trên màn hình lịch
+- Người duyệt (pct/quan_tri: mọi lịch; pho_truong_doan: chỉ lịch Đoàn) thấy nút xanh
+  "Duyệt ngày (N)" ngay trên màn hình Lịch tuần & Lịch ngày — không cần vào tab Chờ duyệt
+- WeekView: ApproveDayBtn hiện trên ô tiêu đề Thứ/Ngày (chế độ Đầy đủ) + trên dải tiêu đề
+  ngày (chế độ Gọn); N = số lịch CHỜ DUYỆT trong ngày thuộc các cột đang hiển thị mà người
+  đó có quyền (canReviewEntry). Bấm -> confirm -> reviewEntries(ids,'da_duyet') -> onChanged
+- DayView: thanh xanh đầu màn "Có N lịch chờ duyệt" + nút "Duyệt cả ngày (N)"
+- pendingByDay/pendingIds BỎ QUA bộ lọc trạng thái để luôn bắt được mục chờ duyệt
+- App.jsx truyền onChanged={refresh} vào WeekView + DayView
+
 ## 2026-06-12 — Header ngày (Gọn) nổi bật + sửa sắp xếp "Cả ngày"
 - WeekView Gọn: dải tiêu đề ngày to/đậm thành BĂNG ĐỎ riêng rẽ (gradient đỏ, chữ
   trắng 18px + icon lịch, viền đáy 4px; hôm nay = băng vàng), khối cách nhau space-y-5
