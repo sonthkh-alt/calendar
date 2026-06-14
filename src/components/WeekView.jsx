@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Printer, Plus, LayoutGrid, Rows3, CalendarDays, CheckCheck, FileText, FileDown } from 'lucide-react';
+import { Plus, LayoutGrid, Rows3, CalendarDays, CheckCheck, FileText, FileDown } from 'lucide-react';
 import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
 import { canCreateFor, canEditEntry, canSeeEntry, canReview, canReviewEntry } from '../lib/permissions';
@@ -7,7 +7,6 @@ import { weekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
 import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation, hidesDriver, makeEntrySorter, canExportDocx } from '../lib/constants';
 import { reviewEntries } from '../lib/api';
 import { exportWeekDocx, exportWeekPdf } from '../lib/exporters';
-import { printPage } from '../lib/print';
 
 /**
  * Lịch tuần kiểu "Lịch công tác tuần" chính quyền — CỘT THEO ĐƠN VỊ:
@@ -247,9 +246,6 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
               <FileText className="w-4 h-4" /> {exporting ? 'Đang xuất…' : 'Xuất Word'}
             </button>
           )}
-          <button onClick={() => printPage('portrait')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-slate-700 bg-white/90 border border-slate-200 hover:bg-red-50 shadow-sm" title="In theo mẫu công văn, khổ A4 dọc">
-            <Printer className="w-4 h-4" /> In lịch tuần
-          </button>
         </div>
       </div>
 
