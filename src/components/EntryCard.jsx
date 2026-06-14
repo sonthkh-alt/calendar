@@ -18,10 +18,10 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
     : '';
   const s = STATUS[entry.status] || STATUS.cho_duyet;
   const rejected = entry.status === 'tu_choi'; // từ chối -> gạch ngang TẤT CẢ thông tin
-  // Tô nền theo ĐƠN VỊ (chế độ Gọn): TTr HĐND tỉnh (pct) đậm hơn chút (đỏ),
-  // Đoàn ĐBQH (doan) vàng nhạt — để phân biệt nhanh với các thành phần khác.
+  // Tô nền theo ĐƠN VỊ: TTr HĐND tỉnh (pct) nền XANH đậm hơn chút so với các Ban/đơn vị
+  // khác; Đoàn ĐBQH (doan) vàng nhạt — để phân biệt nhanh với các thành phần khác.
   const unitAccent = (unitTint && !rejected)
-    ? (leader?.leader_type === 'pct' ? 'border-red-300 bg-red-100'
+    ? (leader?.leader_type === 'pct' ? 'border-emerald-400 bg-emerald-100'
       : leader?.leader_type === 'doan' ? 'border-yellow-300 bg-yellow-100'
         : null)
     : null;

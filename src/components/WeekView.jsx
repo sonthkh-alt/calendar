@@ -297,7 +297,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                       return (
                         <td key={u.key} className={`${vB} ${hB} px-1 py-1 align-top`} style={{ minWidth: 150 }}>
                           <div className="space-y-1">
-                            {mergeEntries([...list].sort(entrySorter)).map((m) => renderMergedCard(m, true))}
+                            {mergeEntries([...list].sort(entrySorter)).map((m) => renderMergedCard(m, true, true))}
                             {addable.length > 0 && (
                               <button
                                 onClick={() => onAdd?.({ date: d, session: sess, leaderId: addable.length === 1 ? addable[0] : null, leaderIds: u.leaderIds })}
