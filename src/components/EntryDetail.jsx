@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy, Check, XCircle, Zap, SlidersHorizontal } from 'lucide-react';
+import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy, Check, XCircle, Zap, SlidersHorizontal, UserCheck } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
@@ -12,7 +12,7 @@ import DateField from './DateField';
  * Các mục TRÙNG nội dung + thời gian được GỘP: thành phần nối lại với nhau.
  * Khu "Xử lý nhanh": Duyệt/Từ chối (PCT, Quản trị) + chọn xe (Văn phòng, Quản trị).
  */
-export default function EntryDetail({ entry, entries, leaders, vehicles, profile, canEdit, canDuplicate, dupInfo, onEdit, onDelete, onDuplicate, onChanged, onClose }) {
+export default function EntryDetail({ entry, entries, leaders, vehicles, profile, reviewer, canEdit, canDuplicate, dupInfo, onEdit, onDelete, onDuplicate, onChanged, onClose }) {
   const dupOthers = dupInfo?.others;
   const dupWeek = dupInfo?.severity === 'week';
   const [busy, setBusy] = useState(false);
@@ -298,6 +298,17 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
               <div>
                 <p className={lab}>Ghi chú của lãnh đạo</p>
                 <p className={`${val} italic`}>{entry.review_note}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Người phê duyệt (chức vụ + họ tên) — hiện khi lịch đã được xử lý */}
+          {reviewer && ['da_duyet', 'da_dieu_chinh', 'tu_choi'].includes(entry.status) && (
+            <div className={row}>
+              <UserCheck className={ic} />
+              <div>
+                <p className={lab}>Người phê duyệt</p>
+                <p className={`${val} font-semibold`}>{[reviewer.position, reviewer.full_name].filter(Boolean).join(' — ') || reviewer.email}</p>
               </div>
             </div>
           )}

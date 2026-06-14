@@ -15,7 +15,7 @@
 | role | quyền |
 |---|---|
 | quan_tri | toàn quyền (bootstrap: sonthkh@gmail.com) |
-| pct | xem tất cả; duyệt/điều chỉnh/từ chối MỌI lịch (Ban + Đoàn); NHẬP lịch cho mọi đối tượng → tự động da_duyet |
+| pct | xem tất cả; duyệt/điều chỉnh/từ chối MỌI lịch (Ban + Đoàn), kể cả lịch ĐÃ duyệt; NHẬP lịch cho mọi đối tượng → tự động da_duyet. Gồm PCT + Chủ tịch HĐND tỉnh (phongnh@thanhhoa.gov.vn, chức vụ "Chủ tịch HĐND tỉnh") |
 | pho_truong_doan | Phó Trưởng Đoàn ĐBQH: duyệt/điều chỉnh/từ chối CHỈ lịch Đoàn (doan); NHẬP lịch Đoàn → tự động da_duyet — đ/c Lương Thị Hoa |
 | cb_ban | CRUD lịch lãnh đạo thuộc ban_ids; chỉ sửa khi cho_duyet/tu_choi |
 | cb_tonghop | CRUD lịch PCT/Đoàn → khởi tạo da_duyet (hiện ngay) |

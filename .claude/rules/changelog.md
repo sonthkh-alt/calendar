@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-14 — Tài khoản Chủ tịch HĐND tỉnh + hiện "Người phê duyệt"
+- Migration 2026-06-14-tai-khoan-chu-tich-hdnd.sql: phongnh@thanhhoa.gov.vn / Phongnh@123 —
+  Nguyễn Hồng Phong, chức vụ "Chủ tịch HĐND tỉnh", vai trò 'pct' (duyệt/điều chỉnh/từ chối
+  MỌI lịch, kể cả lịch đã duyệt). Theo pattern token='' tránh lỗi GoTrue; idempotent
+- App: nạp profiles toàn cục (loadCatalogs += fetchProfiles) -> reviewerById; truyền
+  reviewer={reviewerById[viewing.reviewed_by]} vào EntryDetail
+- EntryDetail: thêm dòng "Người phê duyệt: <chức vụ> — <họ tên>" (hiện khi da_duyet/
+  da_dieu_chinh/tu_choi) -> Chủ tịch duyệt thì hiện "Chủ tịch HĐND tỉnh — Nguyễn Hồng Phong"
+
 ## 2026-06-14 — Xuất Word: cột Thành phần sắp theo ƯU TIÊN HỌ VÀ TÊN
 - exporters.compactParticipants: sắp các đoạn Thành phần theo sort_order lãnh đạo (chức vụ
   cao -> trước), áp dụng CẢ nhánh text thành phần lẫn nhánh dự phòng (tên lãnh đạo của mục);

@@ -7,7 +7,7 @@ import Login from './Login';
 import SetPassword from './SetPassword';
 import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
-import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, deleteEntry, deleteEntries } from './lib/api';
+import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, deleteEntry, deleteEntries } from './lib/api';
 import { weekStart, parseISO, toISODate } from './lib/dates';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS } from './lib/constants';
 import { canReview, canReviewEntry, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
@@ -65,6 +65,7 @@ export default function App() {
   const [vehicles, setVehicles] = useState([]);
   const [pGroups, setPGroups] = useState([]);
   const [pLocations, setPLocations] = useState([]);
+  const [pProfiles, setPProfiles] = useState([]); // hồ sơ tài khoản (để hiện người phê duyệt)
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -101,9 +102,15 @@ export default function App() {
   }), [anchor]);
 
   const loadCatalogs = useCallback(async () => {
-    const [b, l, v, g, loc] = await Promise.all([fetchBans(), fetchLeaders(), fetchVehicles(), fetchParticipantGroups(), fetchLocations()]);
-    setBans(b.data || []); setLeaders(l.data || []); setVehicles(v.data || []); setPGroups(g.data || []); setPLocations(loc.data || []);
+    const [b, l, v, g, loc, pr] = await Promise.all([fetchBans(), fetchLeaders(), fetchVehicles(), fetchParticipantGroups(), fetchLocations(), fetchProfiles()]);
+    setBans(b.data || []); setLeaders(l.data || []); setVehicles(v.data || []); setPGroups(g.data || []); setPLocations(loc.data || []); setPProfiles(pr.data || []);
   }, []);
+
+  // Tra cứu người phê duyệt theo id (reviewed_by) -> hiện chức vụ + họ tên trên chi tiết lịch
+  const reviewerById = useMemo(
+    () => Object.fromEntries((pProfiles || []).map((p) => [p.id, p])),
+    [pProfiles]
+  );
 
   // Tên địa điểm gợi ý (dùng cho ô gợi ý + bỏ qua cảnh báo trùng); rỗng -> mặc định
   const locationNames = useMemo(
@@ -387,6 +394,7 @@ export default function App() {
           leaders={leaders}
           vehicles={vehicles}
           profile={profile}
+          reviewer={reviewerById[viewing.reviewed_by]}
           onChanged={refresh}
           canEdit={canEditEntry(profile, viewing, leaders.find((l) => l.id === viewing.leader_id))}
           canDuplicate={canDup(viewing)}
