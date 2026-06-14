@@ -61,17 +61,27 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     () => (pGroups || []).filter((g) => groupLeaderIds(g, leaders).some((id) => allowedIds.has(id))),
     [pGroups, leaders, allowedIds]
   );
-  // Chọn nhóm ở trường Lãnh đạo: chọn các lãnh đạo trong nhóm + đặt nhãn nhóm +
-  // ĐIỀN THÀNH PHẦN bằng đúng danh sách của nhóm (giống hệt tick nhóm ở ô Thành phần)
+  // Cho phép chọn NHIỀU nhóm cùng lúc: groupLabel lưu các tên nhóm nối bằng "; ".
+  const selectedGroupNames = groupLabel ? groupLabel.split(';').map((s) => s.trim()).filter(Boolean) : [];
+  const isGroupSelected = (g) => selectedGroupNames.includes(g.name);
+
+  // Chọn/bỏ nhóm ở trường Lãnh đạo: thêm/bớt các lãnh đạo trong nhóm + nhãn nhóm +
+  // ĐIỀN/GỠ THÀNH PHẦN theo danh sách của nhóm (giống tick nhóm ở ô Thành phần).
   const toggleLeaderGroup = (g) => {
     const ids = groupLeaderIds(g, leaders).filter((id) => allowedIds.has(id));
-    if (groupLabel === g.name) {
-      setLeaderIds((prev) => prev.filter((id) => !ids.includes(id)));
-      setGroupLabel('');
+    if (isGroupSelected(g)) {
+      // Bỏ chọn nhóm này -> chỉ gỡ lãnh đạo KHÔNG còn thuộc nhóm khác đang chọn
+      const keepIds = new Set(
+        (pGroups || [])
+          .filter((x) => x.name !== g.name && selectedGroupNames.includes(x.name))
+          .flatMap((x) => groupLeaderIds(x, leaders))
+      );
+      setLeaderIds((prev) => prev.filter((id) => !ids.includes(id) || keepIds.has(id)));
+      setGroupLabel(selectedGroupNames.filter((n) => n !== g.name).join('; '));
       removeMembers(g.members);
     } else {
       setLeaderIds((prev) => [...new Set([...prev, ...ids])]);
-      setGroupLabel(g.name);
+      setGroupLabel([...selectedGroupNames, g.name].join('; '));
       addMembers(g.members);
     }
   };
@@ -219,11 +229,11 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Lãnh đạo <span className="text-rose-600">*</span></label>
               {leaderGroups.length > 0 && (
                 <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50/60 p-2.5">
-                  <p className="text-[11px] font-bold text-amber-800 mb-1">Chọn nhanh theo nhóm <span className="font-normal text-amber-700">(lịch ghi theo tên nhóm, trải đủ các đơn vị):</span></p>
+                  <p className="text-[11px] font-bold text-amber-800 mb-1">Chọn nhanh theo nhóm <span className="font-normal text-amber-700">(có thể chọn nhiều nhóm; lịch ghi theo tên nhóm, trải đủ các đơn vị):</span></p>
                   <div className="flex flex-wrap gap-1.5">
                     {leaderGroups.map((g) => (
-                      <label key={g.id} title={`Gồm: ${groupLeaderIds(g, leaders).map((id) => leaderById[id]?.full_name).filter(Boolean).join(', ')}`} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${groupLabel === g.name ? 'bg-amber-100 border-amber-400 text-amber-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'}`}>
-                        <input type="checkbox" checked={groupLabel === g.name} onChange={() => toggleLeaderGroup(g)} className="accent-amber-600" />
+                      <label key={g.id} title={`Gồm: ${groupLeaderIds(g, leaders).map((id) => leaderById[id]?.full_name).filter(Boolean).join(', ')}`} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${isGroupSelected(g) ? 'bg-amber-100 border-amber-400 text-amber-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'}`}>
+                        <input type="checkbox" checked={isGroupSelected(g)} onChange={() => toggleLeaderGroup(g)} className="accent-amber-600" />
                         {g.name}
                       </label>
                     ))}

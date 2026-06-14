@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-15 — ScheduleForm: "Chọn nhanh theo nhóm" cho phép chọn NHIỀU nhóm
+- Trước: groupLabel giữ 1 tên nhóm -> chọn nhóm mới bỏ nhóm cũ
+- Nay: groupLabel = các tên nhóm nối "; "; isGroupSelected(g) = tên g có trong groupLabel
+- toggleLeaderGroup: chọn -> hợp leaderIds + thêm members + nối tên; BỎ chọn -> chỉ gỡ
+  lãnh đạo KHÔNG thuộc nhóm khác còn chọn (keepIds), gỡ members + tên nhóm khỏi nhãn
+- Lưu group_label = nhãn gộp -> EntryCard/PDF/Word hiển thị đúng các nhóm đã chọn
+
 ## 2026-06-15 — Lọc "đơn vị" CHỌN NHIỀU cùng lúc (vd TTr HĐND + Đoàn ĐBQH)
 - filters.banId (chọn 1) -> filters.banIds (MẢNG khóa: 'grp:pct'|'grp:doan'|'grp:vanphong'|UUID Ban)
 - constants.leaderInUnits(leader, unitKeys): rỗng -> mọi đơn vị; ngược lại khớp BẤT KỲ khóa nào
