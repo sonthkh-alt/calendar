@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Printer, Plus, LayoutGrid, Rows3, CalendarDays, CheckCheck } from 'lucide-react';
+import { Printer, Plus, LayoutGrid, Rows3, CalendarDays, CheckCheck, FileText } from 'lucide-react';
 import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
 import { canCreateFor, canEditEntry, canSeeEntry, canReview, canReviewEntry } from '../lib/permissions';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
 import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation, hidesDriver, makeEntrySorter } from '../lib/constants';
 import { reviewEntries } from '../lib/api';
+import { exportWeekDocx } from '../lib/exporters';
 import { printPage } from '../lib/print';
 
 /**
@@ -17,6 +18,7 @@ import { printPage } from '../lib/print';
  */
 export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
   const [mode, setMode] = useState(isMobile ? 'compact' : 'full'); // full | compact
+  const [exporting, setExporting] = useState(false);
   // Điện thoại: luôn dùng chế độ Gọn (khối từng ngày, kéo dọc) cho dễ xem
   useEffect(() => { if (isMobile) setMode('compact'); }, [isMobile]);
   const effMode = isMobile ? 'compact' : mode;
@@ -176,6 +178,23 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     );
   };
 
+  // Xuất lịch tuần ra file Word (.docx) — đúng các cột đang hiển thị
+  const onExportWord = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      await exportWeekDocx({
+        anchor,
+        entries: visible.filter((e) => allUnitLeaderIds.includes(e.leader_id)),
+        leaders, groups,
+      });
+    } catch (err) {
+      alert('Không xuất được file Word: ' + (err?.message || err));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div>
       {/* BẢN IN kiểu công văn (A4 dọc) — chỉ hiện khi in */}
@@ -198,6 +217,9 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
               <Plus className="w-4 h-4" /> Thêm lịch
             </button>
           )}
+          <button onClick={onExportWord} disabled={exporting} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-r from-sky-700 to-sky-600 hover:from-sky-800 hover:to-sky-700 shadow-sm disabled:opacity-60" title="Xuất lịch tuần ra file Word (.docx) theo mẫu công văn">
+            <FileText className="w-4 h-4" /> {exporting ? 'Đang xuất…' : 'Xuất Word'}
+          </button>
           <button onClick={() => printPage('portrait')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-slate-700 bg-white/90 border border-slate-200 hover:bg-red-50 shadow-sm" title="In theo mẫu công văn, khổ A4 dọc">
             <Printer className="w-4 h-4" /> In lịch tuần
           </button>

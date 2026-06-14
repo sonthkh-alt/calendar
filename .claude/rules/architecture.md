@@ -9,6 +9,9 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 - `permissions.js` — ma trận quyền: canCreateFor / canEditEntry / canReview / canAssignVehicle / canSeeEntry / initialStatus
 - `dates.js` — tuần T2–CN (date-fns, locale vi), weekDays/monthGrid/weekLabel, `sessionsOverlap` (thuật toán trùng buổi/giờ)
 - `constants.js` — BOOTSTRAP_ADMIN_EMAILS, ROLES, STATUS (màu), SESSIONS, VEHICLE_TYPES
+- `exporters.js` — `exportWeekDocx` xuất lịch tuần ra .docx (NẠP ĐỘNG docx + file-saver);
+  bảng công văn A4 dọc như WeekPrintSheet; thêm "Đồng chí" trước tên cán bộ (withComrade),
+  in đậm "(chờ duyệt)". Gọi từ nút "Xuất Word" trong WeekView.
 
 ## src/components/
 - `WeekView.jsx` — màn chính: bảng ngày×(Sáng/Chiều)×cột lãnh đạo; chế độ Đầy đủ/Gọn; nút In

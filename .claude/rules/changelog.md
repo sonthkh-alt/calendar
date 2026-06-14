@@ -1,5 +1,19 @@
 # Nhật ký dự án
 
+## 2026-06-14 — Module XUẤT LỊCH TUẦN RA WORD (.docx)
+- src/lib/exporters.js: exportWeekDocx({anchor,entries,leaders,groups}) — NẠP ĐỘNG docx +
+  file-saver (dynamic import, không phình bundle chính); dựng bảng công văn A4 dọc giống
+  WeekPrintSheet (Ngày | Thời gian | Nội dung | Địa điểm | Thành phần), gộp mục giống nhau,
+  rowSpan ô Ngày, tên nhóm thay thành viên (compactParticipants dùng chung logic bản in)
+- YÊU CẦU 1 — cột THÀNH PHẦN: thêm "Đồng chí" trước TÊN CÁN BỘ (withComrade): chuẩn hóa
+  kính ngữ Đ/c|đc|Đồng chí -> "Đồng chí"; giữ Ông/Bà; tên người 2–5 từ viết hoa (không phải
+  từ chỉ đơn vị: Ban/Văn phòng/Sở/UBND/Thường trực/Lãnh đạo/Đoàn... ORG_RE) -> thêm "Đồng chí"
+- YÊU CẦU 2 — Nội dung lịch CHỜ DUYỆT: thêm chữ " (chờ duyệt)" IN ĐẬM (bold TextRun);
+  da_dieu_chinh -> "(ghi chú)" in nghiêng
+- WeekView: nút "Xuất Word" (xanh dương) cạnh nút In; xuất đúng các cột đang hiển thị
+- Đã kiểm chứng API docx v9 (rowSpan/columnSpan/borders/allCaps/PageOrientation/Packer) dựng OK
+- (Lưu ý: build local KHÔNG .env tree-shake hết nên chưa thấy chunk docx — Vercel build đủ)
+
 ## 2026-06-14 — Người phê duyệt tự nhập lịch (tự duyệt) + từ chối gạch ngang
 - permissions.canCreateFor: pct nhập được MỌI lịch; pho_truong_doan nhập lịch Đoàn (doan)
 - permissions.initialStatus: pct/quan_tri tự nhập -> da_duyet; pho_truong_doan nhập Đoàn -> da_duyet
