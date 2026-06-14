@@ -69,6 +69,13 @@ export function leaderInUnit(leader, banId) {
   return leader?.ban_id === banId;
 }
 
+// Phiên bản CHỌN NHIỀU đơn vị: unitKeys là mảng khóa ('grp:<type>' hoặc UUID Ban).
+// Rỗng -> mọi đơn vị; ngược lại -> lãnh đạo thuộc BẤT KỲ đơn vị nào được chọn.
+export function leaderInUnits(leader, unitKeys) {
+  if (!unitKeys || unitKeys.length === 0) return true;
+  return unitKeys.some((k) => leaderInUnit(leader, k));
+}
+
 // Bộ so sánh sắp xếp lịch trong NGÀY (lịch tuần + bản in):
 //  1) Sáng trước Chiều. "Cả ngày" coi như BUỔI SÁNG (bắt đầu từ sáng) để trong
 //     buổi sáng vẫn xếp theo STT lãnh đạo; "theo giờ" phân sáng/chiều theo mốc 12:00.

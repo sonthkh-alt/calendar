@@ -4,7 +4,7 @@ import EntryCard from './EntryCard';
 import { canEditEntry, canSeeEntry, canCreateFor, canReview, canReviewEntry } from '../lib/permissions';
 import { reviewEntries } from '../lib/api';
 import { toISODate, dayName, fmtDMY } from '../lib/dates';
-import { isHqLocation, leaderInUnit, hidesDriver } from '../lib/constants';
+import { isHqLocation, leaderInUnits, hidesDriver } from '../lib/constants';
 
 /**
  * Lịch ngày: 2 khối Sáng / Chiều, EntryCard đầy đủ thông tin.
@@ -25,7 +25,7 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
       if (e.date !== dISO) return false;
       const l = leaderById[e.leader_id];
       if (!canSeeEntry(profile, e, l)) return false;
-      if (!leaderInUnit(l, filters.banId)) return false;
+      if (!leaderInUnits(l, filters.banIds)) return false;
       if (filters.leaderId && e.leader_id !== filters.leaderId) return false;
       if (filters.status && e.status !== filters.status) return false;
       return true;
@@ -41,11 +41,11 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
     if (!reviewer) return [];
     return (entries || [])
       .filter((e) => e.date === dISO && e.status === 'cho_duyet'
-        && leaderInUnit(leaderById[e.leader_id], filters.banId)
+        && leaderInUnits(leaderById[e.leader_id], filters.banIds)
         && (!filters.leaderId || e.leader_id === filters.leaderId)
         && canReviewEntry(profile, e, leaderById[e.leader_id]))
       .map((e) => e.id);
-  }, [entries, dISO, reviewer, profile, leaderById, filters.banId, filters.leaderId]);
+  }, [entries, dISO, reviewer, profile, leaderById, filters.banIds, filters.leaderId]);
 
   const approveDay = async () => {
     if (!pendingIds.length || approving) return;

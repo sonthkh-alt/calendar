@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { STATUS, leaderInUnit } from '../lib/constants';
+import { STATUS, leaderInUnits } from '../lib/constants';
 import { canSeeEntry } from '../lib/permissions';
 import { monthGrid, toISODate, isSameMonth, solarToLunar } from '../lib/dates';
 
@@ -17,7 +17,7 @@ export default function MonthView({ profile, anchor, entries, leaders, filters, 
     () => (entries || []).filter((e) => {
       const l = leaderById[e.leader_id];
       if (!canSeeEntry(profile, e, l)) return false;
-      if (!leaderInUnit(l, filters.banId)) return false;
+      if (!leaderInUnits(l, filters.banIds)) return false;
       if (filters.leaderId && e.leader_id !== filters.leaderId) return false;
       if (filters.status && e.status !== filters.status) return false;
       return true;

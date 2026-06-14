@@ -1,5 +1,13 @@
 # Nhật ký dự án
 
+## 2026-06-15 — Lọc "đơn vị" CHỌN NHIỀU cùng lúc (vd TTr HĐND + Đoàn ĐBQH)
+- filters.banId (chọn 1) -> filters.banIds (MẢNG khóa: 'grp:pct'|'grp:doan'|'grp:vanphong'|UUID Ban)
+- constants.leaderInUnits(leader, unitKeys): rỗng -> mọi đơn vị; ngược lại khớp BẤT KỲ khóa nào
+- FilterBar: nút dropdown + danh sách CHECKBOX đơn vị (badge đếm số đã chọn, "Bỏ chọn tất cả");
+  đổi chọn -> reset leaderId. visibleLeaders lọc theo leaderInUnits
+- WeekView.units: wantGroup/ban lọc theo banIds (mảng); MonthView/DayView dùng leaderInUnits
+- App: filters mặc định { banIds: [], leaderId, status }; "Xóa lọc" -> banIds: []
+
 ## 2026-06-15 — Sắp lịch theo ƯU TIÊN lãnh đạo cao nhất của sự kiện (PDF/Word/In)
 - Lỗi: mục đã GỘP (PDF/Word/bản in gộp trước rồi sắp) dùng STT của lãnh đạo DÒNG ĐẦU
   (theo thứ tự DB) -> sự kiện có đ/c Lê Tiến Lam (STT1) bị xếp sau "Cả ngày" của Ban

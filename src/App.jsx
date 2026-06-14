@@ -59,7 +59,7 @@ export default function App() {
   const [tab, setTab] = useState('week'); // week | month | day | approve | vehicles | admin
   const [adminTab, setAdminTab] = useState('users');
   const [anchor, setAnchor] = useState(new Date());
-  const [filters, setFilters] = useState({ banId: null, leaderId: null, status: null });
+  const [filters, setFilters] = useState({ banIds: [], leaderId: null, status: null });
   const [bans, setBans] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [vehicles, setVehicles] = useState([]);

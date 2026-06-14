@@ -38,9 +38,9 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
   const units = useMemo(() => {
     const active = (leaders || []).filter((l) => l.active);
     const pick = (ls) => (filters.leaderId ? ls.filter((l) => l.id === filters.leaderId) : ls);
-    const bid = filters.banId;
-    // hiện nhóm cột leader_type khi: không lọc, hoặc lọc đúng nhóm 'grp:<type>'
-    const wantGroup = (t) => !bid || bid === 'grp:' + t;
+    const bids = filters.banIds || [];
+    // hiện nhóm cột leader_type khi: KHÔNG lọc đơn vị, hoặc đơn vị được chọn có nhóm đó
+    const wantGroup = (t) => bids.length === 0 || bids.includes('grp:' + t);
     const out = [];
 
     if (wantGroup('pct')) {
@@ -52,7 +52,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
       if (doan.length) out.push({ key: 'doan', label: DOAN_GROUP_LABEL, leaderIds: doan.map((l) => l.id) });
     }
     for (const b of bans || []) {
-      if (bid && bid !== b.id) continue;
+      if (bids.length && !bids.includes(b.id)) continue;
       const ls = pick(active.filter((l) => l.ban_id === b.id));
       if (ls.length) out.push({ key: b.id, label: b.name, leaderIds: ls.map((l) => l.id) });
     }
@@ -61,7 +61,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
       if (vp.length) out.push({ key: 'vp', label: 'Lãnh đạo Văn phòng', leaderIds: vp.map((l) => l.id) });
     }
     return out;
-  }, [leaders, bans, filters.banId, filters.leaderId]);
+  }, [leaders, bans, filters.banIds, filters.leaderId]);
 
   const visible = useMemo(
     () => (entries || []).filter((e) => {
