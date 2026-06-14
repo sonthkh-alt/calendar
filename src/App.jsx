@@ -71,6 +71,7 @@ export default function App() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [duplicating, setDuplicating] = useState(null); // entry gốc khi nhân bản
+  const [adjusting, setAdjusting] = useState(null); // entry đang ĐIỀU CHỈNH (người duyệt)
   const [prefill, setPrefill] = useState(null);
   const [viewing, setViewing] = useState(null); // entry đang xem chi tiết
 
@@ -148,9 +149,11 @@ export default function App() {
 
   const refresh = useCallback(() => { loadEntries(); }, [loadEntries]);
 
-  const onAdd = (pf) => { setEditing(null); setDuplicating(null); setPrefill(pf || null); setFormOpen(true); };
-  const onEdit = (entry) => { setEditing(entry); setDuplicating(null); setPrefill(null); setFormOpen(true); };
-  const onDuplicate = (entry) => { setEditing(null); setDuplicating(entry); setPrefill(null); setFormOpen(true); };
+  const onAdd = (pf) => { setEditing(null); setDuplicating(null); setAdjusting(null); setPrefill(pf || null); setFormOpen(true); };
+  const onEdit = (entry) => { setEditing(entry); setDuplicating(null); setAdjusting(null); setPrefill(null); setFormOpen(true); };
+  const onDuplicate = (entry) => { setEditing(null); setDuplicating(entry); setAdjusting(null); setPrefill(null); setFormOpen(true); };
+  // Điều chỉnh (người duyệt): mở form đầy đủ như Sửa, lưu thành "đã điều chỉnh" + ghi chú
+  const onAdjust = (entry) => { setEditing(null); setDuplicating(null); setAdjusting(entry); setPrefill(null); setFormOpen(true); };
   const canDup = (entry) => canCreateFor(profile, leaders.find((l) => l.id === entry.leader_id));
   const onDelete = async (entry) => {
     if (!window.confirm(`Xóa mục lịch "${entry.content}"?`)) return;
@@ -382,8 +385,9 @@ export default function App() {
           locations={locationNames}
           editing={editing}
           duplicating={duplicating}
+          adjusting={adjusting}
           prefill={prefill}
-          onClose={() => { setFormOpen(false); setEditing(null); setDuplicating(null); setPrefill(null); }}
+          onClose={() => { setFormOpen(false); setEditing(null); setDuplicating(null); setAdjusting(null); setPrefill(null); }}
           onSaved={refresh}
         />
       )}
@@ -400,6 +404,7 @@ export default function App() {
           canDuplicate={canDup(viewing)}
           dupInfo={dupMap.get(viewing.id)}
           onEdit={onEdit}
+          onAdjust={onAdjust}
           onDelete={onDelete}
           onDuplicate={onDuplicate}
           onClose={() => setViewing(null)}

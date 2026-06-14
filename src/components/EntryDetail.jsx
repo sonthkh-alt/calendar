@@ -5,25 +5,19 @@ import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver } from '../lib/c
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
 import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk, canAdmin } from '../lib/permissions';
 import { reviewEntries, updateEntries } from '../lib/api';
-import DateField from './DateField';
 
 /**
  * Modal chi tiết 1 mục lịch — hiển thị ĐẦY ĐỦ, không cắt chữ.
  * Các mục TRÙNG nội dung + thời gian được GỘP: thành phần nối lại với nhau.
  * Khu "Xử lý nhanh": Duyệt/Từ chối (PCT, Quản trị) + chọn xe (Văn phòng, Quản trị).
  */
-export default function EntryDetail({ entry, entries, leaders, vehicles, profile, reviewer, canEdit, canDuplicate, dupInfo, onEdit, onDelete, onDuplicate, onChanged, onClose }) {
+export default function EntryDetail({ entry, entries, leaders, vehicles, profile, reviewer, canEdit, canDuplicate, dupInfo, onEdit, onAdjust, onDelete, onDuplicate, onChanged, onClose }) {
   const dupOthers = dupInfo?.others;
   const dupWeek = dupInfo?.severity === 'week';
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
-  const [adjusting, setAdjusting] = useState(false);
   const [note, setNote] = useState('');
-  const [adjContent, setAdjContent] = useState('');
-  const [adjDate, setAdjDate] = useState('');
-  const [adjSession, setAdjSession] = useState('sang');
-  const [adjLocation, setAdjLocation] = useState('');
-  // Điều chỉnh / từ chối theo TỪNG thành viên: id các mục được chọn áp dụng
+  // Từ chối theo TỪNG thành viên: id các mục được chọn áp dụng
   const [selIds, setSelIds] = useState([]);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
@@ -128,7 +122,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
     setBusy(false); onChanged?.(); onClose?.();
   };
   const openReject = () => {
-    setRejecting(true); setAdjusting(false); setNote(''); setSelIds(mergedIds);
+    setRejecting(true); setNote(''); setSelIds(mergedIds);
   };
   const doReject = async () => {
     if (!selIds.length) { alert('Vui lòng chọn ít nhất một thành viên để từ chối.'); return; }
@@ -141,22 +135,8 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
     if (restIds.length) await reviewEntries(restIds, 'da_duyet', null, profile.id);
     setBusy(false); onChanged?.(); onClose?.();
   };
-  const openAdjust = () => {
-    setAdjusting(true); setRejecting(false); setNote(''); setSelIds(mergedIds);
-    setAdjContent(entry.content); setAdjDate(entry.date);
-    setAdjSession(entry.session === 'gio' ? 'sang' : entry.session); setAdjLocation(entry.location || '');
-  };
-  const doAdjust = async () => {
-    if (!selIds.length) { alert('Vui lòng chọn ít nhất một thành viên để điều chỉnh.'); return; }
-    if (!note.trim()) { alert('Vui lòng nhập ghi chú điều chỉnh để Văn phòng và Ban được biết.'); return; }
-    setBusy(true);
-    await updateEntries(selIds, {
-      content: adjContent.trim(), date: adjDate, session: adjSession, location: adjLocation.trim() || null,
-      status: 'da_dieu_chinh', review_note: note.trim(),
-      reviewed_by: profile.id, reviewed_at: new Date().toISOString(),
-    });
-    setBusy(false); onChanged?.(); onClose?.();
-  };
+  // ĐIỀU CHỈNH: mở form đầy đủ như "Sửa" (ScheduleForm chế độ điều chỉnh) — đóng modal trước
+  const doOpenAdjust = () => { onClose?.(); onAdjust?.(entry); };
   const doAssign = async (vehId) => {
     if (vehId) {
       const cf = findConflicts(vehId);
@@ -318,7 +298,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
             <div className="rounded-xl border border-red-200 bg-red-50/40 p-3.5 space-y-3">
               <p className="flex items-center gap-1.5 text-[12px] font-bold text-red-800 uppercase tracking-wide"><Zap className="w-4 h-4" /> Xử lý nhanh</p>
 
-              {canModerate && !rejecting && !adjusting && (
+              {canModerate && !rejecting && (
                 <div className="flex flex-wrap items-center gap-2">
                   {!canApproveNow && <span className="text-[12px] text-emerald-700 font-semibold mr-1">Lịch đã duyệt — có thể điều chỉnh hoặc từ chối:</span>}
                   {canApproveNow && (
@@ -326,49 +306,12 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                       <Check className="w-4 h-4" /> Phê duyệt
                     </button>
                   )}
-                  <button onClick={openAdjust} disabled={busy} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-bold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-60">
+                  <button onClick={doOpenAdjust} disabled={busy} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-bold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-60" title="Mở biểu mẫu đầy đủ như Sửa để điều chỉnh (lưu thành 'Đã điều chỉnh')">
                     <SlidersHorizontal className="w-4 h-4" /> Điều chỉnh
                   </button>
                   <button onClick={openReject} disabled={busy} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60">
                     <XCircle className="w-4 h-4" /> Từ chối
                   </button>
-                </div>
-              )}
-              {canModerate && adjusting && (
-                <div className="space-y-2">
-                  <p className="text-[12px] font-bold text-sky-800">Điều chỉnh nội dung lịch (chuyển trạng thái "Đã điều chỉnh")</p>
-                  {isGroup && (
-                    <div className="rounded-lg border border-sky-200 bg-white p-2.5">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="text-[11px] font-bold text-slate-500">Áp dụng cho thành viên ({selIds.length}/{members.length}):</p>
-                        <div className="flex gap-2 text-[11px] font-semibold">
-                          <button type="button" onClick={() => setSelIds(members.map((m) => m.id))} className="text-slate-500 hover:text-sky-700">Tất cả</button>
-                          <button type="button" onClick={() => setSelIds([])} className="text-slate-500 hover:text-sky-700">Bỏ chọn</button>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {members.map((m) => (
-                          <label key={m.id} className="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
-                            <input type="checkbox" checked={selIds.includes(m.id)} onChange={() => toggleSel(m.id)} className="accent-sky-600 w-4 h-4" />
-                            {m.name}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <textarea rows={2} value={adjContent} onChange={(e) => setAdjContent(e.target.value)} placeholder="Nội dung" className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <DateField value={adjDate} onChange={setAdjDate} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
-                    <select value={adjSession} onChange={(e) => setAdjSession(e.target.value)} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
-                      {Object.entries(SESSIONS).filter(([k]) => k !== 'gio').map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
-                    <input type="text" value={adjLocation} onChange={(e) => setAdjLocation(e.target.value)} placeholder="Địa điểm" className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
-                  </div>
-                  <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ghi chú điều chỉnh (bắt buộc) — VD: Gộp đoàn với Ban Dân tộc, xuất phát 13h00" className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => setAdjusting(false)} className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-slate-600 hover:bg-white">Hủy</button>
-                    <button onClick={doAdjust} disabled={busy} className="px-4 py-1.5 rounded-lg text-[12px] font-bold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-60">Lưu điều chỉnh</button>
-                  </div>
                 </div>
               )}
               {canModerate && rejecting && (

@@ -16,9 +16,13 @@ import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
  *  - prefill: { date, session, leaderId, leaderIds } khi click ô trống
  *  - onClose, onSaved
  */
-export default function ScheduleForm({ profile, leaders, entries, groups: pGroups, locations, editing, duplicating, prefill, onClose, onSaved }) {
+export default function ScheduleForm({ profile, leaders, entries, groups: pGroups, locations, editing, duplicating, adjusting, prefill, onClose, onSaved }) {
   const locOptions = (locations && locations.length) ? locations : COMMON_LOCATIONS;
-  const src = editing || duplicating; // nguồn dữ liệu điền sẵn
+  // ĐIỀU CHỈNH (người duyệt) dùng chung luồng SỬA, nhưng lưu trạng thái 'da_dieu_chinh'
+  // + ghi chú điều chỉnh bắt buộc. edit = mục đang sửa/điều chỉnh.
+  const isAdjust = !editing && !!adjusting;
+  const edit = editing || adjusting;
+  const src = edit || duplicating; // nguồn dữ liệu điền sẵn
   // Danh sách được chọn: theo quyền. Mở từ ô của một cột (prefill.leaderIds)
   // thì nhóm lãnh đạo của cột đó được ĐƯA LÊN ĐẦU, các nhóm khác vẫn chọn được.
   const allowed = useMemo(
@@ -45,6 +49,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const [participants, setParticipants] = useState(src?.participants || '');
   const [atOffice, setAtOffice] = useState(src?.at_office || false);
   const [groupLabel, setGroupLabel] = useState(src?.group_label || '');
+  const [adjustNote, setAdjustNote] = useState(''); // ghi chú điều chỉnh (bắt buộc khi isAdjust)
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
@@ -78,13 +83,13 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     const cand = { session, start_time: session === 'gio' ? startTime : null, end_time: session === 'gio' ? endTime : null };
     return (entries || []).filter((e) =>
       e.date === date &&
-      e.id !== editing?.id &&
+      e.id !== edit?.id &&
       e.status !== 'tu_choi' &&
       leaderIds.includes(e.leader_id) &&
       ['pct', 'doan'].includes(leaderById[e.leader_id]?.leader_type) &&
       sessionsOverlap(e, cand)
     );
-  }, [entries, date, session, startTime, endTime, leaderIds, editing, leaderById]);
+  }, [entries, date, session, startTime, endTime, leaderIds, edit, leaderById]);
 
   const toggleLeader = (id) =>
     setLeaderIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -111,6 +116,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     if (!content.trim()) { setErr('Vui lòng nhập Nội dung công việc.'); return; }
     if (!atOffice && !location.trim()) { setErr('Vui lòng nhập Địa điểm.'); return; }
     if (leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); return; }
+    if (isAdjust && !adjustNote.trim()) { setErr('Vui lòng nhập Ghi chú điều chỉnh để Văn phòng và Ban được biết.'); return; }
     setSaving(true); setErr('');
 
     const base = {
@@ -126,31 +132,38 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       group_label: groupLabel.trim() || null,
       created_by: profile.id,
     };
-    // Trạng thái cho 1 lãnh đạo (mục đang có / mới): at_office -> da_duyet; tu_choi sửa lại -> về đầu
+    // Trạng thái cho 1 lãnh đạo (mục đang có / mới):
+    // - ĐIỀU CHỈNH (người duyệt) -> 'da_dieu_chinh'
+    // - at_office -> da_duyet; tu_choi sửa lại -> về trạng thái khởi tạo
     const statusFor = (leaderId, existing) => {
+      if (isAdjust) return 'da_dieu_chinh';
       if (atOffice) return 'da_duyet';
       const leader = leaders.find((l) => l.id === leaderId);
       if (!existing) return initialStatus(leader, profile);
       return existing.status === 'tu_choi' ? initialStatus(leader, profile) : existing.status;
     };
+    // Khi ĐIỀU CHỈNH: ghi ghi chú + người/thời điểm duyệt vào mọi mục
+    const reviewPatch = isAdjust
+      ? { review_note: adjustNote.trim(), reviewed_by: profile.id, reviewed_at: new Date().toISOString() }
+      : null;
 
     let res = { error: null };
-    if (editing) {
-      // SỬA: cho phép đổi cả danh sách Lãnh đạo. Đối chiếu các mục của SỰ KIỆN
-      // (cùng group_id) -> giữ id/xe của lãnh đạo còn lại, thêm mục cho lãnh đạo mới,
+    if (edit) {
+      // SỬA / ĐIỀU CHỈNH: cho phép đổi cả danh sách Lãnh đạo. Đối chiếu các mục của SỰ
+      // KIỆN (cùng group_id) -> giữ id/xe của lãnh đạo còn lại, thêm mục cho lãnh đạo mới,
       // xóa mục của lãnh đạo bị bỏ. Mọi mục dùng CHUNG group_id để vẫn gộp với nhau.
-      const groupId = editing.group_id || (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()));
-      const eventEntries = editing.group_id
-        ? (entries || []).filter((e) => e.group_id === editing.group_id)
-        : [editing];
+      const groupId = edit.group_id || (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()));
+      const eventEntries = edit.group_id
+        ? (entries || []).filter((e) => e.group_id === edit.group_id)
+        : [edit];
       const existingByLeader = Object.fromEntries(eventEntries.map((e) => [e.leader_id, e]));
       const ops = [];
       for (const lid of leaderIds) {
         const existing = existingByLeader[lid];
-        const patch = { ...base, group_id: groupId, status: statusFor(lid, existing) };
-        if (!atOffice && existing?.status === 'tu_choi') patch.review_note = null;
+        const patch = { ...base, group_id: groupId, status: statusFor(lid, existing), ...(reviewPatch || {}) };
+        if (!isAdjust && !atOffice && existing?.status === 'tu_choi') patch.review_note = null;
         if (existing) ops.push(updateEntry(existing.id, patch));
-        else ops.push(createEntries({ ...base, group_id: groupId }, [{ leaderId: lid, status: statusFor(lid, null) }]));
+        else ops.push(createEntries({ ...base, group_id: groupId, ...(reviewPatch || {}) }, [{ leaderId: lid, status: statusFor(lid, null) }]));
       }
       for (const e of eventEntries) {
         if (!leaderIds.includes(e.leader_id)) ops.push(deleteEntry(e.id));
@@ -196,7 +209,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl max-h-full overflow-y-auto animate-fadeUp">
         <div className="sticky top-0 bg-gradient-to-r from-red-800 to-red-700 text-white px-5 py-3.5 rounded-t-2xl flex items-center justify-between">
-          <h2 className="font-bold flex items-center gap-2"><CalendarPlus className="w-5 h-5" /> {editing ? 'Sửa mục lịch công tác' : duplicating ? 'Nhân bản lịch công tác' : 'Thêm lịch công tác'}</h2>
+          <h2 className="font-bold flex items-center gap-2"><CalendarPlus className="w-5 h-5" /> {isAdjust ? 'Điều chỉnh lịch công tác' : editing ? 'Sửa mục lịch công tác' : duplicating ? 'Nhân bản lịch công tác' : 'Thêm lịch công tác'}</h2>
           <button onClick={onClose} className="p-1 rounded hover:bg-white/20"><X className="w-5 h-5" /></button>
         </div>
 
@@ -305,12 +318,21 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
             </div>
           )}
 
+          {/* Ghi chú điều chỉnh — bắt buộc khi người duyệt ĐIỀU CHỈNH lịch */}
+          {isAdjust && (
+            <div>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Ghi chú điều chỉnh <span className="text-rose-600">*</span></label>
+              <textarea rows={2} value={adjustNote} onChange={(e) => setAdjustNote(e.target.value)} placeholder="VD: Gộp đoàn với Ban Dân tộc, xuất phát 13h00; chuyển sang chiều..." className={`${input} mt-1.5 resize-y`} />
+              <p className="mt-1 text-[12px] text-slate-500">Lịch sẽ chuyển trạng thái “Đã điều chỉnh”; ghi chú hiển thị cho Văn phòng và Ban.</p>
+            </div>
+          )}
+
           {err && <p className="text-[13px] text-rose-600 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" /> {err}</p>}
 
           <div className="flex items-center justify-end gap-2 pt-1">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100">Hủy</button>
-            <button type="submit" disabled={saving} className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-red-700 to-red-600 hover:from-red-800 hover:to-red-700 disabled:opacity-60 shadow-lg shadow-red-900/20">
-              <Save className="w-4 h-4" /> {saving ? 'Đang lưu...' : 'Lưu lịch'}
+            <button type="submit" disabled={saving} className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 shadow-lg ${isAdjust ? 'bg-gradient-to-r from-sky-700 to-sky-600 hover:from-sky-800 hover:to-sky-700 shadow-sky-900/20' : 'bg-gradient-to-r from-red-700 to-red-600 hover:from-red-800 hover:to-red-700 shadow-red-900/20'}`}>
+              <Save className="w-4 h-4" /> {saving ? 'Đang lưu...' : isAdjust ? 'Lưu điều chỉnh' : 'Lưu lịch'}
             </button>
           </div>
         </form>

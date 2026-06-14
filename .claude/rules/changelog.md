@@ -1,5 +1,17 @@
 # Nhật ký dự án
 
+## 2026-06-14 — Điều chỉnh = mở form đầy đủ như Sửa (chế độ điều chỉnh)
+- Trước: "Điều chỉnh" là form inline rút gọn (chỉ Nội dung/Ngày/Buổi/Địa điểm + chọn TV)
+- Nay: bấm "Điều chỉnh" mở ScheduleForm ĐẦY ĐỦ như "Sửa" (đủ Lãnh đạo/Thời gian/Nội dung/
+  Địa điểm/Thành phần/at_office), thêm ô "Ghi chú điều chỉnh" BẮT BUỘC; lưu -> trạng thái
+  'da_dieu_chinh' + review_note/reviewed_by/reviewed_at cho mọi mục của sự kiện (nút xanh dương)
+- ScheduleForm: prop `adjusting`; isAdjust dùng chung luồng edit (edit = editing||adjusting),
+  statusFor -> da_dieu_chinh, reviewPatch ghi vào cả updateEntry lẫn createEntries (TV mới)
+- App: state adjusting + onAdjust; truyền vào ScheduleForm + EntryDetail
+- EntryDetail: gỡ form điều chỉnh inline (adjContent/adjDate/adjSession/adjLocation/doAdjust);
+  nút "Điều chỉnh" -> onClose()+onAdjust(entry); gỡ import DateField thừa. Từ chối GIỮ NGUYÊN
+  (vẫn chọn từng thành viên inline)
+
 ## 2026-06-14 — Tài khoản Chủ tịch HĐND tỉnh + hiện "Người phê duyệt"
 - Migration 2026-06-14-tai-khoan-chu-tich-hdnd.sql: phongnh@thanhhoa.gov.vn / Phongnh@123 —
   Nguyễn Hồng Phong, chức vụ "Chủ tịch HĐND tỉnh", vai trò 'pct' (duyệt/điều chỉnh/từ chối
