@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-06-15 — Sắp lịch theo ƯU TIÊN lãnh đạo cao nhất của sự kiện (PDF/Word/In)
+- Lỗi: mục đã GỘP (PDF/Word/bản in gộp trước rồi sắp) dùng STT của lãnh đạo DÒNG ĐẦU
+  (theo thứ tự DB) -> sự kiện có đ/c Lê Tiến Lam (STT1) bị xếp sau "Cả ngày" của Ban
+- Sửa constants.makeEntrySorter: thêm leaderPrio(e) — mục có _leaderIds (đã gộp) lấy
+  STT NHỎ NHẤT trong các thành viên; prio + tie-break dùng leaderPrio. Áp dụng cho mọi
+  nơi sắp qua makeEntrySorter trên mục đã gộp (exporters PDF + Word, WeekPrintSheet)
+- WeekView (sắp entry THÔ rồi mới gộp) không có _leaderIds -> giữ nguyên, vẫn đúng
+- test-pdf.mjs: thêm ca "Hội nghị BCH" (nhóm có Lam, dòng đầu là Long STT8) phải xếp
+  TRƯỚC "Dự Đại hội" Cả ngày của Hảo (STT6) — 12/12 đạt
+
 ## 2026-06-15 — Tô nền thẻ theo đơn vị: TTr HĐND tỉnh XANH (cả Đầy đủ + Gọn)
 - EntryCard.unitAccent: pct = border-emerald-400 bg-emerald-100 (XANH, đậm hơn chút so
   với Ban/đơn vị khác); doan = border-yellow-300 bg-yellow-100 (vàng nhạt); khác giữ theo trạng thái

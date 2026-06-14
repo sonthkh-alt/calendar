@@ -83,13 +83,19 @@ export const makeEntrySorter = (leaders, groups) => {
     if (e.session === 'gio') return (e.start_time || '08:00') < '12:00' ? 1 : 2;
     return 1; // sang + ca_ngay -> buổi sáng
   };
+  // STT lãnh đạo của MỤC. Với mục ĐÃ GỘP nhiều đơn vị (bản in/PDF/Word có _leaderIds)
+  // -> lấy STT NHỎ NHẤT trong các thành viên (lãnh đạo ưu tiên cao nhất đại diện cho cả
+  // sự kiện) để vd sự kiện có đ/c Lê Tiến Lam (STT 1) xếp trước "Cả ngày" của Ban (STT lớn).
+  const leaderPrio = (e) => (Array.isArray(e._leaderIds) && e._leaderIds.length)
+    ? Math.min(...e._leaderIds.map((id) => leaderSort[id] ?? 999))
+    : (leaderSort[e.leader_id] ?? 999);
   const prio = (e) => (e.group_label != null && groupSort[e.group_label] != null)
     ? groupSort[e.group_label]
-    : (leaderSort[e.leader_id] ?? 999);
+    : leaderPrio(e);
   return (a, b) =>
     sessRank(a) - sessRank(b)
     || prio(a) - prio(b)
-    || (leaderSort[a.leader_id] ?? 999) - (leaderSort[b.leader_id] ?? 999)
+    || leaderPrio(a) - leaderPrio(b)
     || (a.start_time || '').localeCompare(b.start_time || '')
     || (a.content || '').localeCompare(b.content || '');
 };

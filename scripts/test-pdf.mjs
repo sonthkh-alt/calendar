@@ -37,8 +37,14 @@ const entries = [
   // sự kiện 2 người, NHẬP sai thứ tự (Long trước Lam) -> phải sắp Lam (STT 1) lên trước + thêm "Đồng chí"
   { id: 'e2a', group_id: 'g2', leader_id: 'long', date: '2026-06-17', session: 'sang', content: 'Hội nghị Ban Thường vụ Tỉnh ủy', location: 'Trụ sở Tỉnh ủy', participants: 'Trần Mạnh Long, Trưởng ban Pháp chế; Lê Tiến Lam, PCT Thường trực HĐND tỉnh', status: 'da_duyet' },
   { id: 'e2b', group_id: 'g2', leader_id: 'lam', date: '2026-06-17', session: 'sang', content: 'Hội nghị Ban Thường vụ Tỉnh ủy', location: 'Trụ sở Tỉnh ủy', participants: 'Trần Mạnh Long, Trưởng ban Pháp chế; Lê Tiến Lam, PCT Thường trực HĐND tỉnh', status: 'da_duyet' },
-  { id: 'e3', leader_id: 'lam', date: '2026-06-18', session: 'ca_ngay', content: 'Rà soát, hoàn thiện báo cáo giám sát', location: null, participants: null, at_office: true, status: 'da_duyet' },
   { id: 'e4', leader_id: 'hai', date: '2026-06-16', session: 'chieu', content: 'Họp thẩm tra nội dung kỳ họp', location: 'Phòng họp tầng 3', participants: 'Nguyễn Quang Hải', status: 'da_dieu_chinh', review_note: 'Đổi sang 14h00' },
+  // Ngày 18: sự kiện nhóm CÓ Lê Tiến Lam (STT1) nhưng dòng ĐẦU là Long (STT8) — mô phỏng
+  // thứ tự DB. Phải xếp TRƯỚC lịch "Cả ngày" của Hảo (STT6) nhờ lấy STT nhỏ nhất nhóm.
+  { id: 'e5a', group_id: 'g5', leader_id: 'long', date: '2026-06-18', session: 'sang', content: 'Hội nghị BCH Đảng bộ tỉnh', location: 'Trụ sở Tỉnh ủy', participants: null, status: 'da_duyet' },
+  { id: 'e5b', group_id: 'g5', leader_id: 'lam', date: '2026-06-18', session: 'sang', content: 'Hội nghị BCH Đảng bộ tỉnh', location: 'Trụ sở Tỉnh ủy', participants: null, status: 'da_duyet' },
+  { id: 'e5c', group_id: 'g5', leader_id: 'hao', date: '2026-06-18', session: 'sang', content: 'Hội nghị BCH Đảng bộ tỉnh', location: 'Trụ sở Tỉnh ủy', participants: null, status: 'da_duyet' },
+  { id: 'e6', leader_id: 'hao', date: '2026-06-18', session: 'ca_ngay', content: 'Dự Đại hội đại biểu Liên hiệp phụ nữ Việt Nam', location: 'Tại Hà Nội', participants: null, status: 'cho_duyet' },
+  { id: 'e7', leader_id: 'lam', date: '2026-06-19', session: 'ca_ngay', content: 'Rà soát, hoàn thiện báo cáo giám sát', location: null, participants: null, at_office: true, status: 'da_duyet' },
 ];
 
 const docDef = buildWeekPdfDocDefinition({ anchor, entries, leaders, groups });
@@ -67,7 +73,11 @@ pdfDoc.on('end', async () => {
   must(text.includes('Đồng chí Trần Mạnh Long'), 'Thêm "Đồng chí" cho tên thứ hai');
   const iLam = text.indexOf('Lê Tiến Lam');
   const iLong = text.indexOf('Trần Mạnh Long');
-  must(iLam > -1 && iLong > -1 && iLam < iLong, `Sắp ƯU TIÊN: Lê Tiến Lam (STT1) trước Trần Mạnh Long (vt ${iLam} < ${iLong})`);
+  must(iLam > -1 && iLong > -1 && iLam < iLong, `Sắp ƯU TIÊN trong ô: Lê Tiến Lam (STT1) trước Trần Mạnh Long (vt ${iLam} < ${iLong})`);
+  // Thứ tự GIỮA CÁC SỰ KIỆN trong ngày: sự kiện nhóm có Lam (Sáng) trước "Cả ngày" của Hảo
+  const iBCH = text.indexOf('Hội nghị BCH Đảng bộ tỉnh');
+  const iDH = text.indexOf('Dự Đại hội đại biểu Liên hiệp');
+  must(iBCH > -1 && iDH > -1 && iBCH < iDH, `Ưu tiên lãnh đạo giữa sự kiện: "Hội nghị BCH" (có Lam STT1) trước "Dự Đại hội" Cả ngày của Hảo (vt ${iBCH} < ${iDH})`);
   // không còn dấu tổ hợp lạ (tofu/khoảng trắng chèn giữa dấu) — kiểm chứng mềm
   must(!/[̀-ͯ]/.test(data.text), 'Không còn dấu tổ hợp rời (đã NFC)');
 
