@@ -1,11 +1,12 @@
 # Nhật ký dự án
 
-## 2026-06-15 — Sửa lỗi Xuất PDF ra trang TRẮNG
-- Nguyên nhân: clone đặt position:fixed; left:-10000px (lề âm) -> html2canvas vẽ nội dung
-  RA NGOÀI vùng canvas -> trang trắng (lỗi kinh điển của html2canvas)
-- Sửa: bọc clone trong holder position:absolute; left:0; top:0; zIndex:-1 (góc trên-trái,
-  nằm dưới giao diện, không che); chờ document.fonts.ready + 2 rAF để layout ổn định;
-  html2canvas thêm scrollX/Y:0, windowWidth:900; .from(holder)
+## 2026-06-15 — Xuất PDF: BỎ html2canvas, dùng hộp In của trình duyệt
+- html2pdf/html2canvas vẫn ra trang TRẮNG (nhiều khả năng không phân tích được toàn bộ
+  CSS Tailwind của trang) -> BỎ hẳn html2pdf.js (gỡ dependency + exportWeekPdf)
+- print.printForPdf(filename, orientation): đặt document.title = tên file rồi window.print()
+  -> người dùng chọn đích "Lưu thành PDF / Save as PDF"; bản công văn @media print vốn đã
+  render chuẩn, tiếng Việt đẹp; khôi phục title sau afterprint
+- WeekView.onExportPdf: gọi printForPdf('Lich-cong-tac-tuan-<tuần>-<năm>'); gỡ state exportingPdf
 
 ## 2026-06-15 — Xuất PDF (mặc định) + Word (riêng 2 tài khoản)
 - exporters.exportWeekPdf: nạp động html2pdf.js, nhân bản #week-print-root (bản in
