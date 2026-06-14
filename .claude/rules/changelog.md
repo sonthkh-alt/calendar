@@ -1,5 +1,13 @@
 # Nhật ký dự án
 
+## 2026-06-14 — Điều chỉnh / Từ chối lịch nhóm theo TỪNG thành viên
+- EntryDetail "Xử lý nhanh": với sự kiện nhiều thành viên (merged > 1), form Điều chỉnh
+  và Từ chối hiện danh sách CHECKBOX chọn thành viên (mặc định chọn tất cả) + nút
+  "Tất cả"/"Bỏ chọn"; thao tác CHỈ áp dụng cho các mục được tick (selIds) thay vì cả nhóm
+- doAdjust/doReject dùng selIds (bắt buộc >= 1); doApprove vẫn áp dụng cả nhóm (mergedIds)
+- Thành viên không được chọn giữ nguyên trạng thái -> tách thành thẻ riêng trên lịch
+- Memo hóa `merged` (useMemo) để hết cảnh báo deps; ApprovalQueue vốn đã xử lý từng mục
+
 ## 2026-06-14 — Phê duyệt lịch THEO NGÀY ngay trên màn hình lịch
 - Người duyệt (pct/quan_tri: mọi lịch; pho_truong_doan: chỉ lịch Đoàn) thấy nút xanh
   "Duyệt ngày (N)" ngay trên màn hình Lịch tuần & Lịch ngày — không cần vào tab Chờ duyệt

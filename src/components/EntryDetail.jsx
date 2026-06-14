@@ -23,6 +23,8 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   const [adjDate, setAdjDate] = useState('');
   const [adjSession, setAdjSession] = useState('sang');
   const [adjLocation, setAdjLocation] = useState('');
+  // Điều chỉnh / từ chối theo TỪNG thành viên: id các mục được chọn áp dụng
+  const [selIds, setSelIds] = useState([]);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
 
@@ -37,7 +39,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
     ),
     [entries, entry]
   );
-  const merged = same.length > 0 ? same : [entry];
+  const merged = useMemo(() => (same.length > 0 ? same : [entry]), [same, entry]);
 
   // Admin: BỎ QUA / TÍNH LẠI cảnh báo trùng cho RIÊNG lịch này (đặt cờ dup_ignored
   // trên các mục của sự kiện) — KHÔNG ảnh hưởng các lịch khác cùng địa điểm.
@@ -101,28 +103,47 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
     x.status !== 'tu_choi' && sessionsOverlap(x, entry)
   );
 
-  // Duyệt/từ chối áp dụng cho TẤT CẢ mục đã gộp (mọi đơn vị/thành viên của sự kiện)
+  // Duyệt áp dụng cho TẤT CẢ mục đã gộp (mọi đơn vị/thành viên của sự kiện)
   const mergedIds = [...new Set(merged.map((e) => e.id))];
+  // Danh sách THÀNH VIÊN của sự kiện (mỗi đơn vị/lãnh đạo 1 mục) — để điều chỉnh/từ chối
+  // theo TỪNG người thay vì cả nhóm khi sự kiện có nhiều thành viên.
+  const members = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const e of merged) {
+      if (seen.has(e.id)) continue; seen.add(e.id);
+      out.push({ id: e.id, name: leaderById[e.leader_id]?.full_name || e.group_label || 'Đơn vị', status: e.status });
+    }
+    return out;
+  }, [merged, leaderById]);
+  const isGroup = members.length > 1;
+  const toggleSel = (id) => setSelIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
   const doApprove = async () => {
     setBusy(true);
     await reviewEntries(mergedIds, 'da_duyet', null, profile.id);
     setBusy(false); onChanged?.(); onClose?.();
   };
+  const openReject = () => {
+    setRejecting(true); setAdjusting(false); setNote(''); setSelIds(mergedIds);
+  };
   const doReject = async () => {
+    if (!selIds.length) { alert('Vui lòng chọn ít nhất một thành viên để từ chối.'); return; }
     if (!note.trim()) { alert('Vui lòng nhập lý do từ chối.'); return; }
     setBusy(true);
-    await reviewEntries(mergedIds, 'tu_choi', note.trim(), profile.id);
+    await reviewEntries(selIds, 'tu_choi', note.trim(), profile.id);
     setBusy(false); onChanged?.(); onClose?.();
   };
   const openAdjust = () => {
-    setAdjusting(true); setRejecting(false); setNote('');
+    setAdjusting(true); setRejecting(false); setNote(''); setSelIds(mergedIds);
     setAdjContent(entry.content); setAdjDate(entry.date);
     setAdjSession(entry.session === 'gio' ? 'sang' : entry.session); setAdjLocation(entry.location || '');
   };
   const doAdjust = async () => {
+    if (!selIds.length) { alert('Vui lòng chọn ít nhất một thành viên để điều chỉnh.'); return; }
     if (!note.trim()) { alert('Vui lòng nhập ghi chú điều chỉnh để Văn phòng và Ban được biết.'); return; }
     setBusy(true);
-    await updateEntries(mergedIds, {
+    await updateEntries(selIds, {
       content: adjContent.trim(), date: adjDate, session: adjSession, location: adjLocation.trim() || null,
       status: 'da_dieu_chinh', review_note: note.trim(),
       reviewed_by: profile.id, reviewed_at: new Date().toISOString(),
@@ -290,14 +311,33 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                   <button onClick={openAdjust} disabled={busy} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-bold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-60">
                     <SlidersHorizontal className="w-4 h-4" /> Điều chỉnh
                   </button>
-                  <button onClick={() => setRejecting(true)} disabled={busy} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60">
+                  <button onClick={openReject} disabled={busy} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60">
                     <XCircle className="w-4 h-4" /> Từ chối
                   </button>
                 </div>
               )}
               {canModerate && adjusting && (
                 <div className="space-y-2">
-                  <p className="text-[12px] font-bold text-sky-800">Điều chỉnh nội dung lịch (chuyển trạng thái "Đã điều chỉnh", áp dụng cho cả nhóm)</p>
+                  <p className="text-[12px] font-bold text-sky-800">Điều chỉnh nội dung lịch (chuyển trạng thái "Đã điều chỉnh")</p>
+                  {isGroup && (
+                    <div className="rounded-lg border border-sky-200 bg-white p-2.5">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[11px] font-bold text-slate-500">Áp dụng cho thành viên ({selIds.length}/{members.length}):</p>
+                        <div className="flex gap-2 text-[11px] font-semibold">
+                          <button type="button" onClick={() => setSelIds(members.map((m) => m.id))} className="text-slate-500 hover:text-sky-700">Tất cả</button>
+                          <button type="button" onClick={() => setSelIds([])} className="text-slate-500 hover:text-sky-700">Bỏ chọn</button>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {members.map((m) => (
+                          <label key={m.id} className="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
+                            <input type="checkbox" checked={selIds.includes(m.id)} onChange={() => toggleSel(m.id)} className="accent-sky-600 w-4 h-4" />
+                            {m.name}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <textarea rows={2} value={adjContent} onChange={(e) => setAdjContent(e.target.value)} placeholder="Nội dung" className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <DateField value={adjDate} onChange={setAdjDate} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
@@ -315,6 +355,25 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
               )}
               {canModerate && rejecting && (
                 <div className="space-y-2">
+                  {isGroup && (
+                    <div className="rounded-lg border border-rose-200 bg-white p-2.5">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[11px] font-bold text-slate-500">Từ chối thành viên ({selIds.length}/{members.length}):</p>
+                        <div className="flex gap-2 text-[11px] font-semibold">
+                          <button type="button" onClick={() => setSelIds(members.map((m) => m.id))} className="text-slate-500 hover:text-rose-700">Tất cả</button>
+                          <button type="button" onClick={() => setSelIds([])} className="text-slate-500 hover:text-rose-700">Bỏ chọn</button>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {members.map((m) => (
+                          <label key={m.id} className="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
+                            <input type="checkbox" checked={selIds.includes(m.id)} onChange={() => toggleSel(m.id)} className="accent-rose-600 w-4 h-4" />
+                            {m.name}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Lý do từ chối (bắt buộc)" className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
                   <div className="flex justify-end gap-2">
                     <button onClick={() => setRejecting(false)} className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-slate-600 hover:bg-white">Hủy</button>
