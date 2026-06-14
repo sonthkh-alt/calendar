@@ -320,10 +320,12 @@ export function buildWeekPdfDocDefinition({ anchor, entries, leaders, groups }) 
  */
 export async function exportWeekPdf({ anchor, entries, leaders, groups }) {
   const pdfMakeMod = await import('pdfmake/build/pdfmake');
-  const vfsMod = await import('pdfmake/build/vfs_fonts');
+  // TỰ NHÚNG phông Roboto — KHÔNG import 'pdfmake/build/vfs_fonts' (file đó dùng
+  // this.pdfMake nên Vite/Rollup đóng gói -> 'this' undefined -> vỡ khi nạp).
+  const { ROBOTO_VFS, ROBOTO_FONTS } = await import('./pdfFonts.js');
   const pdfMake = pdfMakeMod.default || pdfMakeMod;
-  const vfs = vfsMod?.pdfMake?.vfs || vfsMod?.default?.pdfMake?.vfs || vfsMod?.vfs || vfsMod?.default?.vfs;
-  if (vfs) pdfMake.vfs = vfs;
+  pdfMake.vfs = ROBOTO_VFS;
+  pdfMake.fonts = ROBOTO_FONTS;
 
   const docDefinition = buildWeekPdfDocDefinition({ anchor, entries, leaders, groups });
   pdfMake.createPdf(docDefinition).download(pdfFileName(anchor));

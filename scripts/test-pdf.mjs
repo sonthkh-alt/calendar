@@ -4,7 +4,7 @@
 //  (3) nội dung chờ duyệt có "(chờ duyệt)", (4) "Làm việc tại cơ quan", (5) PDF hợp lệ.
 import { createRequire } from 'module';
 import { build } from 'esbuild';
-import vfsPkg from 'pdfmake/build/vfs_fonts.js';
+import { ROBOTO_VFS } from '../src/lib/pdfFonts.js';
 const require = createRequire(import.meta.url);
 const PdfPrinter = require('pdfmake');
 const { PDFParse } = require('pdf-parse');
@@ -19,8 +19,8 @@ await build({
 });
 const { buildWeekPdfDocDefinition } = require('./.exporters.cjs');
 
-const vfs = vfsPkg.pdfMake.vfs;
-const b = (n) => Buffer.from(vfs[n], 'base64');
+// Phông cho PdfPrinter LẤY TỪ chính module tự nhúng (giống hệt trình duyệt dùng)
+const b = (n) => Buffer.from(ROBOTO_VFS[n], 'base64');
 const fonts = { Roboto: { normal: b('Roboto-Regular.ttf'), bold: b('Roboto-Medium.ttf'), italics: b('Roboto-Italic.ttf'), bolditalics: b('Roboto-MediumItalic.ttf') } };
 
 // ---- Dữ liệu mẫu (tuần chứa 15/06/2026) ----

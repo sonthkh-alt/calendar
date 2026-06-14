@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-15 — Sửa lỗi PDF "Cannot read properties of undefined (reading 'pdfMake')"
+- Nguyên nhân: import 'pdfmake/build/vfs_fonts' — file đó chạy `this.pdfMake = ...`; Vite/
+  Rollup đóng gói ESM strict -> `this` = undefined -> vỡ NGAY khi nạp (trên Vercel). Bản
+  thân 'pdfmake/build/pdfmake' nạp OK (lỗi rơi đúng ở bước vfs_fonts kế tiếp)
+- Sửa: TỰ NHÚNG phông -> src/lib/pdfFonts.js (ROBOTO_VFS + ROBOTO_FONTS, ~766KB base64,
+  sinh từ vfs_fonts). exportWeekPdf nạp động './pdfFonts.js' (chunk lazy riêng), gán
+  pdfMake.vfs + pdfMake.fonts; KHÔNG còn import vfs_fonts của pdfmake
+- test-pdf.mjs: lấy phông từ chính pdfFonts.js (đúng dữ liệu trình duyệt dùng) -> 11/11 đạt
+
 ## 2026-06-15 — Xuất PDF MỘT CÚ BẤM bằng pdfmake (tải file trực tiếp)
 - BỎ cách "mở hộp In"; dùng pdfmake dựng PDF trực tiếp từ dữ liệu -> tải ngay file .pdf
 - Phông Roboto kèm pdfmake: ĐÃ KIỂM CHỨNG đủ glyph tiếng Việt (parser cmap: đ/ệ/ử/ố/ậ/
