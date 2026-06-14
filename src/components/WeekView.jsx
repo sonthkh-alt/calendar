@@ -3,11 +3,11 @@ import { Printer, Plus, LayoutGrid, Rows3, CalendarDays, CheckCheck, FileText, F
 import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
 import { canCreateFor, canEditEntry, canSeeEntry, canReview, canReviewEntry } from '../lib/permissions';
-import { weekDays, toISODate, dayName, fmtDM, fmtDMY, weekStart, getISOWeek } from '../lib/dates';
+import { weekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
 import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation, hidesDriver, makeEntrySorter, canExportDocx } from '../lib/constants';
 import { reviewEntries } from '../lib/api';
-import { exportWeekDocx } from '../lib/exporters';
-import { printPage, printForPdf } from '../lib/print';
+import { exportWeekDocx, exportWeekPdf } from '../lib/exporters';
+import { printPage } from '../lib/print';
 
 /**
  * Lịch tuần kiểu "Lịch công tác tuần" chính quyền — CỘT THEO ĐƠN VỊ:
@@ -19,6 +19,7 @@ import { printPage, printForPdf } from '../lib/print';
 export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
   const [mode, setMode] = useState('compact'); // full | compact — mặc định "Gọn"
   const [exporting, setExporting] = useState(false);   // đang xuất Word
+  const [exportingPdf, setExportingPdf] = useState(false); // đang xuất PDF
   // Điện thoại: luôn dùng chế độ Gọn (khối từng ngày, kéo dọc) cho dễ xem
   useEffect(() => { if (isMobile) setMode('compact'); }, [isMobile]);
   const effMode = isMobile ? 'compact' : mode;
@@ -195,11 +196,21 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     }
   };
 
-  // Xuất lịch tuần ra PDF — mở hộp In của trình duyệt (bản công văn A4 dọc),
-  // người dùng chọn đích "Lưu thành PDF / Save as PDF"; tên file gợi ý sẵn.
-  const onExportPdf = () => {
-    const ws = weekStart(anchor);
-    printForPdf(`Lich-cong-tac-tuan-${getISOWeek(ws)}-${ws.getFullYear()}`, 'portrait');
+  // Xuất lịch tuần ra PDF (một cú bấm) — pdfmake, đúng các cột đang hiển thị
+  const onExportPdf = async () => {
+    if (exportingPdf) return;
+    setExportingPdf(true);
+    try {
+      await exportWeekPdf({
+        anchor,
+        entries: visible.filter((e) => allUnitLeaderIds.includes(e.leader_id)),
+        leaders, groups,
+      });
+    } catch (err) {
+      alert('Không xuất được file PDF: ' + (err?.message || err));
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   // Riêng một số tài khoản được xuất THÊM file Word (.docx)
@@ -227,8 +238,8 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
               <Plus className="w-4 h-4" /> Thêm lịch
             </button>
           )}
-          <button onClick={onExportPdf} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-r from-rose-700 to-rose-600 hover:from-rose-800 hover:to-rose-700 shadow-sm" title="Mở hộp in — chọn đích 'Lưu thành PDF' để xuất file PDF (mẫu công văn A4 dọc)">
-            <FileDown className="w-4 h-4" /> Xuất PDF
+          <button onClick={onExportPdf} disabled={exportingPdf} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-r from-rose-700 to-rose-600 hover:from-rose-800 hover:to-rose-700 shadow-sm disabled:opacity-60" title="Tải file PDF lịch tuần (mẫu công văn A4 dọc)">
+            <FileDown className="w-4 h-4" /> {exportingPdf ? 'Đang xuất…' : 'Xuất PDF'}
           </button>
           {showDocx && (
             <button onClick={onExportWord} disabled={exporting} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-r from-sky-700 to-sky-600 hover:from-sky-800 hover:to-sky-700 shadow-sm disabled:opacity-60" title="Xuất lịch tuần ra file Word (.docx) theo mẫu công văn">

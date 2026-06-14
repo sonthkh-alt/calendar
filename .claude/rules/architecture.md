@@ -11,9 +11,10 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 - `constants.js` — BOOTSTRAP_ADMIN_EMAILS, ROLES, STATUS (màu), SESSIONS, VEHICLE_TYPES
 - `exporters.js` — `exportWeekDocx` xuất .docx (NẠP ĐỘNG docx + file-saver); bảng công văn
   A4 dọc như WeekPrintSheet; thêm "Đồng chí" trước tên cán bộ (withComrade), in đậm "(chờ
-  duyệt)". WeekView: "Xuất Word" CHỈ hiện với email trong constants.DOCX_EXPORT_EMAILS
-  (canExportDocx). "Xuất PDF" (mọi tài khoản) KHÔNG tạo file trực tiếp mà gọi
-  print.printForPdf -> hộp In trình duyệt -> "Lưu thành PDF" (html2canvas ra trắng nên đã bỏ).
+  duyệt)". `buildWeekPdfDocDefinition` (hàm thuần) + `exportWeekPdf` xuất .pdf MỘT CÚ BẤM
+  bằng pdfmake (NẠP ĐỘNG pdfmake + vfs_fonts; Roboto kèm theo đủ glyph tiếng Việt; chuẩn
+  hóa NFC). WeekView: "Xuất PDF" cho MỌI tài khoản; "Xuất Word" chỉ với email trong
+  constants.DOCX_EXPORT_EMAILS (canExportDocx). Test: scripts/test-pdf.mjs (npm run test:pdf).
 
 ## src/components/
 - `WeekView.jsx` — màn chính: bảng ngày×(Sáng/Chiều)×cột lãnh đạo; chế độ Đầy đủ/Gọn; nút In

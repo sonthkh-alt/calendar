@@ -221,3 +221,110 @@ export async function exportWeekDocx({ anchor, entries, leaders, groups }) {
   const blob = await Packer.toBlob(doc);
   saveAs(blob, `Lich-cong-tac-tuan-${getISOWeek(ws)}-${ws.getFullYear()}.docx`);
 }
+
+// ===== XUẤT PDF (pdfmake) =====
+const nfc = (s) => (s == null ? '' : String(s)).normalize('NFC'); // chuẩn dựng sẵn -> Roboto đủ glyph
+export const pdfFileName = (anchor) => {
+  const ws = weekStart(anchor);
+  return `Lich-cong-tac-tuan-${getISOWeek(ws)}-${ws.getFullYear()}.pdf`;
+};
+
+/**
+ * Dựng docDefinition (pdfmake) cho lịch tuần — HÀM THUẦN (không dùng DOM / pdfmake)
+ * để test được ở node. Bảng công văn A4 dọc giống bản in:
+ * Ngày | Thời gian | Nội dung | Địa điểm | Thành phần.
+ * - Thành phần: thêm "Đồng chí" trước tên cán bộ + sắp theo ưu tiên (như Word).
+ * - Nội dung CHỜ DUYỆT: thêm " (chờ duyệt)" IN ĐẬM; đã điều chỉnh -> ghi chú in nghiêng.
+ */
+export function buildWeekPdfDocDefinition({ anchor, entries, leaders, groups }) {
+  const days = weekDays(anchor);
+  const leaderById = Object.fromEntries((leaders || []).map((l) => [l.id, l]));
+  const entrySorter = makeEntrySorter(leaders, groups);
+  const ws = weekStart(anchor), we = weekEnd(anchor);
+
+  const mergeDay = (list) => {
+    const map = new Map();
+    const out = [];
+    for (const e of list) {
+      const key = `${e.content}|${e.session}|${e.start_time || ''}|${(e.location || '').trim().toLowerCase()}`;
+      const m = map.get(key);
+      if (!m) {
+        const item = { ...e, _leaderIds: [e.leader_id], _parts: e.participants ? [e.participants] : [] };
+        map.set(key, item); out.push(item);
+      } else {
+        if (!m._leaderIds.includes(e.leader_id)) m._leaderIds.push(e.leader_id);
+        if (e.participants && !m._parts.includes(e.participants)) m._parts.push(e.participants);
+      }
+    }
+    return out.sort(entrySorter);
+  };
+
+  const headerRow = ['Ngày', 'Thời gian', 'Nội dung công việc', 'Địa điểm', 'Thành phần']
+    .map((t) => ({ text: t, bold: true, alignment: 'center', fillColor: '#eeeeee' }));
+  const body = [headerRow];
+
+  for (const d of days) {
+    const dISO = toISODate(d);
+    const list = mergeDay((entries || []).filter((e) => e.date === dISO && e.status !== 'tu_choi'));
+    const dayCell = { text: `${nfc(dayName(d))}\n${fmtDM(d)}`, bold: true, alignment: 'center' };
+    if (!list.length) {
+      body.push([{ ...dayCell }, { text: '', colSpan: 4 }, {}, {}, {}]);
+      continue;
+    }
+    list.forEach((m, i) => {
+      const contentRuns = [{ text: nfc(m.content) }];
+      if (m.status === 'cho_duyet') contentRuns.push({ text: ' (chờ duyệt)', bold: true });
+      else if (m.status === 'da_dieu_chinh' && m.review_note) contentRuns.push({ text: ` (${nfc(m.review_note)})`, italics: true });
+
+      const partText = nfc(withComrade(m.group_label || compactParticipants(m, groups, leaderById)));
+      const ngay = i === 0 ? { ...dayCell, rowSpan: list.length } : {};
+      const diaDiem = m.at_office ? { text: 'Làm việc tại cơ quan', bold: true } : { text: nfc(m.location || '') };
+      body.push([
+        ngay,
+        { text: timeLabel(m), alignment: 'center' },
+        { text: contentRuns },
+        diaDiem,
+        { text: partText },
+      ]);
+    });
+  }
+
+  return {
+    pageSize: 'A4',
+    pageOrientation: 'portrait',
+    pageMargins: [40, 36, 30, 36],
+    defaultStyle: { font: 'Roboto', fontSize: 10, lineHeight: 1.15 },
+    content: [
+      { text: nfc(UNIT_NAME).toUpperCase(), alignment: 'center', fontSize: 11 },
+      { text: 'LỊCH CÔNG TÁC TUẦN', alignment: 'center', bold: true, fontSize: 15, margin: [0, 4, 0, 0] },
+      { text: 'của lãnh đạo HĐND tỉnh, lãnh đạo Đoàn ĐBQH tỉnh và các Ban HĐND tỉnh', alignment: 'center', fontSize: 11 },
+      {
+        text: [`Tuần thứ ${getISOWeek(ws)} năm ${ws.getFullYear()} `, { text: `(từ ngày ${fmtDMY(ws)} đến ngày ${fmtDMY(we)})`, bold: true }],
+        alignment: 'center', italics: true, fontSize: 11, margin: [0, 2, 0, 8],
+      },
+      {
+        table: { headerRows: 1, dontBreakRows: true, widths: [46, 42, '*', 74, 150], body },
+        layout: {
+          hLineWidth: () => 0.5, vLineWidth: () => 0.5,
+          hLineColor: () => '#000000', vLineColor: () => '#000000',
+          paddingLeft: () => 3, paddingRight: () => 3, paddingTop: () => 2, paddingBottom: () => 2,
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Xuất lịch tuần ra .pdf (MỘT CÚ BẤM) — NẠP ĐỘNG pdfmake + phông Roboto kèm theo
+ * (đã kiểm chứng đủ glyph tiếng Việt). Văn bản chuẩn hóa NFC để khớp glyph dựng sẵn.
+ */
+export async function exportWeekPdf({ anchor, entries, leaders, groups }) {
+  const pdfMakeMod = await import('pdfmake/build/pdfmake');
+  const vfsMod = await import('pdfmake/build/vfs_fonts');
+  const pdfMake = pdfMakeMod.default || pdfMakeMod;
+  const vfs = vfsMod?.pdfMake?.vfs || vfsMod?.default?.pdfMake?.vfs || vfsMod?.vfs || vfsMod?.default?.vfs;
+  if (vfs) pdfMake.vfs = vfs;
+
+  const docDefinition = buildWeekPdfDocDefinition({ anchor, entries, leaders, groups });
+  pdfMake.createPdf(docDefinition).download(pdfFileName(anchor));
+}

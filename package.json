@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:pdf": "node scripts/test-pdf.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
@@ -15,6 +16,7 @@
     "docx": "^9.0.2",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.460.0",
+    "pdfmake": "^0.2.12",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "xlsx": "^0.18.5"
@@ -23,10 +25,12 @@
     "@eslint/js": "^9.13.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
+    "esbuild": "^0.28.1",
     "eslint": "^9.13.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",
     "globals": "^15.11.0",
+    "pdf-parse": "^2.4.5",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
     "vite": "^5.4.8"

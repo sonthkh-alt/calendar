@@ -1,5 +1,19 @@
 # Nhật ký dự án
 
+## 2026-06-15 — Xuất PDF MỘT CÚ BẤM bằng pdfmake (tải file trực tiếp)
+- BỎ cách "mở hộp In"; dùng pdfmake dựng PDF trực tiếp từ dữ liệu -> tải ngay file .pdf
+- Phông Roboto kèm pdfmake: ĐÃ KIỂM CHỨNG đủ glyph tiếng Việt (parser cmap: đ/ệ/ử/ố/ậ/
+  ằ/ợ/Đ/ỹ đều map gid≠0). Văn bản chuẩn hóa NFC để khớp glyph dựng sẵn
+- exporters.buildWeekPdfDocDefinition (HÀM THUẦN, test được) dựng bảng công văn A4 dọc:
+  Ngày(rowSpan) | Thời gian | Nội dung | Địa điểm | Thành phần; "(chờ duyệt)" IN ĐẬM
+  (rich text), at_office in đậm, Thành phần thêm "Đồng chí" + sắp ưu tiên Họ tên (như Word)
+- exporters.exportWeekPdf: nạp động pdfmake + vfs_fonts -> createPdf().download()
+- WeekView: nút "Xuất PDF" gọi exportWeekPdf (state exportingPdf); gỡ printForPdf
+- KIỂM CHỨNG: scripts/test-pdf.mjs (esbuild bundle exporters -> PdfPrinter render ->
+  pdf-parse trích xuất) — 11/11 đạt: PDF hợp lệ, tiếng Việt round-trip, (chờ duyệt),
+  Làm việc tại cơ quan, "Đồng chí", thứ tự ưu tiên Lam<Long, NFC sạch. npm run test:pdf
+- devDeps: pdf-parse + esbuild (chỉ phục vụ test)
+
 ## 2026-06-15 — Xuất PDF: BỎ html2canvas, dùng hộp In của trình duyệt
 - html2pdf/html2canvas vẫn ra trang TRẮNG (nhiều khả năng không phân tích được toàn bộ
   CSS Tailwind của trang) -> BỎ hẳn html2pdf.js (gỡ dependency + exportWeekPdf)
