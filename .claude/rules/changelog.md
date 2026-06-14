@@ -1,5 +1,9 @@
 # Nhật ký dự án
 
+## 2026-06-14 — Mặc định lịch tuần ở chế độ "Gọn"
+- WeekView: mode mặc định 'compact' (trước 'full' trên máy tính) -> truy cập trang
+  thấy ngay bản Gọn; vẫn bấm "Đầy đủ" để đổi
+
 ## 2026-06-14 — Ẩn nút "Sửa" với người phê duyệt (đã có "Điều chỉnh")
 - EntryDetail: nút "Sửa" chỉ hiện khi canEdit && KHÔNG phải người duyệt mục đó
   (isReviewerOfEntry = canReviewEntry). pct/quan_tri ẩn Sửa mọi lịch; pho_truong_doan

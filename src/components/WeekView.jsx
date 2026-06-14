@@ -17,7 +17,7 @@ import { printPage } from '../lib/print';
  * - Chế độ "Gọn": mỗi ngày 1 khối (hợp mobile).
  */
 export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
-  const [mode, setMode] = useState(isMobile ? 'compact' : 'full'); // full | compact
+  const [mode, setMode] = useState('compact'); // full | compact — mặc định "Gọn"
   const [exporting, setExporting] = useState(false);
   // Điện thoại: luôn dùng chế độ Gọn (khối từng ngày, kéo dọc) cho dễ xem
   useEffect(() => { if (isMobile) setMode('compact'); }, [isMobile]);
