@@ -234,29 +234,39 @@ export async function exportWeekPdf({ anchor }) {
   const html2pdf = (await import('html2pdf.js')).default;
   const ws = weekStart(anchor);
 
-  // Bản in đang display:none (class "hidden", chỉ hiện khi in) -> nhân bản, hiện ngoài
-  // màn hình để html2canvas chụp được, xong gỡ bỏ.
+  // Bản in đang display:none (class "hidden") -> nhân bản vào 1 container đặt ở GÓC
+  // TRÊN-TRÁI (left:0) để html2canvas chụp đúng (đặt lề ÂM sẽ vẽ ra ngoài canvas -> trắng).
+  // Đẩy xuống dưới mọi lớp (zIndex thấp) nên không che giao diện trong lúc chụp.
+  const holder = document.createElement('div');
+  holder.style.position = 'absolute';
+  holder.style.left = '0';
+  holder.style.top = '0';
+  holder.style.zIndex = '-1';
+  holder.style.width = '794px'; // ~210mm @96dpi (A4 dọc)
+  holder.style.background = '#ffffff';
+  holder.style.padding = '16px';
+
   const clone = el.cloneNode(true);
   clone.removeAttribute('id');
   clone.classList.remove('hidden');
   clone.style.display = 'block';
-  clone.style.position = 'fixed';
-  clone.style.left = '-10000px';
-  clone.style.top = '0';
-  clone.style.width = '794px'; // ~210mm @96dpi (A4 dọc)
-  clone.style.background = '#ffffff';
-  clone.style.padding = '16px';
-  document.body.appendChild(clone);
+  holder.appendChild(clone);
+  document.body.appendChild(holder);
+
+  // Chờ font (Times New Roman) + 2 khung hình để layout ổn định trước khi chụp
+  try { await (document.fonts && document.fonts.ready); } catch { /* bỏ qua */ }
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
   try {
     await html2pdf().set({
       margin: [12, 10, 12, 10], // mm
       filename: `Lich-cong-tac-tuan-${getISOWeek(ws)}-${ws.getFullYear()}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, windowWidth: 900 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['css', 'legacy'] },
-    }).from(clone).save();
+    }).from(holder).save();
   } finally {
-    document.body.removeChild(clone);
+    document.body.removeChild(holder);
   }
 }
