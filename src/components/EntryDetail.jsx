@@ -82,8 +82,10 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
 
   // ===== Xử lý nhanh: duyệt / điều chỉnh / từ chối / điều xe ngay trong hộp chi tiết =====
   const leader = leaderById[entry.leader_id];
+  // Người này là NGƯỜI PHÊ DUYỆT của mục lịch này? -> dùng "Điều chỉnh", KHÔNG hiện nút "Sửa"
+  const isReviewerOfEntry = canReviewEntry(profile, entry, leader);
   // Cho phép xử lý cả khi đã duyệt: điều chỉnh / từ chối lịch đã phê duyệt
-  const canModerate = canReviewEntry(profile, entry, leader) && ['cho_duyet', 'da_duyet', 'da_dieu_chinh'].includes(entry.status);
+  const canModerate = isReviewerOfEntry && ['cho_duyet', 'da_duyet', 'da_dieu_chinh'].includes(entry.status);
   const canApproveNow = entry.status !== 'da_duyet'; // đã duyệt rồi thì không cần nút Phê duyệt
   // Lãnh đạo HĐND tỉnh / Đoàn ĐBQH: ô Lái xe luôn để trống -> không hiện cả khu gán xe nhanh
   const showVehicle = canAssignVehicle(profile) && entryNeedsVehicleOk(entry, leader)
@@ -379,15 +381,16 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                   <Copy className="w-3.5 h-3.5" /> Nhân bản
                 </button>
               )}
+              {/* Nút "Sửa" KHÔNG hiện với người phê duyệt mục này (họ dùng "Điều chỉnh") */}
+              {canEdit && !isReviewerOfEntry && (
+                <button onClick={() => { onClose?.(); onEdit?.(entry); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-sky-600 hover:bg-sky-700">
+                  <Pencil className="w-3.5 h-3.5" /> Sửa
+                </button>
+              )}
               {canEdit && (
-                <>
-                  <button onClick={() => { onClose?.(); onEdit?.(entry); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-sky-600 hover:bg-sky-700">
-                    <Pencil className="w-3.5 h-3.5" /> Sửa
-                  </button>
-                  <button onClick={() => { onClose?.(); onDelete?.(entry); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-rose-600 hover:bg-rose-700">
-                    <Trash2 className="w-3.5 h-3.5" /> Xóa
-                  </button>
-                </>
+                <button onClick={() => { onClose?.(); onDelete?.(entry); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-rose-600 hover:bg-rose-700">
+                  <Trash2 className="w-3.5 h-3.5" /> Xóa
+                </button>
               )}
               <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-[13px] font-semibold text-slate-600 hover:bg-slate-100">Đóng</button>
             </div>

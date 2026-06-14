@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-14 — Ẩn nút "Sửa" với người phê duyệt (đã có "Điều chỉnh")
+- EntryDetail: nút "Sửa" chỉ hiện khi canEdit && KHÔNG phải người duyệt mục đó
+  (isReviewerOfEntry = canReviewEntry). pct/quan_tri ẩn Sửa mọi lịch; pho_truong_doan
+  ẩn Sửa với lịch Đoàn -> họ dùng "Điều chỉnh". "Xóa"/"Nhân bản" giữ nguyên
+- cb_ban/cb_tonghop (không phải người duyệt) vẫn có nút "Sửa" bình thường
+
 ## 2026-06-14 — Điều chỉnh = mở form đầy đủ như Sửa (chế độ điều chỉnh)
 - Trước: "Điều chỉnh" là form inline rút gọn (chỉ Nội dung/Ngày/Buổi/Địa điểm + chọn TV)
 - Nay: bấm "Điều chỉnh" mở ScheduleForm ĐẦY ĐỦ như "Sửa" (đủ Lãnh đạo/Thời gian/Nội dung/
