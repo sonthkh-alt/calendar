@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-15 — Lịch Gọn: tô nền thẻ theo đơn vị (TTr HĐND tỉnh / Đoàn ĐBQH)
+- EntryCard: prop `unitTint` -> nền theo leader_type khi KHÔNG trùng/từ chối:
+  pct = border-red-300 bg-red-100 (đậm hơn chút), doan = border-yellow-300 bg-yellow-100
+  (vàng nhạt); các đơn vị khác giữ nền theo trạng thái
+- WeekView: renderMergedCard(m, compact, unitTint); chế độ GỌN truyền unitTint=true
+  (full giữ nguyên). StatusBadge vẫn hiển thị trạng thái nên không mất thông tin
+
 ## 2026-06-15 — Sửa lỗi PDF "Cannot read properties of undefined (reading 'pdfMake')"
 - Nguyên nhân: import 'pdfmake/build/vfs_fonts' — file đó chạy `this.pdfMake = ...`; Vite/
   Rollup đóng gói ESM strict -> `this` = undefined -> vỡ NGAY khi nạp (trên Vercel). Bản

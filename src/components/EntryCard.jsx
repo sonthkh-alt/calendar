@@ -9,7 +9,7 @@ import { fmtTime, fmtDM, parseISO } from '../lib/dates';
  * `vehicle` do cha truyền vào: xe đã gán, hoặc xe riêng của lãnh đạo (PCT /
  * Phó Trưởng Đoàn) nếu chưa gán. Bấm vào ô để mở chi tiết đầy đủ.
  */
-export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, dupInfo, onEdit, onDelete, onDuplicate, onView, compact, brief }) {
+export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, dupInfo, onEdit, onDelete, onDuplicate, onView, compact, brief, unitTint }) {
   const dupOthers = dupInfo?.others;
   const dupWarn = dupOthers?.length > 0;
   const dupWeek = dupInfo?.severity === 'week'; // cùng tuần -> ĐỎ; cả năm -> VÀNG
@@ -18,6 +18,13 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
     : '';
   const s = STATUS[entry.status] || STATUS.cho_duyet;
   const rejected = entry.status === 'tu_choi'; // từ chối -> gạch ngang TẤT CẢ thông tin
+  // Tô nền theo ĐƠN VỊ (chế độ Gọn): TTr HĐND tỉnh (pct) đậm hơn chút (đỏ),
+  // Đoàn ĐBQH (doan) vàng nhạt — để phân biệt nhanh với các thành phần khác.
+  const unitAccent = (unitTint && !rejected)
+    ? (leader?.leader_type === 'pct' ? 'border-red-300 bg-red-100'
+      : leader?.leader_type === 'doan' ? 'border-yellow-300 bg-yellow-100'
+        : null)
+    : null;
   const timeLabel = entry.session === 'gio'
     ? `${fmtTime(entry.start_time)}${entry.end_time ? ' - ' + fmtTime(entry.end_time) : ''}`
     : SESSIONS[entry.session];
@@ -34,7 +41,7 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
           ? (dupWeek
               ? 'border-red-500 bg-red-50 ring-2 ring-red-300 shadow-md shadow-red-200'
               : 'border-amber-400 bg-amber-50 ring-2 ring-amber-300 shadow-md shadow-amber-200')
-          : `${s.border} ${s.bg} ${onView ? 'hover:ring-2 hover:ring-red-200' : ''}`}`}
+          : `${unitAccent || `${s.border} ${s.bg}`} ${onView ? 'hover:ring-2 hover:ring-red-200' : ''}`}`}
     >
       {dupWarn && (
         <p className={`flex items-start gap-1 text-[10px] font-bold text-white rounded px-1.5 py-0.5 mb-1 -mx-0.5 ${dupWeek ? 'bg-red-600' : 'bg-amber-500'}`}

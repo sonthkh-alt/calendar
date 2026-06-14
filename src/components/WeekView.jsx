@@ -155,7 +155,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     return out;
   };
 
-  const renderMergedCard = (m, compact) => {
+  const renderMergedCard = (m, compact, unitTint = false) => {
     const orig = m.orig;
     const lead = leaderById[orig.leader_id];
     const names = m.leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean);
@@ -174,6 +174,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
         onDuplicate={() => onDuplicate?.(orig)}
         onView={() => onView?.(orig)}
         compact={compact}
+        unitTint={unitTint}
         brief
       />
     );
@@ -352,7 +353,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                 </div>
                 <div className={`p-2.5 grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
                   {dayEntries.length === 0 && <p className="text-[12px] text-slate-400 italic col-span-full">Không có lịch.</p>}
-                  {mergeEntries(dayEntries).map((m) => renderMergedCard(m, false))}
+                  {mergeEntries(dayEntries).map((m) => renderMergedCard(m, false, true))}
                 </div>
               </div>
             );
