@@ -48,8 +48,32 @@ const timeLabel = (e) => {
   return e.session === 'sang' ? 'Sáng' : e.session === 'chieu' ? 'Chiều' : 'Cả ngày';
 };
 
-// THÀNH PHẦN GỌN: thay nhóm thành viên bằng tên Nhóm (giống WeekPrintSheet)
+// THÀNH PHẦN GỌN: thay nhóm thành viên bằng tên Nhóm (giống WeekPrintSheet).
+// SẮP XẾP theo thứ tự ƯU TIÊN HỌ VÀ TÊN = sort_order của lãnh đạo (chức vụ cao -> trước);
+// nhóm xếp theo STT nhỏ nhất của thành viên; đoạn không khớp lãnh đạo giữ thứ tự cuối.
 const compactParticipants = (m, groups, leaderById) => {
+  // coreName(họ tên lãnh đạo) -> sort_order, để xếp ưu tiên theo chức vụ
+  const coreToSort = (Object.values(leaderById) || [])
+    .map((l) => [coreName(l.full_name), l.sort_order ?? 999]);
+  const sortOfName = (seg) => {
+    const c = coreName(seg);
+    for (const [lc, ord] of coreToSort) if (isSamePerson(c, lc) || isSamePerson(lc, c)) return ord;
+    return 9999;
+  };
+  const sortOfSeg = (seg) => {
+    const g = (groups || []).find((gr) => gr.name === seg);
+    if (g) {
+      const ords = (g.members || '').split(';').map((x) => sortOfName(x)).filter((v) => v < 9999);
+      return ords.length ? Math.min(...ords) : (g.sort_order ?? 9998);
+    }
+    return sortOfName(seg);
+  };
+  // sắp ổn định theo ưu tiên (đoạn không khớp -> giữ nguyên thứ tự tương đối, ra cuối)
+  const byPriority = (arr) => arr
+    .map((s, i) => [s, sortOfSeg(s), i])
+    .sort((a, b) => a[1] - b[1] || a[2] - b[2])
+    .map((x) => x[0]);
+
   let segs = m._parts.join('; ').split(';').map((s) => s.trim()).filter(Boolean);
   const ordered = [...(groups || [])].sort((a, b) =>
     (b.members || '').split(';').length - (a.members || '').split(';').length);
@@ -70,9 +94,11 @@ const compactParticipants = (m, groups, leaderById) => {
     });
     if (!inserted) segs.unshift(g.name);
   }
-  const text = [...new Set(segs)].join('; ');
+  const text = byPriority([...new Set(segs)]).join('; ');
   if (text) return text;
-  return [...new Set(m._leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean))].join('; ');
+  // Nhánh dự phòng: tên các lãnh đạo của mục -> xếp theo sort_order
+  const names = [...new Set(m._leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean))];
+  return byPriority(names).join('; ');
 };
 
 /**

@@ -1,5 +1,12 @@
 # Nhật ký dự án
 
+## 2026-06-14 — Xuất Word: cột Thành phần sắp theo ƯU TIÊN HỌ VÀ TÊN
+- exporters.compactParticipants: sắp các đoạn Thành phần theo sort_order lãnh đạo (chức vụ
+  cao -> trước), áp dụng CẢ nhánh text thành phần lẫn nhánh dự phòng (tên lãnh đạo của mục);
+  nhóm xếp theo STT nhỏ nhất của thành viên; đoạn không khớp lãnh đạo giữ thứ tự gốc, ra cuối
+- Sửa lỗi: trước đây tên xếp theo thứ tự nhập (vd "Trần Mạnh Long; Lê Tiến Lam") -> nay
+  "Lê Tiến Lam (PCT TT); Trần Mạnh Long" đúng ưu tiên. Kiểm chứng bằng node test 3 ca
+
 ## 2026-06-14 — Module XUẤT LỊCH TUẦN RA WORD (.docx)
 - src/lib/exporters.js: exportWeekDocx({anchor,entries,leaders,groups}) — NẠP ĐỘNG docx +
   file-saver (dynamic import, không phình bundle chính); dựng bảng công văn A4 dọc giống
