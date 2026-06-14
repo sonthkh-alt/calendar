@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-15 — Xuất PDF (mặc định) + Word (riêng 2 tài khoản)
+- exporters.exportWeekPdf: nạp động html2pdf.js, nhân bản #week-print-root (bản in
+  WeekPrintSheet, đang display:none) ra ngoài màn hình -> render A4 dọc -> tải .pdf;
+  PDF khớp HỆT bản in, tiếng Việt chuẩn (html2canvas render bằng font trình duyệt)
+- WeekPrintSheet: thêm id="week-print-root" để exporter dùng lại
+- constants.DOCX_EXPORT_EMAILS = [thttdn@thanhhoa.gov.vn, sonthkh@gmail.com] + canExportDocx
+- WeekView: nút "Xuất PDF" (đỏ) cho MỌI tài khoản; nút "Xuất Word" (xanh) CHỈ hiện với
+  2 email trên. Cài thêm dependency html2pdf.js@0.10.1 (lazy, không phình bundle chính)
+
 ## 2026-06-14 — Mặc định lịch tuần ở chế độ "Gọn"
 - WeekView: mode mặc định 'compact' (trước 'full' trên máy tính) -> truy cập trang
   thấy ngay bản Gọn; vẫn bấm "Đầy đủ" để đổi

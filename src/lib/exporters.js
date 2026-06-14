@@ -221,3 +221,42 @@ export async function exportWeekDocx({ anchor, entries, leaders, groups }) {
   const blob = await Packer.toBlob(doc);
   saveAs(blob, `Lich-cong-tac-tuan-${getISOWeek(ws)}-${ws.getFullYear()}.docx`);
 }
+
+/**
+ * Xuất lịch tuần ra .pdf — DÙNG LẠI đúng bản in công văn (WeekPrintSheet, id
+ * "week-print-root") nên PDF khớp hệt bản in và hiển thị tiếng Việt chuẩn.
+ * NẠP ĐỘNG html2pdf.js (html2canvas + jsPDF) để không phình bundle chính.
+ * @param {Date} anchor ngày bất kỳ trong tuần cần xuất (dùng đặt tên file)
+ */
+export async function exportWeekPdf({ anchor }) {
+  const el = typeof document !== 'undefined' && document.getElementById('week-print-root');
+  if (!el) { throw new Error('Không tìm thấy nội dung bản in để xuất PDF.'); }
+  const html2pdf = (await import('html2pdf.js')).default;
+  const ws = weekStart(anchor);
+
+  // Bản in đang display:none (class "hidden", chỉ hiện khi in) -> nhân bản, hiện ngoài
+  // màn hình để html2canvas chụp được, xong gỡ bỏ.
+  const clone = el.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.classList.remove('hidden');
+  clone.style.display = 'block';
+  clone.style.position = 'fixed';
+  clone.style.left = '-10000px';
+  clone.style.top = '0';
+  clone.style.width = '794px'; // ~210mm @96dpi (A4 dọc)
+  clone.style.background = '#ffffff';
+  clone.style.padding = '16px';
+  document.body.appendChild(clone);
+  try {
+    await html2pdf().set({
+      margin: [12, 10, 12, 10], // mm
+      filename: `Lich-cong-tac-tuan-${getISOWeek(ws)}-${ws.getFullYear()}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] },
+    }).from(clone).save();
+  } finally {
+    document.body.removeChild(clone);
+  }
+}

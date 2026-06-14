@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Printer, Plus, LayoutGrid, Rows3, CalendarDays, CheckCheck, FileText } from 'lucide-react';
+import { Printer, Plus, LayoutGrid, Rows3, CalendarDays, CheckCheck, FileText, FileDown } from 'lucide-react';
 import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
 import { canCreateFor, canEditEntry, canSeeEntry, canReview, canReviewEntry } from '../lib/permissions';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
-import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation, hidesDriver, makeEntrySorter } from '../lib/constants';
+import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation, hidesDriver, makeEntrySorter, canExportDocx } from '../lib/constants';
 import { reviewEntries } from '../lib/api';
-import { exportWeekDocx } from '../lib/exporters';
+import { exportWeekDocx, exportWeekPdf } from '../lib/exporters';
 import { printPage } from '../lib/print';
 
 /**
@@ -18,7 +18,8 @@ import { printPage } from '../lib/print';
  */
 export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
   const [mode, setMode] = useState('compact'); // full | compact — mặc định "Gọn"
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState(false);   // đang xuất Word
+  const [exportingPdf, setExportingPdf] = useState(false); // đang xuất PDF
   // Điện thoại: luôn dùng chế độ Gọn (khối từng ngày, kéo dọc) cho dễ xem
   useEffect(() => { if (isMobile) setMode('compact'); }, [isMobile]);
   const effMode = isMobile ? 'compact' : mode;
@@ -195,6 +196,22 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     }
   };
 
+  // Xuất lịch tuần ra PDF — dùng lại đúng bản in công văn (WeekPrintSheet)
+  const onExportPdf = async () => {
+    if (exportingPdf) return;
+    setExportingPdf(true);
+    try {
+      await exportWeekPdf({ anchor });
+    } catch (err) {
+      alert('Không xuất được file PDF: ' + (err?.message || err));
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  // Riêng một số tài khoản được xuất THÊM file Word (.docx)
+  const showDocx = canExportDocx(profile?.email);
+
   return (
     <div>
       {/* BẢN IN kiểu công văn (A4 dọc) — chỉ hiện khi in */}
@@ -217,9 +234,14 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
               <Plus className="w-4 h-4" /> Thêm lịch
             </button>
           )}
-          <button onClick={onExportWord} disabled={exporting} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-r from-sky-700 to-sky-600 hover:from-sky-800 hover:to-sky-700 shadow-sm disabled:opacity-60" title="Xuất lịch tuần ra file Word (.docx) theo mẫu công văn">
-            <FileText className="w-4 h-4" /> {exporting ? 'Đang xuất…' : 'Xuất Word'}
+          <button onClick={onExportPdf} disabled={exportingPdf} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-r from-rose-700 to-rose-600 hover:from-rose-800 hover:to-rose-700 shadow-sm disabled:opacity-60" title="Xuất lịch tuần ra file PDF theo mẫu công văn, khổ A4 dọc">
+            <FileDown className="w-4 h-4" /> {exportingPdf ? 'Đang xuất…' : 'Xuất PDF'}
           </button>
+          {showDocx && (
+            <button onClick={onExportWord} disabled={exporting} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-r from-sky-700 to-sky-600 hover:from-sky-800 hover:to-sky-700 shadow-sm disabled:opacity-60" title="Xuất lịch tuần ra file Word (.docx) theo mẫu công văn">
+              <FileText className="w-4 h-4" /> {exporting ? 'Đang xuất…' : 'Xuất Word'}
+            </button>
+          )}
           <button onClick={() => printPage('portrait')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-slate-700 bg-white/90 border border-slate-200 hover:bg-red-50 shadow-sm" title="In theo mẫu công văn, khổ A4 dọc">
             <Printer className="w-4 h-4" /> In lịch tuần
           </button>

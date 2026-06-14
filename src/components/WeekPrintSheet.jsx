@@ -98,7 +98,7 @@ export default function WeekPrintSheet({ anchor, entries, leaders, groups }) {
   const th = { ...td, fontWeight: 700, textAlign: 'center', verticalAlign: 'middle' };
 
   return (
-    <div className="hidden print:block print-root" style={{ fontFamily: "'Times New Roman', Times, serif", color: '#000' }}>
+    <div id="week-print-root" className="hidden print:block print-root" style={{ fontFamily: "'Times New Roman', Times, serif", color: '#000' }}>
       {/* Tiêu đề kiểu công văn */}
       <div style={{ textAlign: 'center', marginBottom: 10 }}>
         <p style={{ fontSize: 12, textTransform: 'uppercase' }}>{UNIT_NAME}</p>
