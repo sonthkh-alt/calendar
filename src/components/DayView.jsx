@@ -67,7 +67,8 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
     const map = new Map();
     const out = [];
     for (const e of list) {
-      const key = `${e.content}|${e.session}|${e.start_time || ''}|${(e.location || '').trim().toLowerCase()}`;
+      // Lịch ĐÃ TỪ CHỐI gộp riêng để tách khỏi thẻ bình thường (gạch ngang riêng).
+      const key = `${e.content}|${e.session}|${e.start_time || ''}|${(e.location || '').trim().toLowerCase()}|${e.status === 'tu_choi' ? 'tc' : ''}`;
       const m = map.get(key);
       if (!m) {
         out.push({ orig: e, ids: [e.id], leaderIds: [e.leader_id], parts: e.participants ? [e.participants] : [] });

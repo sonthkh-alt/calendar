@@ -17,6 +17,7 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
     ? dupOthers.map((o) => `${fmtDM(parseISO(o.date))}${o.name ? ` (${o.name})` : ''}`).join(', ')
     : '';
   const s = STATUS[entry.status] || STATUS.cho_duyet;
+  const rejected = entry.status === 'tu_choi'; // từ chối -> gạch ngang TẤT CẢ thông tin
   const timeLabel = entry.session === 'gio'
     ? `${fmtTime(entry.start_time)}${entry.end_time ? ' - ' + fmtTime(entry.end_time) : ''}`
     : SESSIONS[entry.session];
@@ -45,11 +46,11 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
       <div className="flex items-start justify-between gap-1">
         {/* Khung GIỜ nổi bật (to ~1.15 lần, in đậm) đứng TRƯỚC nội dung; nội dung
             chảy inline nên khi xuống dòng sẽ canh về cùng đầu hàng với icon đồng hồ. */}
-        <p className="text-[12px] font-semibold leading-snug text-slate-800 min-w-0">
+        <p className={`text-[12px] font-semibold leading-snug text-slate-800 min-w-0 ${rejected ? 'line-through decoration-rose-500/70 text-slate-400' : ''}`}>
           <span className="inline-flex items-center gap-1 align-bottom mr-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[13px] font-bold leading-none text-red-700">
             <Clock className="w-[15px] h-[15px] shrink-0" /> {timeLabel}
           </span>
-          <span className={entry.status === 'tu_choi' ? 'line-through' : ''}>{entry.content}</span>
+          <span>{entry.content}</span>
         </p>
         {(canEdit || canDuplicate) && (
           <span className="hidden group-hover:flex items-center gap-0.5 shrink-0 no-print">
@@ -66,7 +67,7 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
         )}
       </div>
 
-      <div className="mt-1 space-y-0.5 text-[11px] text-slate-600">
+      <div className={`mt-1 space-y-0.5 text-[11px] text-slate-600 ${rejected ? 'line-through decoration-rose-500/70 text-slate-400' : ''}`}>
         <p className="flex items-start gap-1 font-medium text-red-800">
           <UserRound className="w-3 h-3 shrink-0 mt-0.5" /> <span>{entry.group_label || leader?.full_name || '—'}</span>
         </p>
@@ -92,7 +93,7 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
           </>
         )}
         {entry.review_note && (
-          <p className={`flex items-start gap-1 italic ${s.text}`}><MessageSquareText className="w-3 h-3 shrink-0 mt-0.5" /> {entry.review_note}</p>
+          <p className={`flex items-start gap-1 italic no-underline ${rejected ? 'text-rose-700' : s.text}`}><MessageSquareText className="w-3 h-3 shrink-0 mt-0.5" /> {entry.review_note}</p>
         )}
       </div>
 

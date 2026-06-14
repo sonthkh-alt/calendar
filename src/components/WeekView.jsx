@@ -135,7 +135,9 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     const map = new Map();
     const out = [];
     for (const e of list) {
-      const key = `${e.content}|${e.session}|${e.start_time || ''}|${(e.location || '').trim().toLowerCase()}`;
+      // Lịch ĐÃ TỪ CHỐI gộp riêng (thêm cờ 'tc') -> không gộp chung với thẻ bình thường,
+      // để khi từ chối vài thành viên thì thẻ bị từ chối (gạch ngang) tách riêng.
+      const key = `${e.content}|${e.session}|${e.start_time || ''}|${(e.location || '').trim().toLowerCase()}|${e.status === 'tu_choi' ? 'tc' : ''}`;
       const m = map.get(key);
       if (!m) {
         const item = { orig: e, ids: [e.id], leaderIds: [e.leader_id], parts: e.participants ? [e.participants] : [], vehicleIds: e.vehicle_id ? [e.vehicle_id] : [] };

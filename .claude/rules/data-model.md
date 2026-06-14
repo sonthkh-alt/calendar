@@ -15,8 +15,8 @@
 | role | quyền |
 |---|---|
 | quan_tri | toàn quyền (bootstrap: sonthkh@gmail.com) |
-| pct | xem tất cả; duyệt/điều chỉnh/từ chối MỌI lịch (Ban + Đoàn) |
-| pho_truong_doan | Phó Trưởng Đoàn ĐBQH: duyệt/điều chỉnh/từ chối CHỈ lịch Đoàn ĐBQH (doan) — đ/c Lương Thị Hoa |
+| pct | xem tất cả; duyệt/điều chỉnh/từ chối MỌI lịch (Ban + Đoàn); NHẬP lịch cho mọi đối tượng → tự động da_duyet |
+| pho_truong_doan | Phó Trưởng Đoàn ĐBQH: duyệt/điều chỉnh/từ chối CHỈ lịch Đoàn (doan); NHẬP lịch Đoàn → tự động da_duyet — đ/c Lương Thị Hoa |
 | cb_ban | CRUD lịch lãnh đạo thuộc ban_ids; chỉ sửa khi cho_duyet/tu_choi |
 | cb_tonghop | CRUD lịch PCT/Đoàn → khởi tạo da_duyet (hiện ngay) |
 | cb_ctqh | Cán bộ Công tác Quốc hội: CRUD lịch Đoàn ĐBQH → khởi tạo cho_duyet (Phó Trưởng Đoàn duyệt) |
@@ -29,8 +29,11 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
 ## Trạng thái & luồng
 - `cho_duyet` (amber) → người duyệt xử lý → `da_duyet` (emerald) | `da_dieu_chinh` (sky, ghi chú bắt buộc) | `tu_choi` (rose, lý do bắt buộc)
 - Lịch PCT/Đoàn (cb_tonghop nhập): vào thẳng `da_duyet`
+- Lịch do NGƯỜI PHÊ DUYỆT tự nhập (pct/quan_tri mọi lịch; pho_truong_doan lịch Đoàn): vào thẳng `da_duyet` (xem permissions.initialStatus)
 - Lịch Đoàn ĐBQH do cb_ctqh nhập: `cho_duyet` → Phó Trưởng Đoàn (pho_truong_doan) duyệt
 - Sửa lịch `tu_choi` → tự quay về `cho_duyet`, xóa review_note
+- Từ chối MỘT VÀI thành viên của sự kiện nhóm (EntryDetail): các thành viên CÒN LẠI đang
+  `cho_duyet` được tự động `da_duyet`; thẻ bị từ chối gạch ngang tách riêng (merge key thêm cờ 'tc')
 - Nhịp nghiệp vụ: thứ Sáu nhập lịch TUẦN SAU (nút "Tuần sau →" trên FilterBar)
 
 ## Trùng giờ (dates.js → sessionsOverlap)

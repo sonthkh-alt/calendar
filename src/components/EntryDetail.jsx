@@ -28,16 +28,19 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
 
-  // Gộp các mục trùng nội dung + ngày + thời gian (khác thành phần / đơn vị)
+  // Gộp các mục trùng nội dung + ngày + thời gian (khác thành phần / đơn vị).
+  // Lịch ĐÃ TỪ CHỐI gộp riêng với nhau; lịch chưa từ chối gộp riêng -> khi từ chối một
+  // vài thành viên thì thẻ bị từ chối (gạch ngang) tách khỏi thẻ còn lại (bình thường).
+  const rejectedEntry = entry.status === 'tu_choi';
   const same = useMemo(
     () => (entries || []).filter((e) =>
       e.content === entry.content &&
       e.date === entry.date &&
       e.session === entry.session &&
       (e.start_time || '') === (entry.start_time || '') &&
-      e.status !== 'tu_choi'
+      (rejectedEntry ? e.status === 'tu_choi' : e.status !== 'tu_choi')
     ),
-    [entries, entry]
+    [entries, entry, rejectedEntry]
   );
   const merged = useMemo(() => (same.length > 0 ? same : [entry]), [same, entry]);
 
@@ -132,6 +135,10 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
     if (!note.trim()) { alert('Vui lòng nhập lý do từ chối.'); return; }
     setBusy(true);
     await reviewEntries(selIds, 'tu_choi', note.trim(), profile.id);
+    // Thành viên KHÔNG bị từ chối nhưng còn CHỜ DUYỆT -> phê duyệt bình thường
+    // (lịch của họ vẫn hiển thị bình thường, không bị gạch ngang theo người bị từ chối)
+    const restIds = merged.filter((e) => !selIds.includes(e.id) && e.status === 'cho_duyet').map((e) => e.id);
+    if (restIds.length) await reviewEntries(restIds, 'da_duyet', null, profile.id);
     setBusy(false); onChanged?.(); onClose?.();
   };
   const openAdjust = () => {

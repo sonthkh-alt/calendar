@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-14 — Người phê duyệt tự nhập lịch (tự duyệt) + từ chối gạch ngang
+- permissions.canCreateFor: pct nhập được MỌI lịch; pho_truong_doan nhập lịch Đoàn (doan)
+- permissions.initialStatus: pct/quan_tri tự nhập -> da_duyet; pho_truong_doan nhập Đoàn -> da_duyet
+- permissions.canEditEntry: người phê duyệt sửa được lịch mình có quyền duyệt (canReviewEntry)
+- TỪ CHỐI: EntryCard gạch ngang TOÀN BỘ thông tin (line-through, xám) khi tu_choi; giữ
+  ghi chú lý do (no-underline, đỏ). Từ chối VÀI thành viên -> thành viên còn lại (cho_duyet)
+  tự động da_duyet và hiển thị bình thường; thẻ từ chối tách riêng (merge key thêm cờ 'tc'
+  ở WeekView/DayView; EntryDetail.same nhóm theo tu_choi / không-tu_choi)
+
 ## 2026-06-14 — Điều chỉnh / Từ chối lịch nhóm theo TỪNG thành viên
 - EntryDetail "Xử lý nhanh": với sự kiện nhiều thành viên (merged > 1), form Điều chỉnh
   và Từ chối hiện danh sách CHECKBOX chọn thành viên (mặc định chọn tất cả) + nút
