@@ -82,26 +82,22 @@ export function leaderInUnits(leader, unitKeys) {
 //  2) Ưu tiên theo SỐ THỨ TỰ: nếu lịch có Tên nhóm (group_label thuộc Nhóm thành
 //     phần) -> dùng STT của nhóm; nếu không -> STT của lãnh đạo. Đều tăng dần.
 //     (Nhờ vậy lịch PCT — STT nhỏ — luôn lên trước lịch các Ban trong cùng buổi.)
-export const makeEntrySorter = (leaders, groups) => {
+export const makeEntrySorter = (leaders) => {
   const leaderSort = Object.fromEntries((leaders || []).map((l) => [l.id, l.sort_order ?? 999]));
-  const groupSort = Object.fromEntries((groups || []).map((g) => [g.name, g.sort_order ?? 999]));
   const sessRank = (e) => {
     if (e.session === 'chieu') return 2;
     if (e.session === 'gio') return (e.start_time || '08:00') < '12:00' ? 1 : 2;
     return 1; // sang + ca_ngay -> buổi sáng
   };
-  // STT lãnh đạo của MỤC. Với mục ĐÃ GỘP nhiều đơn vị (bản in/PDF/Word có _leaderIds)
-  // -> lấy STT NHỎ NHẤT trong các thành viên (lãnh đạo ưu tiên cao nhất đại diện cho cả
-  // sự kiện) để vd sự kiện có đ/c Lê Tiến Lam (STT 1) xếp trước "Cả ngày" của Ban (STT lớn).
+  // ƯU TIÊN LÃNH ĐẠO CAO NHẤT của sự kiện: mục đã GỘP nhiều đơn vị (bản in/PDF/Word có
+  // _leaderIds) lấy STT NHỎ NHẤT trong các thành viên; mục lẻ lấy STT lãnh đạo của mục.
+  // KHÔNG dùng STT nhóm để tránh lệch thang đo khi group_label gộp nhiều nhóm (vd "Hội
+  // nghị giao ban" gồm Thường trực + các Ban + Văn phòng) -> luôn so theo STT lãnh đạo.
   const leaderPrio = (e) => (Array.isArray(e._leaderIds) && e._leaderIds.length)
     ? Math.min(...e._leaderIds.map((id) => leaderSort[id] ?? 999))
     : (leaderSort[e.leader_id] ?? 999);
-  const prio = (e) => (e.group_label != null && groupSort[e.group_label] != null)
-    ? groupSort[e.group_label]
-    : leaderPrio(e);
   return (a, b) =>
     sessRank(a) - sessRank(b)
-    || prio(a) - prio(b)
     || leaderPrio(a) - leaderPrio(b)
     || (a.start_time || '').localeCompare(b.start_time || '')
     || (a.content || '').localeCompare(b.content || '');

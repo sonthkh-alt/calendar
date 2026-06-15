@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-15 — Sắp xếp: LUÔN theo STT lãnh đạo cao nhất (bỏ thang STT nhóm)
+- Lỗi: makeEntrySorter.prio dùng STT NHÓM khi group_label khớp 1 nhóm đơn lẻ, nhưng dùng
+  STT lãnh đạo khi group_label gộp NHIỀU nhóm (vd "Hội nghị giao ban" = Thường trực + các
+  Ban + Văn phòng) -> 2 thang đo lệch nhau -> "Làm việc tại cơ quan" (Đoàn) xếp TRƯỚC sự
+  kiện có Thường trực HĐND tỉnh
+- Sửa: bỏ hẳn nhánh groupSort; comparator chỉ dùng leaderPrio (STT nhỏ nhất trong _leaderIds
+  với mục đã gộp, hoặc STT lãnh đạo của mục lẻ). makeEntrySorter(leaders) — bỏ tham số groups
+  (caller truyền dư vô hại). test:pdf 12/12 đạt
+
 ## 2026-06-15 — Người tạo lịch sửa được lịch ĐÃ DUYỆT (nêu lý do -> chờ duyệt lại)
 - permissions.canEditEntry: người có canCreateFor sửa được MỌI LÚC (kể cả da_duyet/da_dieu_chinh)
 - schema: + cột schedule_entries.edit_note (lý do chỉnh sửa) — ALTER idempotent
