@@ -284,6 +284,17 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
             </div>
           )}
 
+          {/* Lý do chỉnh sửa — khi người tạo sửa lịch đã duyệt, lịch chờ duyệt lại */}
+          {entry.edit_note && entry.status === 'cho_duyet' && (
+            <div className={row}>
+              <MessageSquareText className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+              <div>
+                <p className={lab}>Lý do chỉnh sửa (chờ duyệt lại)</p>
+                <p className={`${val} italic text-amber-800`}>{entry.edit_note}</p>
+              </div>
+            </div>
+          )}
+
           {/* Người phê duyệt (chức vụ + họ tên) — hiện khi lịch đã được xử lý */}
           {reviewer && ['da_duyet', 'da_dieu_chinh', 'tu_choi'].includes(entry.status) && (
             <div className={row}>

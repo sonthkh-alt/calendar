@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { X, Save, AlertTriangle, CalendarPlus } from 'lucide-react';
 import { SESSIONS, COMMON_LOCATIONS, groupLeaderIds } from '../lib/constants';
 // `locations` (prop) là danh sách địa điểm gợi ý quản trị được; rỗng -> mặc định COMMON_LOCATIONS
-import { canCreateFor, initialStatus } from '../lib/permissions';
+import { canCreateFor, initialStatus, canReviewEntry } from '../lib/permissions';
 import { createEntries, updateEntry, deleteEntry } from '../lib/api';
 import DateField from './DateField';
 import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
@@ -50,6 +50,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const [atOffice, setAtOffice] = useState(src?.at_office || false);
   const [groupLabel, setGroupLabel] = useState(src?.group_label || '');
   const [adjustNote, setAdjustNote] = useState(''); // ghi chú điều chỉnh (bắt buộc khi isAdjust)
+  const [editReason, setEditReason] = useState(''); // lý do chỉnh sửa (bắt buộc khi sửa lịch ĐÃ DUYỆT)
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
@@ -89,6 +90,14 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   // Cảnh báo mềm: lãnh đạo đích danh (PCT / Đoàn ĐBQH) đã có lịch giao nhau cùng ngày
   // (các Ban có thể có nhiều hoạt động cùng buổi do nhiều thành viên — không cảnh báo)
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
+
+  // SỬA LỊCH ĐÃ DUYỆT (bởi người TẠO lịch, không phải người duyệt): phải nêu lý do
+  // và lịch quay về CHỜ DUYỆT để duyệt lại. (Người duyệt dùng "Điều chỉnh" -> isAdjust;
+  // mục "Làm việc tại cơ quan" không cần duyệt nên cũng không tính là sửa-cần-duyệt-lại.)
+  const isReviewerOfEdit = editing ? canReviewEntry(profile, editing, leaderById[editing.leader_id]) : false;
+  const isReEdit = !!editing && !isAdjust && !isReviewerOfEdit && !atOffice
+    && (editing.status === 'da_duyet' || editing.status === 'da_dieu_chinh');
+
   const conflicts = useMemo(() => {
     const cand = { session, start_time: session === 'gio' ? startTime : null, end_time: session === 'gio' ? endTime : null };
     return (entries || []).filter((e) =>
@@ -127,6 +136,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     if (!atOffice && !location.trim()) { setErr('Vui lòng nhập Địa điểm.'); return; }
     if (leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); return; }
     if (isAdjust && !adjustNote.trim()) { setErr('Vui lòng nhập Ghi chú điều chỉnh để Văn phòng và Ban được biết.'); return; }
+    if (isReEdit && !editReason.trim()) { setErr('Lịch đã được duyệt — vui lòng nêu Lý do chỉnh sửa (lịch sẽ chờ duyệt lại).'); return; }
     setSaving(true); setErr('');
 
     const base = {
@@ -150,7 +160,10 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       if (atOffice) return 'da_duyet';
       const leader = leaders.find((l) => l.id === leaderId);
       if (!existing) return initialStatus(leader, profile);
-      return existing.status === 'tu_choi' ? initialStatus(leader, profile) : existing.status;
+      if (existing.status === 'tu_choi') return initialStatus(leader, profile);
+      // Sửa lịch ĐÃ DUYỆT/ĐÃ ĐIỀU CHỈNH (người tạo) -> quay về chờ duyệt để duyệt lại
+      if (isReEdit && (existing.status === 'da_duyet' || existing.status === 'da_dieu_chinh')) return 'cho_duyet';
+      return existing.status;
     };
     // Khi ĐIỀU CHỈNH: ghi ghi chú + người/thời điểm duyệt vào mọi mục
     const reviewPatch = isAdjust
@@ -172,6 +185,11 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
         const existing = existingByLeader[lid];
         const patch = { ...base, group_id: groupId, status: statusFor(lid, existing), ...(reviewPatch || {}) };
         if (!isAdjust && !atOffice && existing?.status === 'tu_choi') patch.review_note = null;
+        // Sửa lịch đã duyệt -> lưu lý do chỉnh sửa + xóa thông tin duyệt cũ (chờ duyệt lại)
+        if (isReEdit && existing && (existing.status === 'da_duyet' || existing.status === 'da_dieu_chinh')) {
+          patch.edit_note = editReason.trim();
+          patch.review_note = null; patch.reviewed_by = null; patch.reviewed_at = null;
+        }
         if (existing) ops.push(updateEntry(existing.id, patch));
         else ops.push(createEntries({ ...base, group_id: groupId, ...(reviewPatch || {}) }, [{ leaderId: lid, status: statusFor(lid, null) }]));
       }
@@ -325,6 +343,15 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
                 ))}
               </ul>
               <p className="mt-1 text-[12px]">Bạn vẫn có thể lưu nếu đây là chủ đích.</p>
+            </div>
+          )}
+
+          {/* Lý do chỉnh sửa — bắt buộc khi NGƯỜI TẠO sửa lịch ĐÃ DUYỆT (sẽ chờ duyệt lại) */}
+          {isReEdit && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50/70 p-3">
+              <label className="text-xs font-bold text-amber-800 uppercase tracking-wide">Lý do chỉnh sửa <span className="text-rose-600">*</span></label>
+              <textarea rows={2} value={editReason} onChange={(e) => setEditReason(e.target.value)} placeholder="VD: Đổi địa điểm theo thông báo mới; bổ sung thành phần..." className={`${input} mt-1.5 resize-y`} />
+              <p className="mt-1 text-[12px] text-amber-700">Lịch đã được duyệt — sau khi lưu sẽ chuyển về <b>“Chờ duyệt”</b> để cấp có thẩm quyền duyệt lại.</p>
             </div>
           )}
 

@@ -38,9 +38,9 @@ export function canEditEntry(profile, entry, leader) {
   // Người phê duyệt sửa được lịch mình có quyền duyệt (kể cả lịch mình tự nhập đã duyệt)
   if (canReviewEntry(profile, entry, leader)) return true;
   if (!canCreateFor(profile, leader)) return false;
-  // cb_tonghop sửa lịch PCT mọi lúc; cb_ban chỉ sửa khi chưa duyệt hoặc bị từ chối
-  if (profile.role === 'cb_tonghop') return true;
-  return entry.status === 'cho_duyet' || entry.status === 'tu_choi';
+  // Người TẠO lịch sửa được MỌI LÚC — kể cả lịch ĐÃ DUYỆT. Khi sửa lịch đã duyệt,
+  // ScheduleForm bắt nhập "Lý do chỉnh sửa" và chuyển lịch về CHỜ DUYỆT (duyệt lại).
+  return true;
 }
 
 // Có phải người duyệt (để hiện tab "Chờ duyệt" / khu xử lý nhanh) không?

@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-06-15 — Người tạo lịch sửa được lịch ĐÃ DUYỆT (nêu lý do -> chờ duyệt lại)
+- permissions.canEditEntry: người có canCreateFor sửa được MỌI LÚC (kể cả da_duyet/da_dieu_chinh)
+- schema: + cột schedule_entries.edit_note (lý do chỉnh sửa) — ALTER idempotent
+- ScheduleForm: isReEdit = sửa (editing) lịch da_duyet/da_dieu_chinh bởi người KHÔNG phải
+  người duyệt & KHÔNG at_office -> hiện ô "Lý do chỉnh sửa" (bắt buộc); statusFor -> cho_duyet;
+  patch lưu edit_note + xóa review_note/reviewed_by/reviewed_at (chờ duyệt lại)
+- EntryDetail: hiện "Lý do chỉnh sửa (chờ duyệt lại)" khi status cho_duyet; ApprovalQueue:
+  hiện badge "Lý do chỉnh sửa" trên mục chờ để người duyệt nắm
+- Người duyệt vẫn dùng "Điều chỉnh" (isAdjust) như cũ; nút Sửa vẫn ẩn với người duyệt mục đó
+
 ## 2026-06-15 — ScheduleForm: "Chọn nhanh theo nhóm" cho phép chọn NHIỀU nhóm
 - Trước: groupLabel giữ 1 tên nhóm -> chọn nhóm mới bỏ nhóm cũ
 - Nay: groupLabel = các tên nhóm nối "; "; isGroupSelected(g) = tên g có trong groupLabel

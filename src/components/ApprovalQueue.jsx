@@ -132,6 +132,9 @@ export default function ApprovalQueue({ profile, anchor, entries, leaders, bans,
                         {e.location && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {e.location}</span>}
                         {e.participants && <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5 text-slate-400" /> {e.participants}</span>}
                       </div>
+                      {e.edit_note && (
+                        <p className="mt-1 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1"><b>Lý do chỉnh sửa:</b> <i>{e.edit_note}</i></p>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button onClick={() => approve(e)} disabled={busy === e.id} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60">
