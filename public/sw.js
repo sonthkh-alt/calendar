@@ -5,8 +5,8 @@
  * - Dữ liệu lịch (Supabase REST GET): network-first, mất mạng -> bản đã lưu gần nhất
  *   (xem lịch offline). Không đụng tới ghi dữ liệu (POST/PATCH/DELETE) và realtime (WebSocket).
  */
-const CACHE = 'lichcongtac-v1';
-const APP_SHELL = ['/', '/index.html', '/quoc-huy.svg', '/manifest.webmanifest'];
+const CACHE = 'lichcongtac-v2';
+const APP_SHELL = ['/', '/index.html', '/quoc-huy.svg', '/manifest.webmanifest', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(

@@ -1,5 +1,17 @@
 # Nhật ký dự án
 
+## 2026-06-15 — Icon PWA cho iOS (cài "Thêm vào màn hình chính" hiển thị quốc huy)
+- iOS KHÔNG render SVG cho apple-touch-icon -> trước đây icon trên màn hình chính bị
+  trắng/ảnh chụp trang. Bổ sung icon PNG nền trắng đục (chuẩn Apple).
+- public/: thêm apple-touch-icon.png (180), icon-192.png, icon-512.png — rasterize từ
+  quoc-huy.svg bằng Chrome headless (nền #fff, căn giữa, padding ~8%)
+- index.html: apple-touch-icon -> /apple-touch-icon.png (sizes 180x180)
+- manifest.webmanifest: icons thêm 192/512 PNG (purpose any) + 512 maskable; giữ SVG cuối
+- sw.js: CACHE 'lichcongtac-v1' -> 'v2' (dọn cache cũ, lấy manifest mới) + thêm 3 PNG vào APP_SHELL
+- Cài trên iPhone/iPad: mở Safari -> Chia sẻ -> "Thêm vào Màn hình chính" (PWA, không cần App Store)
+- LƯU Ý: chưa chạy npm build (máy hiện tại chưa cài Node); thay đổi chỉ là asset tĩnh +
+  HTML/JSON, không đụng JS bundle. JSON manifest đã validate hợp lệ
+
 ## 2026-06-15 — Ghi chú Demo + liên hệ ở chân trang & màn hình Login
 - constants: DEMO_NOTICE ("Đây là bản Demo thử nghiệm") + CONTACT_INFO
   ("Chi tiết xin liên hệ Hà Ngọc Sơn, PCVP Đoàn ĐBQH và HĐND tỉnh")
