@@ -6,6 +6,10 @@ export const BOOTSTRAP_ADMIN_EMAILS = ['sonthkh@gmail.com'];
 export const UNIT_NAME = 'Văn phòng Đoàn ĐBQH và HĐND tỉnh Thanh Hóa';
 export const APP_NAME = 'Lịch công tác tuần';
 
+// Ghi chú demo + liên hệ — hiện ở chân trang và màn hình đăng nhập
+export const DEMO_NOTICE = 'Đây là bản Demo thử nghiệm';
+export const CONTACT_INFO = 'Chi tiết xin liên hệ Hà Ngọc Sơn, PCVP Đoàn ĐBQH và HĐND tỉnh';
+
 // Mặc định MỌI tài khoản xuất lịch ra PDF. Riêng các email dưới đây được xuất THÊM
 // file Word (.docx) — phục vụ soạn thảo/chỉnh sửa văn bản.
 export const DOCX_EXPORT_EMAILS = ['thttdn@thanhhoa.gov.vn', 'sonthkh@gmail.com'];

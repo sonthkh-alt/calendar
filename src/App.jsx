@@ -9,7 +9,7 @@ import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, deleteEntry, deleteEntries } from './lib/api';
 import { weekStart, parseISO, toISODate } from './lib/dates';
-import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS } from './lib/constants';
+import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO } from './lib/constants';
 import { canReview, canReviewEntry, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
 import FilterBar from './components/FilterBar';
 import WeekView from './components/WeekView';
@@ -371,8 +371,10 @@ export default function App() {
         )}
       </main>
 
-      <footer className="no-print max-w-[1400px] mx-auto px-4 pb-5 text-center text-[11px] text-slate-400">
-        © {UNIT_NAME} — Hệ thống quản lý lịch công tác tuần
+      <footer className="no-print max-w-[1400px] mx-auto px-4 pb-5 text-center space-y-1">
+        <p className="text-[12px] font-bold text-amber-700">{DEMO_NOTICE}</p>
+        <p className="text-[11px] text-slate-500">{CONTACT_INFO}</p>
+        <p className="text-[11px] text-slate-400">© {UNIT_NAME} — Hệ thống quản lý lịch công tác tuần</p>
       </footer>
 
       {/* Modal */}

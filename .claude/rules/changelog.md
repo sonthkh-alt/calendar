@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-15 — Ghi chú Demo + liên hệ ở chân trang & màn hình Login
+- constants: DEMO_NOTICE ("Đây là bản Demo thử nghiệm") + CONTACT_INFO
+  ("Chi tiết xin liên hệ Hà Ngọc Sơn, PCVP Đoàn ĐBQH và HĐND tỉnh")
+- App footer: thêm dòng Demo (đậm amber) + liên hệ + © đơn vị
+- Login: thay dòng liên hệ cũ bằng CONTACT_INFO + thêm dòng Demo
+
 ## 2026-06-15 — Sắp xếp: LUÔN theo STT lãnh đạo cao nhất (bỏ thang STT nhóm)
 - Lỗi: makeEntrySorter.prio dùng STT NHÓM khi group_label khớp 1 nhóm đơn lẻ, nhưng dùng
   STT lãnh đạo khi group_label gộp NHIỀU nhóm (vd "Hội nghị giao ban" = Thường trực + các

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Mail, LogIn, CheckCircle2, AlertTriangle, Lock, KeyRound, Eye } from 'lucide-react';
 import { signInWithOtp, signInWithPassword, GUEST } from './lib/auth';
-import { APP_NAME, UNIT_NAME } from './lib/constants';
+import { APP_NAME, UNIT_NAME, DEMO_NOTICE, CONTACT_INFO } from './lib/constants';
 
 // Theme màn đăng nhập (tông cổ điển — đỏ/vàng).
 const t = {
@@ -137,8 +137,9 @@ export default function Login() {
             </form>
           )}
         </div>
-        <p className={`text-center text-[11px] mt-5 ${t.foot}`}>© {UNIT_NAME}</p>
-        <p className={`text-center text-[11px] mt-1 ${t.foot}`}>Chi tiết xin liên hệ đồng chí Hà Ngọc Sơn, Phó Chánh Văn phòng 0904818886</p>
+        <p className={`text-center text-[12px] font-bold mt-5 ${t.foot}`}>{DEMO_NOTICE}</p>
+        <p className={`text-center text-[11px] mt-1 ${t.foot}`}>{CONTACT_INFO}</p>
+        <p className={`text-center text-[11px] mt-1 ${t.foot}`}>© {UNIT_NAME}</p>
       </div>
     </div>
   );
