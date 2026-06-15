@@ -4,8 +4,8 @@
 > Mở thư mục dự án bằng Claude Code rồi bảo: *"đọc BAN-GIAO.md và tiếp tục"*.
 > (CLAUDE.md đã tự nạp mỗi phiên; file này bổ sung phần "khôi phục môi trường".)
 
-Cập nhật lần cuối: 12/06/2026 — commit mới nhất trên `main`: **Sửa lịch cho phép sửa cả danh sách "Lãnh đạo"** (`fc74131`).
-Toàn bộ đã `git push` lên `main`, cây làm việc sạch. Mở máy ở nhà là `git pull` rồi làm tiếp.
+Cập nhật lần cuối: 15/06/2026 — commit mới nhất trên `main`: **Ghi chú "bản Demo thử nghiệm" + liên hệ ở footer & Login** (`24ad4dc`).
+Toàn bộ đã `git push` lên `main`, cây làm việc **sạch**, đồng bộ `origin/main`. Mở máy là `git pull` rồi làm tiếp.
 
 ---
 
@@ -108,6 +108,21 @@ Toàn bộ nhật ký chi tiết: **`.claude/rules/changelog.md`**. Tóm tắt c
 - **Sắp xếp** (xem + in): Sáng→Chiều, rồi theo STT nhóm/lãnh đạo. **Ngày nhập dd/mm/yyyy** (component `DateField`).
 - **In:** sửa khoảng trắng lớn (bỏ `break-inside:avoid`), **lề trên/dưới 2cm**.
 - **Sửa lịch:** nay **sửa được cả danh sách "Lãnh đạo"** (đối chiếu theo group_id, giữ id/xe).
+
+### Bổ sung phiên 15/06 (mới nhất — chi tiết trong changelog)
+- **Xuất PDF một cú bấm** (pdfmake + phông Roboto tiếng Việt nhúng sẵn `src/lib/pdfFonts.js`)
+  cho MỌI tài khoản; **Xuất Word** (.docx) cho 2 email trong `constants.DOCX_EXPORT_EMAILS`;
+  đã bỏ nút "In lịch tuần". Test: `npm run test:pdf` (11–12 ca).
+- **Lọc đơn vị CHỌN NHIỀU** cùng lúc (filters.banIds là mảng); **"Chọn nhanh theo nhóm"
+  chọn NHIỀU nhóm**; thẻ **TTr HĐND tỉnh tô nền xanh** (cả Đầy đủ + Gọn).
+- **Sắp xếp lịch (xem + in + PDF/Word):** LUÔN theo **STT lãnh đạo cao nhất** của sự kiện
+  (`makeEntrySorter` dùng leaderPrio = STT nhỏ nhất trong `_leaderIds`; ĐÃ BỎ thang STT nhóm
+  vì group_label gộp nhiều nhóm gây lệch — vd "Hội nghị giao ban" có Thường trực phải lên đầu).
+- **Người TẠO lịch sửa được lịch ĐÃ DUYỆT:** nút Sửa hiện cả khi da_duyet -> bắt nhập
+  **"Lý do chỉnh sửa"** -> lịch về **chờ duyệt** (lưu cột `edit_note`, xóa thông tin duyệt cũ);
+  EntryDetail/ApprovalQueue hiển thị lý do cho người duyệt. (Người duyệt vẫn dùng "Điều chỉnh".)
+- **Chân trang + Login:** hiện **"Đây là bản Demo thử nghiệm"** + **"Chi tiết xin liên hệ
+  Hà Ngọc Sơn, PCVP Đoàn ĐBQH và HĐND tỉnh"** (constants `DEMO_NOTICE`, `CONTACT_INFO`).
 
 ---
 
