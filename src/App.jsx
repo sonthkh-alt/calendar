@@ -197,6 +197,7 @@ export default function App() {
       return ent ? lbi[ent.leader_id]?.leader_type === 'doan' : false;
     };
     return activity.filter((a) => {
+      if (a.action === 'vehicle') return false; // KHÔNG thông báo việc điều xe
       if (a.actor_id && a.actor_id === profile.id) return false; // không tự báo việc mình làm
       if (profile.role === 'pho_truong_doan') return isDoan(a);
       return true; // pct / quan_tri: mọi thay đổi
