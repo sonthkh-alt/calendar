@@ -7,6 +7,21 @@ import { createEntries, updateEntry, deleteEntry } from '../lib/api';
 import DateField from './DateField';
 import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
 
+// Suy ra các nhóm đã chọn từ chuỗi group_label đã lưu (khi Sửa/Nhân bản).
+// LƯU Ý: tên nhóm có thể CHỨA dấu ";" (vd "Thường trực HĐND tỉnh; lãnh đạo các Ban...")
+// nên KHÔNG thể tách chuỗi bằng ";". Thay vào đó khớp theo TÊN ĐẦY ĐỦ: ưu tiên tên DÀI
+// trước, khớp xong thì bỏ phần đó khỏi chuỗi để tên nhóm con không khớp nhầm lại.
+function reconstructSelectedGroups(label, pGroups) {
+  if (!label) return [];
+  const names = (pGroups || []).map((g) => g.name).filter(Boolean).sort((a, b) => b.length - a.length);
+  const picked = [];
+  let working = label;
+  for (const name of names) {
+    if (working.includes(name)) { picked.push(name); working = working.replace(name, ''); }
+  }
+  return picked;
+}
+
 /**
  * Modal thêm / sửa / nhân bản mục lịch.
  * props:
@@ -49,6 +64,9 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const [participants, setParticipants] = useState(src?.participants || '');
   const [atOffice, setAtOffice] = useState(src?.at_office || false);
   const [groupLabel, setGroupLabel] = useState(src?.group_label || '');
+  // Nguồn sự thật cho ô tick nhóm: danh sách TÊN nhóm đã chọn (không tách từ group_label
+  // vì tên nhóm có thể chứa dấu ";"). groupLabel = các tên này nối "; " để lưu/hiển thị.
+  const [selGroupNames, setSelGroupNames] = useState(() => reconstructSelectedGroups(src?.group_label, pGroups));
   const [adjustNote, setAdjustNote] = useState(''); // ghi chú điều chỉnh (bắt buộc khi isAdjust)
   const [editReason, setEditReason] = useState(''); // lý do chỉnh sửa (bắt buộc khi sửa lịch ĐÃ DUYỆT)
   const [saving, setSaving] = useState(false);
@@ -65,9 +83,9 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     () => (pGroups || []).filter((g) => groupLeaderIds(g, leaders).some((id) => allowedIds.has(id))),
     [pGroups, leaders, allowedIds]
   );
-  // Cho phép chọn NHIỀU nhóm cùng lúc: groupLabel lưu các tên nhóm nối bằng "; ".
-  const selectedGroupNames = groupLabel ? groupLabel.split(';').map((s) => s.trim()).filter(Boolean) : [];
-  const isGroupSelected = (g) => selectedGroupNames.includes(g.name);
+  // Cho phép chọn NHIỀU nhóm cùng lúc. isGroupSelected tra theo state selGroupNames
+  // (không tách group_label) -> tên nhóm chứa ";" vẫn nhận diện đúng.
+  const isGroupSelected = (g) => selGroupNames.includes(g.name);
 
   // Chọn/bỏ nhóm ở trường Lãnh đạo: thêm/bớt các lãnh đạo trong nhóm + nhãn nhóm +
   // ĐIỀN/GỠ THÀNH PHẦN theo danh sách của nhóm (giống tick nhóm ở ô Thành phần).
@@ -75,17 +93,21 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     const ids = groupLeaderIds(g, leaders).filter((id) => allowedIds.has(id));
     if (isGroupSelected(g)) {
       // Bỏ chọn nhóm này -> chỉ gỡ lãnh đạo KHÔNG còn thuộc nhóm khác đang chọn
+      const remaining = selGroupNames.filter((n) => n !== g.name);
       const keepIds = new Set(
         (pGroups || [])
-          .filter((x) => x.name !== g.name && selectedGroupNames.includes(x.name))
+          .filter((x) => remaining.includes(x.name))
           .flatMap((x) => groupLeaderIds(x, leaders))
       );
       setLeaderIds((prev) => prev.filter((id) => !ids.includes(id) || keepIds.has(id)));
-      setGroupLabel(selectedGroupNames.filter((n) => n !== g.name).join('; '));
+      setSelGroupNames(remaining);
+      setGroupLabel(remaining.join('; '));
       removeMembers(g.members);
     } else {
+      const next = [...selGroupNames, g.name];
       setLeaderIds((prev) => [...new Set([...prev, ...ids])]);
-      setGroupLabel([...selectedGroupNames, g.name].join('; '));
+      setSelGroupNames(next);
+      setGroupLabel(next.join('; '));
       addMembers(g.members);
     }
   };
@@ -255,8 +277,8 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
                 <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50/60 overflow-hidden">
                   <button type="button" onClick={() => setGroupOpen((o) => !o)} className="w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left hover:bg-amber-100/60 transition">
                     <span className="text-[12px] font-bold text-amber-800 truncate">
-                      {selectedGroupNames.length
-                        ? `Nhóm đã chọn (${selectedGroupNames.length}): ${selectedGroupNames.slice(0, 2).join('; ')}${selectedGroupNames.length > 2 ? '…' : ''}`
+                      {selGroupNames.length
+                        ? `Nhóm đã chọn (${selGroupNames.length}): ${selGroupNames.slice(0, 2).join('; ')}${selGroupNames.length > 2 ? '…' : ''}`
                         : 'Chọn nhanh theo nhóm'}
                     </span>
                     <ChevronDown className={`w-4 h-4 text-amber-700 shrink-0 transition-transform ${groupOpen ? 'rotate-180' : ''}`} />
