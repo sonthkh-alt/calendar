@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { X, Save, AlertTriangle, CalendarPlus } from 'lucide-react';
+import { X, Save, AlertTriangle, CalendarPlus, ChevronDown } from 'lucide-react';
 import { SESSIONS, COMMON_LOCATIONS, groupLeaderIds } from '../lib/constants';
 // `locations` (prop) là danh sách địa điểm gợi ý quản trị được; rỗng -> mặc định COMMON_LOCATIONS
 import { canCreateFor, initialStatus, canReviewEntry } from '../lib/permissions';
@@ -53,6 +53,9 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const [editReason, setEditReason] = useState(''); // lý do chỉnh sửa (bắt buộc khi sửa lịch ĐÃ DUYỆT)
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  // Thu gọn 2 khối chọn (mặc định đóng cho gọn) — bấm mũi tên để mở danh sách tick
+  const [groupOpen, setGroupOpen] = useState(false);
+  const [leaderOpen, setLeaderOpen] = useState(false);
 
   // Nhóm thành phần -> chọn nhanh ở trường Lãnh đạo. Thành viên của nhóm chính là
   // các lãnh đạo được tick trong "Danh sách thành phần" (suy ra từ members) — đồng
@@ -134,7 +137,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     e.preventDefault();
     if (!content.trim()) { setErr('Vui lòng nhập Nội dung công việc.'); return; }
     if (!atOffice && !location.trim()) { setErr('Vui lòng nhập Địa điểm.'); return; }
-    if (leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); return; }
+    if (leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); setLeaderOpen(true); return; }
     if (isAdjust && !adjustNote.trim()) { setErr('Vui lòng nhập Ghi chú điều chỉnh để Văn phòng và Ban được biết.'); return; }
     if (isReEdit && !editReason.trim()) { setErr('Lịch đã được duyệt — vui lòng nêu Lý do chỉnh sửa (lịch sẽ chờ duyệt lại).'); return; }
     setSaving(true); setErr('');
@@ -242,37 +245,66 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
         </div>
 
         <form onSubmit={submit} className="p-5 space-y-4">
-          {/* Chọn lãnh đạo — hiện cả khi Sửa để cho phép đổi cả danh sách Lãnh đạo */}
+          {/* Chọn lãnh đạo — hiện cả khi Sửa để cho phép đổi cả danh sách Lãnh đạo.
+              Hai khối THU GỌN: bấm mũi tên để mở danh sách tick. */}
           <div>
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Lãnh đạo <span className="text-rose-600">*</span></label>
+
+              {/* Chọn nhanh theo nhóm — thu gọn */}
               {leaderGroups.length > 0 && (
-                <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50/60 p-2.5">
-                  <p className="text-[11px] font-bold text-amber-800 mb-1">Chọn nhanh theo nhóm <span className="font-normal text-amber-700">(có thể chọn nhiều nhóm; lịch ghi theo tên nhóm, trải đủ các đơn vị):</span></p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {leaderGroups.map((g) => (
-                      <label key={g.id} title={`Gồm: ${groupLeaderIds(g, leaders).map((id) => leaderById[id]?.full_name).filter(Boolean).join(', ')}`} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${isGroupSelected(g) ? 'bg-amber-100 border-amber-400 text-amber-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'}`}>
-                        <input type="checkbox" checked={isGroupSelected(g)} onChange={() => toggleLeaderGroup(g)} className="accent-amber-600" />
-                        {g.name}
-                      </label>
-                    ))}
-                  </div>
+                <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50/60 overflow-hidden">
+                  <button type="button" onClick={() => setGroupOpen((o) => !o)} className="w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left hover:bg-amber-100/60 transition">
+                    <span className="text-[12px] font-bold text-amber-800 truncate">
+                      {selectedGroupNames.length
+                        ? `Nhóm đã chọn (${selectedGroupNames.length}): ${selectedGroupNames.slice(0, 2).join('; ')}${selectedGroupNames.length > 2 ? '…' : ''}`
+                        : 'Chọn nhanh theo nhóm'}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-amber-700 shrink-0 transition-transform ${groupOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {groupOpen && (
+                    <div className="px-2.5 pb-2.5">
+                      <p className="text-[11px] text-amber-700 mb-1.5">Có thể chọn nhiều nhóm; lịch ghi theo tên nhóm, trải đủ các đơn vị.</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {leaderGroups.map((g) => (
+                          <label key={g.id} title={`Gồm: ${groupLeaderIds(g, leaders).map((id) => leaderById[id]?.full_name).filter(Boolean).join(', ')}`} className={`flex items-center gap-1.5 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${isGroupSelected(g) ? 'bg-amber-100 border-amber-400 text-amber-900 font-semibold' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'}`}>
+                            <input type="checkbox" checked={isGroupSelected(g)} onChange={() => toggleLeaderGroup(g)} className="accent-amber-600" />
+                            {g.name}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-              <div className="mt-1.5 space-y-2 max-h-44 overflow-y-auto border border-slate-200 rounded-lg p-2.5 bg-slate-50/50">
-                {groups.length === 0 && <p className="text-[13px] text-slate-500">Bạn chưa được phân quyền nhập lịch cho lãnh đạo nào.</p>}
-                {groups.map((g) => (
-                  <div key={g.label}>
-                    <p className="text-[11px] font-bold text-red-800 mb-1">{g.label}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                      {g.items.map((l) => (
-                        <label key={l.id} className={`flex items-center gap-2 text-[13px] rounded-lg px-2 py-1.5 cursor-pointer border transition ${leaderIds.includes(l.id) ? 'bg-red-50 border-red-300 text-red-900 font-semibold' : 'bg-white border-slate-200 text-slate-700 hover:border-red-200'}`}>
-                          <input type="checkbox" checked={leaderIds.includes(l.id)} onChange={() => toggleLeader(l.id)} className="accent-red-700" />
-                          <span>{l.full_name}{l.position ? <span className="text-slate-400 font-normal"> · {l.position}</span> : null}</span>
-                        </label>
-                      ))}
-                    </div>
+
+              {/* Danh sách lãnh đạo — thu gọn */}
+              <div className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50/50 overflow-hidden">
+                <button type="button" onClick={() => setLeaderOpen((o) => !o)} className="w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left hover:bg-slate-100/70 transition">
+                  <span className={`text-[12px] font-semibold truncate ${leaderIds.length ? 'text-slate-700' : 'text-slate-400'}`}>
+                    {leaderIds.length
+                      ? `Đã chọn ${leaderIds.length}: ${leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean).slice(0, 3).join(', ')}${leaderIds.length > 3 ? '…' : ''}`
+                      : 'Nhấn để chọn lãnh đạo…'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${leaderOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {leaderOpen && (
+                  <div className="px-2.5 pb-2.5 space-y-2 max-h-44 overflow-y-auto">
+                    {groups.length === 0 && <p className="text-[13px] text-slate-500">Bạn chưa được phân quyền nhập lịch cho lãnh đạo nào.</p>}
+                    {groups.map((g) => (
+                      <div key={g.label}>
+                        <p className="text-[11px] font-bold text-red-800 mb-1">{g.label}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                          {g.items.map((l) => (
+                            <label key={l.id} className={`flex items-center gap-2 text-[13px] rounded-lg px-2 py-1.5 cursor-pointer border transition ${leaderIds.includes(l.id) ? 'bg-red-50 border-red-300 text-red-900 font-semibold' : 'bg-white border-slate-200 text-slate-700 hover:border-red-200'}`}>
+                              <input type="checkbox" checked={leaderIds.includes(l.id)} onChange={() => toggleLeader(l.id)} className="accent-red-700" />
+                              <span>{l.full_name}{l.position ? <span className="text-slate-400 font-normal"> · {l.position}</span> : null}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             </div>
 

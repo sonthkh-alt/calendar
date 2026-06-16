@@ -1,5 +1,27 @@
 # Nhật ký dự án
 
+## 2026-06-16 — Chuông THÔNG BÁO cho người duyệt + thu gọn chọn Lãnh đạo
+- **#1 Thông báo:** chuông trên header (chỉ người duyệt: pct/quan_tri/pho_truong_doan).
+  Nguồn = bảng activity_log có sẵn (trigger ghi mọi tạo/duyệt/sửa/điều xe/xóa).
+  - src/lib/notifications.js: mốc "đã xem" lưu localStorage theo user (getNotifSeen/
+    setNotifSeen); requestNotifyPermission + showOsNotification (ưu tiên SW
+    registration.showNotification -> hiện cả khi tab nền; fallback new Notification).
+  - src/components/NotificationBell.jsx: huy hiệu đếm mục có at > mốc đã xem; bấm chuông
+    -> đặt mốc = now -> huy hiệu biến mất. Panel liệt kê 50 mục gần nhất (badge "mới").
+    Nút "Bật thông báo trên thiết bị" khi chưa cấp quyền. Mục mới đến (qua realtime) ->
+    bắn OS notification (gom nhiều mục thành 1).
+  - App.jsx: state activity + loadActivity(80) (chỉ nạp khi canReview); realtime
+    bumpEntries nạp lại cả activity; relevantActivity lọc bỏ thao tác của chính mình,
+    pho_truong_doan chỉ nhận lịch Đoàn (tra leader_type qua entry/group). Đặt chuông
+    sau DeviceSelect (hiện cả PC lẫn mobile).
+  - public/sw.js: + notificationclick (focus/mở app); CACHE v5 -> v6.
+  - GIỚI HẠN: OS notification chỉ chạy khi TRÌNH DUYỆT CÒN MỞ (kể cả tab nền). Thông báo
+    khi đã ĐÓNG HẲN trình duyệt cần Web Push + máy chủ đẩy (VAPID) — chưa triển khai.
+- **#2 Thu gọn chọn Lãnh đạo:** ScheduleForm — "Chọn nhanh theo nhóm" và danh sách
+  "Lãnh đạo" thành 2 khối THU GỌN (mặc định đóng), bấm mũi tên (ChevronDown) để mở danh
+  sách tick. Header hiện tóm tắt đã chọn (số lượng + vài tên đầu). Lưu khi chưa chọn
+  lãnh đạo -> tự mở danh sách. groupOpen/leaderOpen state.
+
 ## 2026-06-15 — Icon PWA cho iOS (cài "Thêm vào màn hình chính" hiển thị quốc huy)
 - iOS KHÔNG render SVG cho apple-touch-icon -> trước đây icon trên màn hình chính bị
   trắng/ảnh chụp trang. Bổ sung icon PNG nền trắng đục (chuẩn Apple).

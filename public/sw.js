@@ -5,7 +5,7 @@
  * - Dữ liệu lịch (Supabase REST GET): network-first, mất mạng -> bản đã lưu gần nhất
  *   (xem lịch offline). Không đụng tới ghi dữ liệu (POST/PATCH/DELETE) và realtime (WebSocket).
  */
-const CACHE = 'lichcongtac-v5';
+const CACHE = 'lichcongtac-v6';
 const APP_SHELL = ['/', '/index.html', '/quoc-huy.svg', '/manifest.webmanifest', '/apple-touch-icon.png', '/icon-192-v2.png', '/icon-512-v2.png'];
 
 self.addEventListener('install', (e) => {
@@ -19,6 +19,18 @@ self.addEventListener('activate', (e) => {
     caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+  );
+});
+
+// Bấm vào thông báo (icon ngoài màn hình) -> focus cửa sổ app đang mở, hoặc mở mới
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) { if ('focus' in c) return c.focus(); }
+      if (self.clients.openWindow) return self.clients.openWindow('/');
+      return undefined;
+    })
   );
 });
 

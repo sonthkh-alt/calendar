@@ -7,7 +7,7 @@ import Login from './Login';
 import SetPassword from './SetPassword';
 import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
-import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, deleteEntry, deleteEntries } from './lib/api';
+import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, fetchActivityLog, deleteEntry, deleteEntries } from './lib/api';
 import { weekStart, parseISO, toISODate } from './lib/dates';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO } from './lib/constants';
 import { canReview, canReviewEntry, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
@@ -27,6 +27,7 @@ import AdminLocations from './components/AdminLocations';
 import ScheduleForm from './components/ScheduleForm';
 import EntryDetail from './components/EntryDetail';
 import DeviceSelect from './components/DeviceSelect';
+import NotificationBell from './components/NotificationBell';
 
 export default function App() {
   // ===== Phiên đăng nhập =====
@@ -67,6 +68,7 @@ export default function App() {
   const [pLocations, setPLocations] = useState([]);
   const [pProfiles, setPProfiles] = useState([]); // hồ sơ tài khoản (để hiện người phê duyệt)
   const [entries, setEntries] = useState([]);
+  const [activity, setActivity] = useState([]); // nhật ký thao tác (nguồn thông báo cho người duyệt)
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -126,15 +128,24 @@ export default function App() {
     setLoading(false);
   }, [range]);
 
+  // Nhật ký thao tác -> nguồn thông báo. Chỉ người PHÊ DUYỆT mới cần (đỡ truy vấn thừa).
+  const loadActivity = useCallback(async () => {
+    if (!canReview(profile)) { setActivity([]); return; }
+    const { data } = await fetchActivityLog(80);
+    setActivity(data || []);
+  }, [profile]);
+
   useEffect(() => { if (session && profile) loadCatalogs(); }, [session, profile, loadCatalogs]);
   useEffect(() => { if (session && profile) loadEntries(); }, [session, profile, loadEntries]);
+  useEffect(() => { if (session && profile) loadActivity(); }, [session, profile, loadActivity]);
 
   // Realtime: tự cập nhật khi NGƯỜI KHÁC thay đổi lịch / danh mục (không cần tải lại trang).
   // Gom sự kiện trong 400ms để 1 thao tác nhiều dòng (vd tạo cả nhóm) chỉ refetch 1 lần.
   useEffect(() => {
     if (!supabase || !session || !profile) return undefined;
     let tE, tC;
-    const bumpEntries = () => { clearTimeout(tE); tE = setTimeout(() => loadEntries(), 400); };
+    // Lịch đổi -> nạp lại cả entries lẫn nhật ký (để chuông thông báo cập nhật ngay)
+    const bumpEntries = () => { clearTimeout(tE); tE = setTimeout(() => { loadEntries(); loadActivity(); }, 400); };
     const bumpCatalogs = () => { clearTimeout(tC); tC = setTimeout(() => loadCatalogs(), 400); };
     const ch = supabase
       .channel('rt-lichcongtac')
@@ -145,7 +156,7 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'locations' }, bumpCatalogs)
       .subscribe();
     return () => { clearTimeout(tE); clearTimeout(tC); supabase.removeChannel(ch); };
-  }, [session, profile, loadEntries, loadCatalogs]);
+  }, [session, profile, loadEntries, loadCatalogs, loadActivity]);
 
   const refresh = useCallback(() => { loadEntries(); }, [loadEntries]);
 
@@ -174,6 +185,23 @@ export default function App() {
     const lbi = Object.fromEntries(leaders.map((l) => [l.id, l]));
     return entries.filter((e) => e.status === 'cho_duyet' && canReviewEntry(profile, e, lbi[e.leader_id])).length;
   }, [entries, leaders, profile]);
+
+  // Thông báo liên quan tới người phê duyệt: bỏ thao tác do CHÍNH MÌNH thực hiện;
+  // Phó Trưởng Đoàn chỉ nhận thông báo lịch Đoàn ĐBQH (tra leader_type qua entry/group).
+  const relevantActivity = useMemo(() => {
+    if (!canReview(profile)) return [];
+    const lbi = Object.fromEntries(leaders.map((l) => [l.id, l]));
+    const entById = Object.fromEntries(entries.map((e) => [e.id, e]));
+    const isDoan = (a) => {
+      const ent = entById[a.entry_id] || (a.group_id ? entries.find((e) => e.group_id === a.group_id) : null);
+      return ent ? lbi[ent.leader_id]?.leader_type === 'doan' : false;
+    };
+    return activity.filter((a) => {
+      if (a.actor_id && a.actor_id === profile.id) return false; // không tự báo việc mình làm
+      if (profile.role === 'pho_truong_doan') return isDoan(a);
+      return true; // pct / quan_tri: mọi thay đổi
+    });
+  }, [activity, entries, leaders, profile]);
 
   // CẢNH BÁO TRÙNG ĐỊA ĐIỂM: >= 2 nhóm/đoàn KHÁC NHAU tới CÙNG một địa điểm là
   // XÃ / PHƯỜNG / THỊ TRẤN (các địa điểm khác KHÔNG cảnh báo; bỏ qua danh mục
@@ -286,6 +314,9 @@ export default function App() {
             <p className="text-[12px] text-red-100/90 truncate">{UNIT_NAME}</p>
           </div>
           <div className="shrink-0"><DeviceSelect value={deviceMode} onChange={setDeviceMode} /></div>
+          {canReview(profile) && (
+            <div className="shrink-0"><NotificationBell profile={profile} items={relevantActivity} /></div>
+          )}
           <div className="hidden sm:flex items-center gap-2 shrink-0">
             <div className="text-right">
               <p className="text-[13px] font-bold leading-tight">{profile.full_name || profile.email}</p>
