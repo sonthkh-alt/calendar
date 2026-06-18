@@ -64,7 +64,7 @@ export default function Login({ onClose }) {
   const inputWrap = `flex items-center gap-2 bg-white/80 border border-slate-200 rounded-xl px-3 focus-within:ring-2 transition ${t.inputFocus}`;
 
   return (
-    <div className={`${isModal ? 'fixed inset-0 z-[60]' : 'min-h-screen'} relative overflow-hidden flex items-center justify-center px-4 py-6`} style={{ fontFamily: "'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif" }}>
+    <div className={`${isModal ? 'fixed inset-0 z-[60] overflow-x-hidden overflow-y-auto' : 'min-h-screen relative overflow-hidden'} flex items-center justify-center px-4 py-6`} style={{ fontFamily: "'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif" }}>
       <div className={`absolute inset-0 ${t.bg}`} />
       {t.gridCls && <div className={`absolute inset-0 ${t.gridCls} opacity-60`} />}
       <div className={`absolute -top-24 right-0 w-96 h-96 rounded-full ${t.blob1} blur-3xl`} />
