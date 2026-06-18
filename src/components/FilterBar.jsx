@@ -30,8 +30,8 @@ export default function FilterBar({ view, anchor, onAnchor, bans, leaders, truon
   const unitOptions = [
     { key: 'grp:pct', label: UNIT_GROUP_FILTERS[0].label },
     { key: 'grp:doan', label: UNIT_GROUP_FILTERS[1].label },
-    ...(bans || []).map((b) => ({ key: b.id, label: b.name })),
     ...((truongBanIds && truongBanIds.size) ? [{ key: TRUONG_BAN_FILTER_KEY, label: TRUONG_BAN_GROUP_NAME }] : []),
+    ...(bans || []).map((b) => ({ key: b.id, label: b.name })),
     { key: 'grp:vanphong', label: UNIT_GROUP_FILTERS[2].label },
   ];
   const toggleUnit = (key) => {
