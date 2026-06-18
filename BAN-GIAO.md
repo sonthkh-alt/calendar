@@ -4,8 +4,25 @@
 > Mở thư mục dự án bằng Claude Code rồi bảo: *"đọc BAN-GIAO.md và tiếp tục"*.
 > (CLAUDE.md đã tự nạp mỗi phiên; file này bổ sung phần "khôi phục môi trường".)
 
-Cập nhật lần cuối: 15/06/2026 — commit mới nhất trên `main`: **Ghi chú "bản Demo thử nghiệm" + liên hệ ở footer & Login** (`24ad4dc`).
+Cập nhật lần cuối: 16/06/2026 — commit mới nhất trên `main`: **Đếm lượt truy cập + thống kê khách** (`d890ea6`).
 Toàn bộ đã `git push` lên `main`, cây làm việc **sạch**, đồng bộ `origin/main`. Mở máy là `git pull` rồi làm tiếp.
+
+### Bổ sung phiên 16/06 (mới nhất → cũ)
+- **Đếm lượt truy cập:** badge "N lượt truy cập" cố định góc dưới phải (ai cũng thấy, kể cả
+  khách). Nguồn = bảng `login_log` (giờ ghi cả tài khoản khách). Đếm theo phiên/tab.
+- **Quản trị → "Đăng nhập":** 3 thẻ thống kê (Tổng lượt / Khách chỉ xem / Tài khoản thật);
+  bảng chi tiết loại tài khoản khách cho gọn. (Bảng `login_log` tạo qua migration
+  `2026-06-16-login-log.sql` — tự chạy qua Actions; KHÔNG cần migration mới cho việc đếm.)
+- **Bộ lọc đơn vị thêm "Trưởng các Ban HĐND tỉnh"** (đặt ngay sau "Đoàn ĐBQH tỉnh") — lọc
+  riêng lịch các đ/c Trưởng Ban; thành viên lấy từ nhóm thành phần cùng tên (admin tự quản lý).
+- **Bấm thông báo → mở chi tiết lịch** (NotificationBell); mục "Xóa lịch" vô hiệu.
+- **Vào thẳng trang chủ chế độ KHÁCH (chỉ xem)** — không bắt đăng nhập trước; nút "Đăng nhập"
+  góc trên phải mở modal; đăng xuất → quay lại chế độ khách. (Cần tài khoản khách
+  `user@thanhhoa.gov.vn`/`password` tồn tại trên Supabase — xem mục 3.)
+- **Chuông THÔNG BÁO** cho người duyệt (tạo/sửa/điều chỉnh/duyệt/xóa; BỎ điều xe); bấm chuông
+  xóa huy hiệu; bắn thông báo OS khi trình duyệt còn mở (đóng hẳn cần Web Push — chưa làm).
+- **ScheduleForm:** "Chọn nhanh theo nhóm" + "Lãnh đạo" thu gọn (bấm mũi tên mở); sửa lỗi tick
+  nhóm sai khi tên nhóm chứa dấu ";" (theo dõi bằng state selGroupNames, không tách group_label).
 
 ---
 
