@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, LogIn, CheckCircle2, AlertTriangle, Lock, KeyRound, Eye } from 'lucide-react';
+import { Mail, LogIn, CheckCircle2, AlertTriangle, Lock, KeyRound, Eye, X } from 'lucide-react';
 import { signInWithOtp, signInWithPassword, GUEST } from './lib/auth';
 import { APP_NAME, UNIT_NAME, DEMO_NOTICE, CONTACT_INFO } from './lib/constants';
 
@@ -16,10 +16,13 @@ const t = {
   foot: 'text-red-100/70',
 };
 
-export default function Login() {
+// onClose (tùy chọn): khi có -> hiển thị dạng MODAL (đang ở chế độ khách, bấm nút Đăng
+// nhập trên trang chủ). Không có -> màn đăng nhập đầy đủ (dự phòng khi chưa có phiên khách).
+export default function Login({ onClose }) {
+  const isModal = !!onClose;
   const [mode, setMode] = useState('password'); // password | link
-  const [email, setEmail] = useState(GUEST.email);
-  const [password, setPassword] = useState(GUEST.password);
+  const [email, setEmail] = useState(isModal ? '' : GUEST.email);
+  const [password, setPassword] = useState(isModal ? '' : GUEST.password);
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
   const [msg, setMsg] = useState('');
 
@@ -61,11 +64,17 @@ export default function Login() {
   const inputWrap = `flex items-center gap-2 bg-white/80 border border-slate-200 rounded-xl px-3 focus-within:ring-2 transition ${t.inputFocus}`;
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4" style={{ fontFamily: "'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif" }}>
+    <div className={`${isModal ? 'fixed inset-0 z-[60]' : 'min-h-screen'} relative overflow-hidden flex items-center justify-center px-4 py-6`} style={{ fontFamily: "'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif" }}>
       <div className={`absolute inset-0 ${t.bg}`} />
       {t.gridCls && <div className={`absolute inset-0 ${t.gridCls} opacity-60`} />}
       <div className={`absolute -top-24 right-0 w-96 h-96 rounded-full ${t.blob1} blur-3xl`} />
       <div className={`absolute -bottom-32 -left-16 w-96 h-96 rounded-full ${t.blob2} blur-3xl`} />
+
+      {isModal && (
+        <button onClick={onClose} title="Đóng" className="absolute top-4 right-4 z-10 p-2 rounded-lg bg-white/15 hover:bg-white/25 text-white transition">
+          <X className="w-5 h-5" />
+        </button>
+      )}
 
       <div className="relative w-full max-w-md animate-fadeUp">
         <div className="text-center mb-6">
@@ -122,13 +131,17 @@ export default function Login() {
               {status === 'error' && (
                 <p className="text-xs text-rose-600 flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /> {msg}</p>
               )}
-              <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3">
-                <p className="text-[12px] font-bold text-amber-800 flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" /> Tài khoản khách (chỉ xem)</p>
-                <p className="text-[12px] text-amber-800/90 mt-1">Email: <b>{GUEST.email}</b> · Mật khẩu: <b>{GUEST.password}</b></p>
-                <button type="button" onClick={guestLogin} disabled={status === 'sending'} className="mt-2 w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-[13px] font-semibold py-2 rounded-lg transition">
-                  <Eye className="w-3.5 h-3.5" /> Vào xem ngay (chỉ xem)
-                </button>
-              </div>
+              {/* Ô tài khoản khách — chỉ hiện ở màn đăng nhập đầy đủ (không hiện trong modal
+                  vì đang ở chế độ khách rồi). */}
+              {!isModal && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3">
+                  <p className="text-[12px] font-bold text-amber-800 flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" /> Tài khoản khách (chỉ xem)</p>
+                  <p className="text-[12px] text-amber-800/90 mt-1">Email: <b>{GUEST.email}</b> · Mật khẩu: <b>{GUEST.password}</b></p>
+                  <button type="button" onClick={guestLogin} disabled={status === 'sending'} className="mt-2 w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-[13px] font-semibold py-2 rounded-lg transition">
+                    <Eye className="w-3.5 h-3.5" /> Vào xem ngay (chỉ xem)
+                  </button>
+                </div>
+              )}
               <button type="submit" disabled={status === 'sending'} className={`w-full flex items-center justify-center gap-2 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl shadow-lg transition ${t.btn}`}>
                 <LogIn className="w-4 h-4" /> {status === 'sending' ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </button>

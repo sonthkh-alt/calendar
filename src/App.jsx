@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarRange, CalendarDays, CalendarClock, ClipboardCheck, Car, Settings,
-  LogOut, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin,
+  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin,
 } from 'lucide-react';
 import Login from './Login';
 import SetPassword from './SetPassword';
 import { supabase } from './lib/supabase';
-import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail } from './lib/auth';
+import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail, signInWithPassword, GUEST } from './lib/auth';
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, fetchActivityLog, deleteEntry, deleteEntries } from './lib/api';
 import { weekStart, parseISO, toISODate } from './lib/dates';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO } from './lib/constants';
@@ -35,16 +35,28 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [showChangePw, setShowChangePw] = useState(false);
+  const [showLogin, setShowLogin] = useState(false); // modal đăng nhập (khi đang là khách)
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const s = await getSession();
+      let s = await getSession();
+      // Chưa đăng nhập -> TỰ ĐĂNG NHẬP KHÁCH (chỉ xem) để vào thẳng trang chủ.
+      // Nếu tài khoản khách chưa được tạo trên máy chủ -> để session null (hiện màn Login dự phòng).
+      if (!s && supabase) {
+        const { error } = await signInWithPassword(GUEST.email, GUEST.password);
+        if (!error) s = await getSession();
+      }
       if (mounted) { setSession(s); setBooting(false); }
     })();
     const off = onAuthChange((s) => setSession(s));
     return () => { mounted = false; off(); };
   }, []);
+
+  // Đăng nhập thành công bằng tài khoản thật -> tự đóng modal đăng nhập
+  useEffect(() => {
+    if (showLogin && session && !isGuestEmail(session.user?.email)) setShowLogin(false);
+  }, [showLogin, session]);
 
   useEffect(() => {
     if (!session) { setProfile(null); return; }
@@ -159,6 +171,16 @@ export default function App() {
   }, [session, profile, loadEntries, loadCatalogs, loadActivity]);
 
   const refresh = useCallback(() => { loadEntries(); }, [loadEntries]);
+
+  // Đăng xuất tài khoản thật -> quay lại chế độ KHÁCH (vào thẳng trang chủ chỉ xem),
+  // không rơi về màn đăng nhập.
+  const handleSignOut = useCallback(async () => {
+    await signOut();
+    if (supabase) {
+      const { error } = await signInWithPassword(GUEST.email, GUEST.password);
+      if (!error) setSession(await getSession());
+    }
+  }, []);
 
   const onAdd = (pf) => { setEditing(null); setDuplicating(null); setAdjusting(null); setPrefill(pf || null); setFormOpen(true); };
   const onEdit = (entry) => { setEditing(entry); setDuplicating(null); setAdjusting(null); setPrefill(null); setFormOpen(true); };
@@ -318,17 +340,24 @@ export default function App() {
           {canReview(profile) && (
             <div className="shrink-0"><NotificationBell profile={profile} items={relevantActivity} /></div>
           )}
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
-            <div className="text-right">
-              <p className="text-[13px] font-bold leading-tight">{profile.full_name || profile.email}</p>
-              <p className="text-[11px] text-amber-200">{ROLES[profile.role]}</p>
-            </div>
-            {!isGuestEmail(profile.email) && (
-              <button onClick={() => setShowChangePw(true)} title="Đổi mật khẩu" className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition"><KeyRound className="w-4 h-4" /></button>
-            )}
-            <button onClick={signOut} title="Đăng xuất" className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition"><LogOut className="w-4 h-4" /></button>
-          </div>
-          <button onClick={signOut} className="sm:hidden p-2 rounded-lg bg-white/10"><LogOut className="w-4 h-4" /></button>
+          {isGuestEmail(profile.email) ? (
+            // Chế độ KHÁCH (chỉ xem): nút Đăng nhập ở góc trên bên phải (mở modal)
+            <button onClick={() => setShowLogin(true)} title="Đăng nhập" className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/15 hover:bg-white/25 transition text-[13px] font-semibold">
+              <LogIn className="w-4 h-4" /> <span className="hidden sm:inline">Đăng nhập</span>
+            </button>
+          ) : (
+            <>
+              <div className="hidden sm:flex items-center gap-2 shrink-0">
+                <div className="text-right">
+                  <p className="text-[13px] font-bold leading-tight">{profile.full_name || profile.email}</p>
+                  <p className="text-[11px] text-amber-200">{ROLES[profile.role]}</p>
+                </div>
+                <button onClick={() => setShowChangePw(true)} title="Đổi mật khẩu" className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition"><KeyRound className="w-4 h-4" /></button>
+                <button onClick={handleSignOut} title="Đăng xuất" className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition"><LogOut className="w-4 h-4" /></button>
+              </div>
+              <button onClick={handleSignOut} className="sm:hidden p-2 rounded-lg bg-white/10"><LogOut className="w-4 h-4" /></button>
+            </>
+          )}
         </div>
 
         {/* Tabs */}
@@ -445,6 +474,7 @@ export default function App() {
         />
       )}
       {showChangePw && <SetPassword mode="change" onClose={() => setShowChangePw(false)} onDone={() => setTimeout(() => setShowChangePw(false), 1200)} />}
+      {showLogin && <Login onClose={() => setShowLogin(false)} />}
     </div>
   );
 }

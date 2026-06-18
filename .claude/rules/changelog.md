@@ -1,5 +1,18 @@
 # Nhật ký dự án
 
+## 2026-06-16 — Vào thẳng trang chủ (chế độ KHÁCH), đăng nhập qua nút góc phải
+- Yêu cầu: không bắt đăng nhập trước; mặc định vào trang chủ CHỈ XEM; cần đăng nhập thì
+  bấm nút ở góc trên bên phải.
+- App.jsx: boot — chưa có phiên -> TỰ signInWithPassword(GUEST) để vào thẳng trang chủ;
+  nếu lỗi (chưa tạo tài khoản khách) -> session null -> hiện màn Login đầy đủ (dự phòng).
+  - state showLogin (modal); header: nếu isGuestEmail -> nút "Đăng nhập" (LogIn) góc phải
+    mở modal; nếu tài khoản thật -> giữ thông tin user + đổi mật khẩu + đăng xuất.
+  - handleSignOut: đăng xuất tài khoản thật -> tự đăng nhập KHÁCH lại (quay về trang chủ
+    chỉ xem, không rơi về màn login). Effect: đăng nhập thật thành công -> đóng modal.
+- Login.jsx: prop onClose -> chế độ MODAL (fixed inset-0 z-[60] + nút X đóng); email/mật
+  khẩu mặc định rỗng (thay vì điền sẵn khách); ẩn ô "Tài khoản khách" trong modal. Không
+  có onClose -> màn đăng nhập đầy đủ như cũ.
+
 ## 2026-06-16 — Chuông THÔNG BÁO cho người duyệt + thu gọn chọn Lãnh đạo
 - **#1 Thông báo:** chuông trên header (chỉ người duyệt: pct/quan_tri/pho_truong_doan).
   Nguồn = bảng activity_log có sẵn (trigger ghi mọi tạo/duyệt/sửa/điều xe/xóa).
