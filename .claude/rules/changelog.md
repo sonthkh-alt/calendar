@@ -1,5 +1,18 @@
 # Nhật ký dự án
 
+## 2026-06-16 — Bộ lọc đơn vị thêm "Trưởng các Ban HĐND tỉnh"
+- Thêm 1 lựa chọn trong dropdown "Tất cả đơn vị": lọc riêng lịch của các đ/c Trưởng Ban.
+- Nguồn thành viên = nhóm thành phần cùng tên "Trưởng các Ban HĐND tỉnh" (groupLeaderIds)
+  -> admin tự quản lý danh sách qua tab Nhóm thành phần. Chỉ hiện tùy chọn khi nhóm có TV.
+- constants: TRUONG_BAN_GROUP_NAME, TRUONG_BAN_FILTER_KEY ('grp:truong_ban'),
+  truongBanLeaderIds(groups,leaders); leaderInUnit/leaderInUnits nhận thêm ctx
+  {truongBanIds} -> khóa 'grp:truong_ban' khớp leader.id thuộc tập đó.
+- App: truongBanIds = useMemo(truongBanLeaderIds(pGroups, leaders)); truyền xuống
+  FilterBar (cả 2 chỗ) + WeekView/MonthView/DayView.
+- FilterBar: thêm tùy chọn (sau 4 Ban, trước Văn phòng); leaderInUnits truyền unitCtx.
+- WeekView.units: wantTruongBan -> hiện các cột Ban nhưng chỉ giữ lãnh đạo là Trưởng Ban
+  (Ban được chọn riêng vẫn hiện đầy đủ). Month/Day lọc qua leaderInUnits + ctx.
+
 ## 2026-06-16 — Bấm thông báo xem chi tiết lịch + Nhật ký ĐĂNG NHẬP (Quản trị)
 - **#1 Bấm thông báo -> chi tiết lịch:** NotificationBell mỗi mục thành nút bấm (trừ mục
   'delete' — lịch đã xóa, vô hiệu). Bấm -> onSelect(a) + đóng panel. App.onOpenActivity

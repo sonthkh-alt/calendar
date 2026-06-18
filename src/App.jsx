@@ -9,7 +9,7 @@ import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail, signInWithPassword, GUEST } from './lib/auth';
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, fetchActivityLog, recordLogin, deleteEntry, deleteEntries } from './lib/api';
 import { weekStart, parseISO, toISODate } from './lib/dates';
-import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO } from './lib/constants';
+import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO, truongBanLeaderIds } from './lib/constants';
 import { canReview, canReviewEntry, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
 import FilterBar from './components/FilterBar';
 import WeekView from './components/WeekView';
@@ -139,6 +139,9 @@ export default function App() {
     () => Object.fromEntries((pProfiles || []).map((p) => [p.id, p])),
     [pProfiles]
   );
+
+  // Tập leader id của nhóm "Trưởng các Ban HĐND tỉnh" -> phục vụ bộ lọc cùng tên
+  const truongBanIds = useMemo(() => truongBanLeaderIds(pGroups, leaders), [pGroups, leaders]);
 
   // Tên địa điểm gợi ý (dùng cho ô gợi ý + bỏ qua cảnh báo trùng); rỗng -> mặc định
   const locationNames = useMemo(
@@ -403,22 +406,22 @@ export default function App() {
         ? 'max-w-[430px] mx-auto my-5 px-3 py-4 bg-slate-50 rounded-[28px] shadow-2xl ring-[6px] ring-slate-800/85'
         : 'max-w-[1400px] mx-auto px-4 py-4'}>
         {['week', 'month', 'day'].includes(tab) && (
-          <FilterBar view={tab} anchor={anchor} onAnchor={setAnchor} bans={bans} leaders={leaders} filters={filters} onFilters={setFilters} />
+          <FilterBar view={tab} anchor={anchor} onAnchor={setAnchor} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} />
         )}
         {['approve', 'vehicles'].includes(tab) && (
-          <FilterBar view="week" anchor={anchor} onAnchor={setAnchor} bans={bans} leaders={leaders} filters={filters} onFilters={setFilters} />
+          <FilterBar view="week" anchor={anchor} onAnchor={setAnchor} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} />
         )}
 
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
 
         {tab === 'week' && (
-          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} filters={filters} dupMap={dupMap} isMobile={isMobile} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} onChanged={refresh} />
+          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} truongBanIds={truongBanIds} filters={filters} dupMap={dupMap} isMobile={isMobile} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} onChanged={refresh} />
         )}
         {tab === 'month' && (
-          <MonthView profile={profile} anchor={anchor} entries={entries} leaders={leaders} filters={filters} onPickDay={(d) => { setAnchor(d); setTab('day'); }} />
+          <MonthView profile={profile} anchor={anchor} entries={entries} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onPickDay={(d) => { setAnchor(d); setTab('day'); }} />
         )}
         {tab === 'day' && (
-          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} filters={filters} dupMap={dupMap} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} onChanged={refresh} />
+          <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} truongBanIds={truongBanIds} filters={filters} dupMap={dupMap} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} onChanged={refresh} />
         )}
         {tab === 'approve' && canReview(profile) && (
           <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupMap={dupMap} onChanged={refresh} />

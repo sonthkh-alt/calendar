@@ -15,7 +15,7 @@ import { exportWeekDocx, exportWeekPdf } from '../lib/exporters';
  * - Chế độ "Đầy đủ": bảng ngày × (Sáng/Chiều) × cột đơn vị.
  * - Chế độ "Gọn": mỗi ngày 1 khối (hợp mobile).
  */
-export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
+export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, truongBanIds, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
   const [mode, setMode] = useState('compact'); // full | compact — mặc định "Gọn"
   const [exporting, setExporting] = useState(false);   // đang xuất Word
   const [exportingPdf, setExportingPdf] = useState(false); // đang xuất PDF
@@ -39,8 +39,11 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     const active = (leaders || []).filter((l) => l.active);
     const pick = (ls) => (filters.leaderId ? ls.filter((l) => l.id === filters.leaderId) : ls);
     const bids = filters.banIds || [];
+    const tbIds = truongBanIds || new Set();
     // hiện nhóm cột leader_type khi: KHÔNG lọc đơn vị, hoặc đơn vị được chọn có nhóm đó
     const wantGroup = (t) => bids.length === 0 || bids.includes('grp:' + t);
+    // Lọc "Trưởng các Ban": hiện các cột Ban nhưng CHỈ giữ lịch của các đ/c Trưởng Ban
+    const wantTruongBan = bids.includes('grp:truong_ban');
     const out = [];
 
     if (wantGroup('pct')) {
@@ -52,8 +55,13 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
       if (doan.length) out.push({ key: 'doan', label: DOAN_GROUP_LABEL, leaderIds: doan.map((l) => l.id) });
     }
     for (const b of bans || []) {
-      if (bids.length && !bids.includes(b.id)) continue;
-      const ls = pick(active.filter((l) => l.ban_id === b.id));
+      const explicit = bids.includes(b.id);
+      // hiện cột Ban khi: không lọc; Ban này được chọn; hoặc đang lọc "Trưởng các Ban"
+      if (bids.length && !explicit && !wantTruongBan) continue;
+      let ls = active.filter((l) => l.ban_id === b.id);
+      // lọc Trưởng các Ban mà Ban này KHÔNG được chọn riêng -> chỉ giữ các đ/c Trưởng Ban
+      if (wantTruongBan && !explicit) ls = ls.filter((l) => tbIds.has(l.id));
+      ls = pick(ls);
       if (ls.length) out.push({ key: b.id, label: b.name, leaderIds: ls.map((l) => l.id) });
     }
     if (wantGroup('vanphong')) {
@@ -61,7 +69,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
       if (vp.length) out.push({ key: 'vp', label: 'Lãnh đạo Văn phòng', leaderIds: vp.map((l) => l.id) });
     }
     return out;
-  }, [leaders, bans, filters.banIds, filters.leaderId]);
+  }, [leaders, bans, truongBanIds, filters.banIds, filters.leaderId]);
 
   const visible = useMemo(
     () => (entries || []).filter((e) => {

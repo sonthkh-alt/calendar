@@ -9,7 +9,7 @@ const DOW = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', '
  * Lưới tháng: mỗi ô đếm số mục + chấm màu trạng thái; click ngày -> chuyển DayView.
  * props: profile, anchor, entries, leaders, filters, onPickDay(date)
  */
-export default function MonthView({ profile, anchor, entries, leaders, filters, onPickDay }) {
+export default function MonthView({ profile, anchor, entries, leaders, truongBanIds, filters, onPickDay }) {
   const weeks = useMemo(() => monthGrid(anchor), [anchor]);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
 
@@ -17,12 +17,12 @@ export default function MonthView({ profile, anchor, entries, leaders, filters, 
     () => (entries || []).filter((e) => {
       const l = leaderById[e.leader_id];
       if (!canSeeEntry(profile, e, l)) return false;
-      if (!leaderInUnits(l, filters.banIds)) return false;
+      if (!leaderInUnits(l, filters.banIds, { truongBanIds })) return false;
       if (filters.leaderId && e.leader_id !== filters.leaderId) return false;
       if (filters.status && e.status !== filters.status) return false;
       return true;
     }),
-    [entries, profile, leaderById, filters]
+    [entries, profile, leaderById, truongBanIds, filters]
   );
 
   const byDate = useMemo(() => {

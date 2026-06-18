@@ -65,19 +65,30 @@ export const UNIT_GROUP_FILTERS = [
   { value: 'grp:vanphong', label: 'Lãnh đạo Văn phòng' },
 ];
 
+// Bộ lọc "Trưởng các Ban HĐND tỉnh" — thành viên = nhóm thành phần cùng tên (gồm các
+// đ/c Trưởng Ban). Dùng khóa 'grp:truong_ban'; tập leader id suy từ nhóm (ctx.truongBanIds).
+export const TRUONG_BAN_GROUP_NAME = 'Trưởng các Ban HĐND tỉnh';
+export const TRUONG_BAN_FILTER_KEY = 'grp:truong_ban';
+export const truongBanLeaderIds = (groups, leaders) => {
+  const g = (groups || []).find((x) => x.name === TRUONG_BAN_GROUP_NAME);
+  return new Set(g ? groupLeaderIds(g, leaders) : []);
+};
+
 // Lãnh đạo có thuộc bộ lọc đơn vị hiện hành không.
-// banId: rỗng -> mọi đơn vị; 'grp:<leader_type>' -> theo nhóm; còn lại -> UUID Ban.
-export function leaderInUnit(leader, banId) {
+// banId: rỗng -> mọi đơn vị; 'grp:truong_ban' -> Trưởng các Ban (theo ctx.truongBanIds);
+// 'grp:<leader_type>' -> theo nhóm cột; còn lại -> UUID Ban.
+export function leaderInUnit(leader, banId, ctx) {
   if (!banId) return true;
+  if (banId === TRUONG_BAN_FILTER_KEY) return !!ctx?.truongBanIds?.has(leader?.id);
   if (banId.startsWith('grp:')) return leader?.leader_type === banId.slice(4);
   return leader?.ban_id === banId;
 }
 
 // Phiên bản CHỌN NHIỀU đơn vị: unitKeys là mảng khóa ('grp:<type>' hoặc UUID Ban).
 // Rỗng -> mọi đơn vị; ngược lại -> lãnh đạo thuộc BẤT KỲ đơn vị nào được chọn.
-export function leaderInUnits(leader, unitKeys) {
+export function leaderInUnits(leader, unitKeys, ctx) {
   if (!unitKeys || unitKeys.length === 0) return true;
-  return unitKeys.some((k) => leaderInUnit(leader, k));
+  return unitKeys.some((k) => leaderInUnit(leader, k, ctx));
 }
 
 // Bộ so sánh sắp xếp lịch trong NGÀY (lịch tuần + bản in):

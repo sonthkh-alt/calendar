@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays, RotateCcw, ChevronDown } from 'lucide-react';
-import { STATUS, UNIT_GROUP_FILTERS, leaderInUnits } from '../lib/constants';
+import { STATUS, UNIT_GROUP_FILTERS, TRUONG_BAN_FILTER_KEY, TRUONG_BAN_GROUP_NAME, leaderInUnits } from '../lib/constants';
 import { weekLabel, addWeeks, addMonths, fmtDMY } from '../lib/dates';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -10,8 +10,9 @@ import { vi } from 'date-fns/locale';
  * props: view ('week'|'month'|'day'), anchor (Date), onAnchor,
  *        bans, leaders, filters {banIds[], leaderId, status}, onFilters
  */
-export default function FilterBar({ view, anchor, onAnchor, bans, leaders, filters, onFilters }) {
+export default function FilterBar({ view, anchor, onAnchor, bans, leaders, truongBanIds, filters, onFilters }) {
   const [unitOpen, setUnitOpen] = useState(false);
+  const unitCtx = { truongBanIds };
   const step = view === 'month' ? (d, n) => addMonths(d, n) : view === 'day' ? (d, n) => new Date(d.getTime() + n * 86400000) : (d, n) => addWeeks(d, n);
 
   const label = view === 'month'
@@ -21,14 +22,16 @@ export default function FilterBar({ view, anchor, onAnchor, bans, leaders, filte
       : weekLabel(anchor);
 
   const banIds = filters.banIds || [];
-  const visibleLeaders = (leaders || []).filter((l) => l.active && leaderInUnits(l, banIds));
+  const visibleLeaders = (leaders || []).filter((l) => l.active && leaderInUnits(l, banIds, unitCtx));
   const sel = 'bg-white/90 border border-slate-200 rounded-lg px-2 py-1.5 text-[13px] text-slate-700 outline-none focus:border-red-400';
 
-  // Danh sách đơn vị chọn được (theo đúng thứ tự hiển thị trên lịch)
+  // Danh sách đơn vị chọn được (theo đúng thứ tự hiển thị trên lịch). Thêm "Trưởng các
+  // Ban HĐND tỉnh" (chỉ khi nhóm cùng tên có thành viên) — lọc riêng các đ/c Trưởng Ban.
   const unitOptions = [
     { key: 'grp:pct', label: UNIT_GROUP_FILTERS[0].label },
     { key: 'grp:doan', label: UNIT_GROUP_FILTERS[1].label },
     ...(bans || []).map((b) => ({ key: b.id, label: b.name })),
+    ...((truongBanIds && truongBanIds.size) ? [{ key: TRUONG_BAN_FILTER_KEY, label: TRUONG_BAN_GROUP_NAME }] : []),
     { key: 'grp:vanphong', label: UNIT_GROUP_FILTERS[2].label },
   ];
   const toggleUnit = (key) => {

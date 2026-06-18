@@ -10,7 +10,7 @@ import { isHqLocation, leaderInUnits, hidesDriver } from '../lib/constants';
  * Lịch ngày: 2 khối Sáng / Chiều, EntryCard đầy đủ thông tin.
  * props: profile, anchor, entries, leaders, vehicles, filters, onEdit, onDelete
  */
-export default function DayView({ profile, anchor, entries, leaders, vehicles, filters, dupMap, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
+export default function DayView({ profile, anchor, entries, leaders, vehicles, truongBanIds, filters, dupMap, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
   const dISO = toISODate(anchor);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
@@ -25,12 +25,12 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
       if (e.date !== dISO) return false;
       const l = leaderById[e.leader_id];
       if (!canSeeEntry(profile, e, l)) return false;
-      if (!leaderInUnits(l, filters.banIds)) return false;
+      if (!leaderInUnits(l, filters.banIds, { truongBanIds })) return false;
       if (filters.leaderId && e.leader_id !== filters.leaderId) return false;
       if (filters.status && e.status !== filters.status) return false;
       return true;
     }),
-    [entries, dISO, profile, leaderById, filters]
+    [entries, dISO, profile, leaderById, truongBanIds, filters]
   );
 
   // PHÊ DUYỆT THEO NGÀY: lịch chờ duyệt trong ngày mà người đang xem có quyền duyệt
@@ -41,11 +41,11 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, f
     if (!reviewer) return [];
     return (entries || [])
       .filter((e) => e.date === dISO && e.status === 'cho_duyet'
-        && leaderInUnits(leaderById[e.leader_id], filters.banIds)
+        && leaderInUnits(leaderById[e.leader_id], filters.banIds, { truongBanIds })
         && (!filters.leaderId || e.leader_id === filters.leaderId)
         && canReviewEntry(profile, e, leaderById[e.leader_id]))
       .map((e) => e.id);
-  }, [entries, dISO, reviewer, profile, leaderById, filters.banIds, filters.leaderId]);
+  }, [entries, dISO, reviewer, profile, leaderById, truongBanIds, filters.banIds, filters.leaderId]);
 
   const approveDay = async () => {
     if (!pendingIds.length || approving) return;
