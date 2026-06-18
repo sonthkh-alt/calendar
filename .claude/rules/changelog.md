@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-06-16 — Đếm lượt truy cập (góc dưới phải) + thống kê khách trong Quản trị
+- Ghi login_log cho MỌI tài khoản kể cả KHÁCH (trước bỏ qua khách) -> dùng làm nguồn đếm.
+  App: effect ghi 1 dòng/phiên (sessionStorage chống trùng) rồi nạp fetchLoginCount() ->
+  visitCount; badge "N lượt truy cập" cố định góc dưới phải (no-print, ai cũng thấy, kể cả khách).
+- api: fetchLoginCount(email?) đếm head exact (email=null -> tổng; =GUEST.email -> lượt khách);
+  fetchLoginLog(limit, excludeEmail?) loại 1 email khỏi danh sách.
+- AdminLoginLog: 3 thẻ thống kê (Tổng lượt / Khách chỉ xem / Tài khoản thật = tổng - khách);
+  bảng đăng nhập loại tài khoản khách (fetchLoginLog 300, exclude GUEST.email) cho gọn.
+- KHÔNG cần migration mới (dùng lại bảng login_log; khách có auth.uid() nên ghi được).
+
 ## 2026-06-16 — Bộ lọc đơn vị thêm "Trưởng các Ban HĐND tỉnh"
 - Thêm 1 lựa chọn trong dropdown "Tất cả đơn vị": lọc riêng lịch của các đ/c Trưởng Ban.
 - Nguồn thành viên = nhóm thành phần cùng tên "Trưởng các Ban HĐND tỉnh" (groupLeaderIds)

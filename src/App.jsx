@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarRange, CalendarDays, CalendarClock, ClipboardCheck, Car, Settings,
-  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin,
+  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin, Eye,
 } from 'lucide-react';
 import Login from './Login';
 import SetPassword from './SetPassword';
 import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail, signInWithPassword, GUEST } from './lib/auth';
-import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, fetchActivityLog, recordLogin, deleteEntry, deleteEntries } from './lib/api';
+import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, fetchActivityLog, recordLogin, fetchLoginCount, deleteEntry, deleteEntries } from './lib/api';
 import { weekStart, parseISO, toISODate } from './lib/dates';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO, truongBanLeaderIds } from './lib/constants';
 import { canReview, canReviewEntry, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
@@ -37,6 +37,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [showChangePw, setShowChangePw] = useState(false);
   const [showLogin, setShowLogin] = useState(false); // modal đăng nhập (khi đang là khách)
+  const [visitCount, setVisitCount] = useState(null); // tổng lượt truy cập (hiện góc dưới phải)
 
   useEffect(() => {
     let mounted = true;
@@ -59,16 +60,23 @@ export default function App() {
     if (showLogin && session && !isGuestEmail(session.user?.email)) setShowLogin(false);
   }, [showLogin, session]);
 
-  // GHI NHẬT KÝ ĐĂNG NHẬP: 1 dòng cho mỗi phiên làm việc (bỏ qua tài khoản khách).
-  // Chống ghi trùng bằng sessionStorage (đóng tab/mở lại = phiên mới = lần đăng nhập mới).
+  // GHI LƯỢT TRUY CẬP / ĐĂNG NHẬP: 1 dòng mỗi phiên làm việc cho MỌI tài khoản (kể cả
+  // khách chỉ xem) -> dùng để đếm lượt truy cập + thống kê khách. Chống ghi trùng bằng
+  // sessionStorage (đóng tab/mở lại = phiên mới). Sau đó nạp TỔNG lượt để hiện góc dưới phải.
   useEffect(() => {
-    if (!session || !profile) return;
-    const email = session.user?.email || '';
-    if (isGuestEmail(email)) return;
-    const key = `login_logged_${session.user.id}`;
-    try { if (sessionStorage.getItem(key)) return; } catch { /* bỏ qua */ }
-    recordLogin({ user_id: session.user.id, email, full_name: profile.full_name || null, role: profile.role || null });
-    try { sessionStorage.setItem(key, '1'); } catch { /* bỏ qua */ }
+    if (!session || !profile || !supabase) return;
+    (async () => {
+      const email = session.user?.email || '';
+      const key = `login_logged_${session.user.id}`;
+      let already = false;
+      try { already = !!sessionStorage.getItem(key); } catch { /* bỏ qua */ }
+      if (!already) {
+        await recordLogin({ user_id: session.user.id, email, full_name: profile.full_name || null, role: profile.role || null });
+        try { sessionStorage.setItem(key, '1'); } catch { /* bỏ qua */ }
+      }
+      const { count } = await fetchLoginCount();
+      setVisitCount(count);
+    })();
   }, [session, profile]);
 
   useEffect(() => {
@@ -502,6 +510,13 @@ export default function App() {
       )}
       {showChangePw && <SetPassword mode="change" onClose={() => setShowChangePw(false)} onDone={() => setTimeout(() => setShowChangePw(false), 1200)} />}
       {showLogin && <Login onClose={() => setShowLogin(false)} />}
+
+      {/* Lượt truy cập website — góc dưới bên phải, ai cũng thấy */}
+      {visitCount != null && (
+        <div className="no-print fixed bottom-2 right-2 z-30 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/70 text-white text-[11px] font-semibold shadow-lg backdrop-blur-sm" title="Tổng lượt truy cập hệ thống">
+          <Eye className="w-3.5 h-3.5 text-amber-300" /> {visitCount.toLocaleString('vi-VN')} lượt truy cập
+        </div>
+      )}
     </div>
   );
 }

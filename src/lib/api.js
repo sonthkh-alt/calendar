@@ -49,14 +49,25 @@ export async function fetchActivityLog(limit = 300) {
   return supabase.from('activity_log').select('*').order('at', { ascending: false }).limit(limit);
 }
 
-// ===== Nhật ký đăng nhập (login_log) =====
+// ===== Nhật ký đăng nhập / lượt truy cập (login_log) =====
 export async function recordLogin({ user_id, email, full_name, role }) {
   if (!supabase) return NO_DB;
   return supabase.from('login_log').insert({ user_id, email, full_name, role });
 }
-export async function fetchLoginLog(limit = 300) {
+// Danh sách lần đăng nhập (mới nhất trước). excludeEmail: bỏ qua 1 email (vd tài khoản khách).
+export async function fetchLoginLog(limit = 300, excludeEmail = null) {
   if (!supabase) return NO_DB;
-  return supabase.from('login_log').select('*').order('at', { ascending: false }).limit(limit);
+  let q = supabase.from('login_log').select('*').order('at', { ascending: false }).limit(limit);
+  if (excludeEmail) q = q.neq('email', excludeEmail);
+  return q;
+}
+// Đếm số dòng login_log. email != null -> chỉ đếm của email đó (vd lượt khách chỉ xem).
+export async function fetchLoginCount(email = null) {
+  if (!supabase) return { count: 0, error: NO_DB.error };
+  let q = supabase.from('login_log').select('*', { count: 'exact', head: true });
+  if (email) q = q.eq('email', email);
+  const { count, error } = await q;
+  return { count: count || 0, error };
 }
 
 export async function upsertParticipantGroup(row) {
