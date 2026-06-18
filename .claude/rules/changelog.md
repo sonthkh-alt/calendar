@@ -1,5 +1,20 @@
 # Nhật ký dự án
 
+## 2026-06-16 — Bấm thông báo xem chi tiết lịch + Nhật ký ĐĂNG NHẬP (Quản trị)
+- **#1 Bấm thông báo -> chi tiết lịch:** NotificationBell mỗi mục thành nút bấm (trừ mục
+  'delete' — lịch đã xóa, vô hiệu). Bấm -> onSelect(a) + đóng panel. App.onOpenActivity
+  tra entry theo entry_id (dự phòng group_id) trong entries -> setViewing (mở EntryDetail);
+  không tìm thấy (đã xóa / ngoài phạm vi) -> alert nhẹ. Truyền onSelect vào NotificationBell.
+- **#2 Nhật ký đăng nhập:** bảng login_log mới + tab Quản trị "Đăng nhập".
+  - supabase/migrations/2026-06-16-login-log.sql: bảng login_log (at, user_id, email,
+    full_name, role); RLS đọc=authenticated, ghi (insert) chốt auth.uid()=user_id;
+    grant select,insert. Idempotent (chạy lại mỗi deploy).
+  - api.js: recordLogin({user_id,email,full_name,role}) + fetchLoginLog(limit).
+  - App.jsx: effect ghi 1 dòng/phiên (bỏ qua tài khoản khách), chống trùng bằng
+    sessionStorage key login_logged_<uid> (đóng/mở lại tab = phiên mới = lần đăng nhập mới).
+  - src/components/AdminLoginLog.jsx: bảng 300 lần đăng nhập gần nhất (thời gian / họ tên /
+    email / vai trò). Thêm tab admin 'logins' (icon LogIn) trong App.
+
 ## 2026-06-16 — Vào thẳng trang chủ (chế độ KHÁCH), đăng nhập qua nút góc phải
 - Yêu cầu: không bắt đăng nhập trước; mặc định vào trang chủ CHỈ XEM; cần đăng nhập thì
   bấm nút ở góc trên bên phải.

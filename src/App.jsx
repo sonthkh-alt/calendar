@@ -7,7 +7,7 @@ import Login from './Login';
 import SetPassword from './SetPassword';
 import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail, signInWithPassword, GUEST } from './lib/auth';
-import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, fetchActivityLog, deleteEntry, deleteEntries } from './lib/api';
+import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, fetchActivityLog, recordLogin, deleteEntry, deleteEntries } from './lib/api';
 import { weekStart, parseISO, toISODate } from './lib/dates';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO } from './lib/constants';
 import { canReview, canReviewEntry, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
@@ -23,6 +23,7 @@ import AdminVehicles from './components/AdminVehicles';
 import AdminGroups from './components/AdminGroups';
 import AdminBackup from './components/AdminBackup';
 import AdminLog from './components/AdminLog';
+import AdminLoginLog from './components/AdminLoginLog';
 import AdminLocations from './components/AdminLocations';
 import ScheduleForm from './components/ScheduleForm';
 import EntryDetail from './components/EntryDetail';
@@ -57,6 +58,18 @@ export default function App() {
   useEffect(() => {
     if (showLogin && session && !isGuestEmail(session.user?.email)) setShowLogin(false);
   }, [showLogin, session]);
+
+  // GHI NHẬT KÝ ĐĂNG NHẬP: 1 dòng cho mỗi phiên làm việc (bỏ qua tài khoản khách).
+  // Chống ghi trùng bằng sessionStorage (đóng tab/mở lại = phiên mới = lần đăng nhập mới).
+  useEffect(() => {
+    if (!session || !profile) return;
+    const email = session.user?.email || '';
+    if (isGuestEmail(email)) return;
+    const key = `login_logged_${session.user.id}`;
+    try { if (sessionStorage.getItem(key)) return; } catch { /* bỏ qua */ }
+    recordLogin({ user_id: session.user.id, email, full_name: profile.full_name || null, role: profile.role || null });
+    try { sessionStorage.setItem(key, '1'); } catch { /* bỏ qua */ }
+  }, [session, profile]);
 
   useEffect(() => {
     if (!session) { setProfile(null); return; }
@@ -171,6 +184,15 @@ export default function App() {
   }, [session, profile, loadEntries, loadCatalogs, loadActivity]);
 
   const refresh = useCallback(() => { loadEntries(); }, [loadEntries]);
+
+  // Bấm 1 thông báo -> mở CHI TIẾT lịch tương ứng (tra theo entry_id, dự phòng group_id).
+  // Lịch đã xóa / ngoài phạm vi đang tải -> báo nhẹ.
+  const onOpenActivity = useCallback((a) => {
+    const ent = entries.find((e) => e.id === a.entry_id)
+      || (a.group_id ? entries.find((e) => e.group_id === a.group_id) : null);
+    if (ent) setViewing(ent);
+    else alert('Lịch trong thông báo này không còn (có thể đã bị xóa) hoặc nằm ngoài phạm vi đang tải.');
+  }, [entries]);
 
   // Đăng xuất tài khoản thật -> quay lại chế độ KHÁCH (vào thẳng trang chủ chỉ xem),
   // không rơi về màn đăng nhập.
@@ -338,7 +360,7 @@ export default function App() {
           </div>
           <div className="shrink-0"><DeviceSelect value={deviceMode} onChange={setDeviceMode} /></div>
           {canReview(profile) && (
-            <div className="shrink-0"><NotificationBell profile={profile} items={relevantActivity} /></div>
+            <div className="shrink-0"><NotificationBell profile={profile} items={relevantActivity} onSelect={onOpenActivity} /></div>
           )}
           {isGuestEmail(profile.email) ? (
             // Chế độ KHÁCH (chỉ xem): nút Đăng nhập ở góc trên bên phải (mở modal)
@@ -414,6 +436,7 @@ export default function App() {
                 { key: 'groups', label: 'Nhóm thành phần', icon: ListChecks },
                 { key: 'locations', label: 'Địa điểm', icon: MapPin },
                 { key: 'log', label: 'Nhật ký', icon: History },
+                { key: 'logins', label: 'Đăng nhập', icon: LogIn },
                 { key: 'backup', label: 'Sao lưu', icon: DatabaseBackup },
               ].map((t) => (
                 <button key={t.key} onClick={() => setAdminTab(t.key)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold transition ${adminTab === t.key ? 'bg-red-700 text-white shadow' : 'bg-white/90 border border-slate-200 text-slate-600 hover:bg-red-50'}`}>
@@ -427,6 +450,7 @@ export default function App() {
             {adminTab === 'groups' && <AdminGroups groups={pGroups} leaders={leaders} onChanged={loadCatalogs} />}
             {adminTab === 'locations' && <AdminLocations locations={pLocations} onChanged={loadCatalogs} />}
             {adminTab === 'log' && <AdminLog />}
+            {adminTab === 'logins' && <AdminLoginLog />}
             {adminTab === 'backup' && <AdminBackup onRestored={() => { loadCatalogs(); loadEntries(); }} />}
           </div>
         )}

@@ -49,6 +49,16 @@ export async function fetchActivityLog(limit = 300) {
   return supabase.from('activity_log').select('*').order('at', { ascending: false }).limit(limit);
 }
 
+// ===== Nhật ký đăng nhập (login_log) =====
+export async function recordLogin({ user_id, email, full_name, role }) {
+  if (!supabase) return NO_DB;
+  return supabase.from('login_log').insert({ user_id, email, full_name, role });
+}
+export async function fetchLoginLog(limit = 300) {
+  if (!supabase) return NO_DB;
+  return supabase.from('login_log').select('*').order('at', { ascending: false }).limit(limit);
+}
+
 export async function upsertParticipantGroup(row) {
   if (!supabase) return NO_DB;
   return supabase.from('participant_groups').upsert(row).select();

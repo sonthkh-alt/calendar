@@ -14,7 +14,8 @@ import {
  * - Huy hiệu số đếm "chưa đọc": mục có thời gian > mốc "đã xem". Bấm chuông -> đặt mốc
  *   "đã xem" = bây giờ -> huy hiệu biến mất.
  * - Mục mới đến (qua realtime) -> bắn thông báo HỆ ĐIỀU HÀNH ra ngoài màn hình.
- * props: profile, items (mảng activity_log đã lọc liên quan tới người này)
+ * props: profile, items (mảng activity_log đã lọc liên quan tới người này),
+ *   onSelect (tùy chọn): bấm 1 mục -> mở chi tiết lịch tương ứng.
  */
 const ACTION_TEXT = {
   create: 'Lịch mới',
@@ -31,7 +32,7 @@ function describe(a) {
   return a.summary || ACTION_TEXT[a.action] || a.action;
 }
 
-export default function NotificationBell({ profile, items }) {
+export default function NotificationBell({ profile, items, onSelect }) {
   const uid = profile?.id;
   const [open, setOpen] = useState(false);
   const [lastSeen, setLastSeen] = useState(() => getNotifSeen(uid));
@@ -116,18 +117,26 @@ export default function NotificationBell({ profile, items }) {
               )}
               {sorted.slice(0, 50).map((a) => {
                 const isNew = ts(a.at) > ts(lastSeen);
+                const clickable = !!onSelect && a.action !== 'delete';
+                const pick = () => { if (clickable) { onSelect(a); setOpen(false); } };
                 return (
-                  <li key={a.id} className={`px-4 py-2.5 ${isNew ? 'bg-amber-50/60' : ''}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-bold text-red-700 flex items-center gap-1">
-                        {isNew && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
-                        {ACTION_TEXT[a.action] || a.action}
-                      </span>
-                      <span className="text-[11px] text-slate-400">{a.at ? format(new Date(a.at), 'HH:mm dd/MM', { locale: vi }) : ''}</span>
-                    </div>
-                    <p className="text-[13px] text-slate-800 font-medium mt-0.5 break-words">{a.content || '—'}</p>
-                    <p className="text-[12px] text-slate-500">{describe(a)}</p>
-                    {a.actor_email && <p className="text-[11px] text-slate-400 mt-0.5">bởi {a.actor_email}</p>}
+                  <li key={a.id}>
+                    <button
+                      type="button" onClick={pick} disabled={!clickable}
+                      className={`w-full text-left px-4 py-2.5 ${isNew ? 'bg-amber-50/60' : ''} ${clickable ? 'hover:bg-slate-50 cursor-pointer' : 'cursor-default'}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-red-700 flex items-center gap-1">
+                          {isNew && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
+                          {ACTION_TEXT[a.action] || a.action}
+                        </span>
+                        <span className="text-[11px] text-slate-400">{a.at ? format(new Date(a.at), 'HH:mm dd/MM', { locale: vi }) : ''}</span>
+                      </div>
+                      <p className="text-[13px] text-slate-800 font-medium mt-0.5 break-words">{a.content || '—'}</p>
+                      <p className="text-[12px] text-slate-500">{describe(a)}</p>
+                      {a.actor_email && <p className="text-[11px] text-slate-400 mt-0.5">bởi {a.actor_email}</p>}
+                      {clickable && <p className="text-[11px] text-red-600 mt-0.5 font-medium">Bấm để xem chi tiết lịch →</p>}
+                    </button>
                   </li>
                 );
               })}
