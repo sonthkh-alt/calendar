@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarRange, CalendarDays, CalendarClock, ClipboardCheck, Car, Settings,
-  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin, Eye,
+  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin, Eye, Search,
 } from 'lucide-react';
 import Login from './Login';
 import SetPassword from './SetPassword';
@@ -29,6 +29,7 @@ import ScheduleForm from './components/ScheduleForm';
 import EntryDetail from './components/EntryDetail';
 import DeviceSelect from './components/DeviceSelect';
 import NotificationBell from './components/NotificationBell';
+import SearchView from './components/SearchView';
 
 export default function App() {
   // ===== Phiên đăng nhập =====
@@ -355,6 +356,7 @@ export default function App() {
     { key: 'week', label: 'Lịch tuần', icon: CalendarRange },
     { key: 'month', label: 'Lịch tháng', icon: CalendarDays },
     { key: 'day', label: 'Lịch ngày', icon: CalendarClock },
+    { key: 'search', label: 'Tìm kiếm', icon: Search },
     ...(canReview(profile) ? [{ key: 'approve', label: 'Chờ duyệt', icon: ClipboardCheck, badge: pendingCount }] : []),
     ...(canAssignVehicle(profile) ? [{ key: 'vehicles', label: 'Điều xe', icon: Car }] : []),
     ...(canAdmin(profile) ? [{ key: 'admin', label: 'Quản trị', icon: Settings }] : []),
@@ -434,6 +436,9 @@ export default function App() {
         )}
         {tab === 'day' && (
           <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} truongBanIds={truongBanIds} filters={filters} dupMap={dupMap} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} onChanged={refresh} />
+        )}
+        {tab === 'search' && (
+          <SearchView leaders={leaders} onView={setViewing} />
         )}
         {tab === 'approve' && canReview(profile) && (
           <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupMap={dupMap} onChanged={refresh} />

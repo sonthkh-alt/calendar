@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-06-19 — Tab "Tìm kiếm" lịch toàn hệ thống
+- Tab mới "Tìm kiếm" (icon Search) cho MỌI tài khoản. SearchView.jsx: ô search debounce
+  300ms; khớp Nội dung/Địa điểm/Thành phần/Tên nhóm (DB ilike) + Tên lãnh đạo (suy leaderIds
+  ở bộ nhớ rồi thêm leader_id.in). Tìm TOÀN BỘ (mọi năm, mọi trạng thái).
+- api.searchEntries(term, leaderIds): .or(content/location/participants/group_label ilike
+  + leader_id.in); làm sạch ký tự phá .or() (, ( ) % *); limit 500.
+- Gộp theo group_id -> 1 kết quả/sự kiện. Sắp xếp: HÔM NAY & SẮP TỚI (tăng dần) trước,
+  rồi ĐÃ QUA (gần nhất trước) — 2 mục riêng. Bấm 1 kết quả -> mở EntryDetail (onView).
+- App: tab 'search' (sau Lịch ngày), không hiện FilterBar; render SearchView leaders+onView.
+
 ## 2026-06-19 — Nút "Hôm nay" cuộn tới đúng vị trí hôm nay (lịch tuần)
 - App: goToday() = setAnchor(now) + bump todayTick; truyền onToday vào FilterBar (cả 2 chỗ),
   todayTick vào WeekView.

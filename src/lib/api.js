@@ -43,6 +43,24 @@ export async function deleteLocation(id) {
   return supabase.from('locations').delete().eq('id', id);
 }
 
+// TÌM KIẾM lịch toàn hệ thống (mọi năm, mọi trạng thái). Khớp Nội dung / Địa điểm /
+// Thành phần / Tên nhóm; thêm các lãnh đạo có tên khớp (leaderIds, suy ở phía gọi).
+// Làm sạch ký tự phá vỡ cú pháp .or() của PostgREST ( , ( ) % * ).
+export async function searchEntries(term, leaderIds = []) {
+  if (!supabase) return NO_DB;
+  const t = (term || '').replace(/[,()%*]/g, ' ').trim();
+  if (!t) return { data: [], error: null };
+  const like = `%${t}%`;
+  const ors = [
+    `content.ilike.${like}`,
+    `location.ilike.${like}`,
+    `participants.ilike.${like}`,
+    `group_label.ilike.${like}`,
+  ];
+  if (leaderIds.length) ors.push(`leader_id.in.(${leaderIds.join(',')})`);
+  return supabase.from('schedule_entries').select('*').or(ors.join(',')).limit(500);
+}
+
 // Nhật ký thao tác (audit log) — mới nhất trước
 export async function fetchActivityLog(limit = 300) {
   if (!supabase) return NO_DB;
