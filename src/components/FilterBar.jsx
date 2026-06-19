@@ -4,13 +4,14 @@ import { STATUS, UNIT_GROUP_FILTERS, TRUONG_BAN_FILTER_KEY, TRUONG_BAN_GROUP_NAM
 import { weekLabel, addWeeks, addMonths, fmtDMY } from '../lib/dates';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import SearchBox from './SearchBox';
 
 /**
  * Thanh điều hướng thời gian + bộ lọc — dùng chung cho 3 chế độ xem.
  * props: view ('week'|'month'|'day'), anchor (Date), onAnchor,
  *        bans, leaders, filters {banIds[], leaderId, status}, onFilters
  */
-export default function FilterBar({ view, anchor, onAnchor, onToday, bans, leaders, truongBanIds, filters, onFilters }) {
+export default function FilterBar({ view, anchor, onAnchor, onToday, bans, leaders, truongBanIds, filters, onFilters, onView }) {
   const [unitOpen, setUnitOpen] = useState(false);
   const unitCtx = { truongBanIds };
   const step = view === 'month' ? (d, n) => addMonths(d, n) : view === 'day' ? (d, n) => new Date(d.getTime() + n * 86400000) : (d, n) => addWeeks(d, n);
@@ -59,6 +60,9 @@ export default function FilterBar({ view, anchor, onAnchor, onToday, bans, leade
           Tuần sau →
         </button>
       )}
+
+      {/* Ô tìm kiếm gõ trực tiếp — đặt ngay cạnh "Tuần sau" */}
+      <SearchBox leaders={leaders} onView={onView} />
 
       <div className="flex-1" />
 

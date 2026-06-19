@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-19 — Tìm kiếm thành Ô GÕ TRỰC TIẾP cạnh "Tuần sau" (bỏ tab)
+- Bỏ tab "Tìm kiếm"; thay bằng SearchBox.jsx — ô gõ trực tiếp đặt trong FilterBar ngay cạnh
+  nút "Tuần sau" (placeholder mờ "Tìm kiếm", icon kính lúp, nút X xóa).
+- Kết quả XỔ XUỐNG ngay dưới ô (dropdown absolute, backdrop đóng khi bấm ra ngoài); cùng
+  logic tìm/sắp xếp như cũ (api.searchEntries; Hôm nay&Sắp tới tăng dần rồi Đã qua; gộp
+  group_id). Bấm 1 kết quả -> onView mở EntryDetail + đóng dropdown.
+- FilterBar nhận prop onView; App truyền onView={setViewing} (cả 2 chỗ FilterBar). Xóa
+  SearchView.jsx + tab 'search' + import Search trong App.
+
 ## 2026-06-19 — Tab "Tìm kiếm" lịch toàn hệ thống
 - Tab mới "Tìm kiếm" (icon Search) cho MỌI tài khoản. SearchView.jsx: ô search debounce
   300ms; khớp Nội dung/Địa điểm/Thành phần/Tên nhóm (DB ilike) + Tên lãnh đạo (suy leaderIds

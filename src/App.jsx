@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarRange, CalendarDays, CalendarClock, ClipboardCheck, Car, Settings,
-  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin, Eye, Search,
+  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin, Eye,
 } from 'lucide-react';
 import Login from './Login';
 import SetPassword from './SetPassword';
@@ -29,7 +29,6 @@ import ScheduleForm from './components/ScheduleForm';
 import EntryDetail from './components/EntryDetail';
 import DeviceSelect from './components/DeviceSelect';
 import NotificationBell from './components/NotificationBell';
-import SearchView from './components/SearchView';
 
 export default function App() {
   // ===== Phiên đăng nhập =====
@@ -356,7 +355,6 @@ export default function App() {
     { key: 'week', label: 'Lịch tuần', icon: CalendarRange },
     { key: 'month', label: 'Lịch tháng', icon: CalendarDays },
     { key: 'day', label: 'Lịch ngày', icon: CalendarClock },
-    { key: 'search', label: 'Tìm kiếm', icon: Search },
     ...(canReview(profile) ? [{ key: 'approve', label: 'Chờ duyệt', icon: ClipboardCheck, badge: pendingCount }] : []),
     ...(canAssignVehicle(profile) ? [{ key: 'vehicles', label: 'Điều xe', icon: Car }] : []),
     ...(canAdmin(profile) ? [{ key: 'admin', label: 'Quản trị', icon: Settings }] : []),
@@ -420,10 +418,10 @@ export default function App() {
         ? 'max-w-[430px] mx-auto my-5 px-3 py-4 bg-slate-50 rounded-[28px] shadow-2xl ring-[6px] ring-slate-800/85'
         : 'max-w-[1400px] mx-auto px-4 py-4'}>
         {['week', 'month', 'day'].includes(tab) && (
-          <FilterBar view={tab} anchor={anchor} onAnchor={setAnchor} onToday={goToday} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} />
+          <FilterBar view={tab} anchor={anchor} onAnchor={setAnchor} onToday={goToday} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} onView={setViewing} />
         )}
         {['approve', 'vehicles'].includes(tab) && (
-          <FilterBar view="week" anchor={anchor} onAnchor={setAnchor} onToday={goToday} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} />
+          <FilterBar view="week" anchor={anchor} onAnchor={setAnchor} onToday={goToday} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} onView={setViewing} />
         )}
 
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
@@ -436,9 +434,6 @@ export default function App() {
         )}
         {tab === 'day' && (
           <DayView profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} truongBanIds={truongBanIds} filters={filters} dupMap={dupMap} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} onChanged={refresh} />
-        )}
-        {tab === 'search' && (
-          <SearchView leaders={leaders} onView={setViewing} />
         )}
         {tab === 'approve' && canReview(profile) && (
           <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupMap={dupMap} onChanged={refresh} />
