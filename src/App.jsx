@@ -38,6 +38,7 @@ export default function App() {
   const [showChangePw, setShowChangePw] = useState(false);
   const [showLogin, setShowLogin] = useState(false); // modal đăng nhập (khi đang là khách)
   const [visitCount, setVisitCount] = useState(null); // tổng lượt truy cập (hiện góc dưới phải)
+  const [todayTick, setTodayTick] = useState(0); // tăng mỗi lần bấm "Hôm nay" -> view cuộn tới hôm nay
 
   useEffect(() => {
     let mounted = true;
@@ -195,6 +196,9 @@ export default function App() {
   }, [session, profile, loadEntries, loadCatalogs, loadActivity]);
 
   const refresh = useCallback(() => { loadEntries(); }, [loadEntries]);
+
+  // "Hôm nay": về đúng tuần/tháng/ngày hiện tại + báo các view cuộn tới vị trí hôm nay
+  const goToday = useCallback(() => { setAnchor(new Date()); setTodayTick((t) => t + 1); }, []);
 
   // Bấm 1 thông báo -> mở CHI TIẾT lịch tương ứng (tra theo entry_id, dự phòng group_id).
   // Lịch đã xóa / ngoài phạm vi đang tải -> báo nhẹ.
@@ -414,16 +418,16 @@ export default function App() {
         ? 'max-w-[430px] mx-auto my-5 px-3 py-4 bg-slate-50 rounded-[28px] shadow-2xl ring-[6px] ring-slate-800/85'
         : 'max-w-[1400px] mx-auto px-4 py-4'}>
         {['week', 'month', 'day'].includes(tab) && (
-          <FilterBar view={tab} anchor={anchor} onAnchor={setAnchor} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} />
+          <FilterBar view={tab} anchor={anchor} onAnchor={setAnchor} onToday={goToday} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} />
         )}
         {['approve', 'vehicles'].includes(tab) && (
-          <FilterBar view="week" anchor={anchor} onAnchor={setAnchor} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} />
+          <FilterBar view="week" anchor={anchor} onAnchor={setAnchor} onToday={goToday} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} />
         )}
 
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
 
         {tab === 'week' && (
-          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} truongBanIds={truongBanIds} filters={filters} dupMap={dupMap} isMobile={isMobile} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} onChanged={refresh} />
+          <WeekView profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} vehicles={vehicles} groups={pGroups} truongBanIds={truongBanIds} filters={filters} dupMap={dupMap} isMobile={isMobile} todayTick={todayTick} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} onDeleteMany={onDeleteMany} onDuplicate={onDuplicate} onView={setViewing} onChanged={refresh} />
         )}
         {tab === 'month' && (
           <MonthView profile={profile} anchor={anchor} entries={entries} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onPickDay={(d) => { setAnchor(d); setTab('day'); }} />

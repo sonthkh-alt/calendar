@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, LayoutGrid, Rows3, CalendarDays, CheckCheck, FileText, FileDown } from 'lucide-react';
 import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
@@ -15,14 +15,22 @@ import { exportWeekDocx, exportWeekPdf } from '../lib/exporters';
  * - Chế độ "Đầy đủ": bảng ngày × (Sáng/Chiều) × cột đơn vị.
  * - Chế độ "Gọn": mỗi ngày 1 khối (hợp mobile).
  */
-export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, truongBanIds, filters, dupMap, isMobile, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
+export default function WeekView({ profile, anchor, entries, leaders, bans, vehicles, groups, truongBanIds, filters, dupMap, isMobile, todayTick, onAdd, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
   const [mode, setMode] = useState('compact'); // full | compact — mặc định "Gọn"
+  const todayRef = useRef(null); // ô/khối "hôm nay" để cuộn tới khi bấm "Hôm nay"
   const [exporting, setExporting] = useState(false);   // đang xuất Word
   const [exportingPdf, setExportingPdf] = useState(false); // đang xuất PDF
   // Điện thoại: luôn dùng chế độ Gọn (khối từng ngày, kéo dọc) cho dễ xem
   useEffect(() => { if (isMobile) setMode('compact'); }, [isMobile]);
   const effMode = isMobile ? 'compact' : mode;
   const days = useMemo(() => weekDays(anchor), [anchor]);
+
+  // Bấm "Hôm nay" -> cuộn tới ô/khối hôm nay (chờ 1 nhịp để view cập nhật tuần mới)
+  useEffect(() => {
+    if (!todayTick) return undefined;
+    const t = setTimeout(() => todayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+    return () => clearTimeout(t);
+  }, [todayTick]);
 
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
@@ -282,7 +290,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
                   // dùng thanh kẻ đỏ có bóng đổ (hàng spacer bên dưới) để tách khung.
                   const hB = si === 0 ? 'border-b border-b-slate-100' : '';
                   return (
-                  <tr key={dISO + sess} className={isToday ? 'bg-amber-50/60' : si === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                  <tr key={dISO + sess} ref={isToday && si === 0 ? todayRef : undefined} className={isToday ? 'bg-amber-50/60' : si === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                     {si === 0 && (
                       <td rowSpan={2} className={`border-r border-r-slate-200 px-2 py-3 text-center align-middle ${isToday
                         ? 'bg-gradient-to-b from-amber-50 to-white'
@@ -343,7 +351,7 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
               .filter((e) => e.date === dISO && allUnitLeaderIds.includes(e.leader_id))
               .sort(entrySorter);
             return (
-              <div key={dISO} className={`rounded-2xl border bg-white shadow-md overflow-hidden ${isToday ? 'border-amber-400 ring-2 ring-amber-300' : 'border-slate-200'}`}>
+              <div key={dISO} ref={isToday ? todayRef : undefined} className={`rounded-2xl border bg-white shadow-md overflow-hidden ${isToday ? 'border-amber-400 ring-2 ring-amber-300' : 'border-slate-200'}`}>
                 <div className={`px-4 py-3 flex items-center justify-between border-b-4 ${isToday ? 'bg-gradient-to-r from-amber-300 to-amber-200 border-amber-500' : 'bg-gradient-to-r from-red-800 via-red-700 to-red-600 border-red-900'}`}>
                   <p className={`flex items-center gap-2 text-[18px] font-extrabold tracking-wide ${isToday ? 'text-red-900' : 'text-white'}`}>
                     <CalendarDays className={`w-5 h-5 ${isToday ? 'text-red-700' : 'text-amber-300'}`} />

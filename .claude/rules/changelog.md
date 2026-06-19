@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-19 — Nút "Hôm nay" cuộn tới đúng vị trí hôm nay (lịch tuần)
+- App: goToday() = setAnchor(now) + bump todayTick; truyền onToday vào FilterBar (cả 2 chỗ),
+  todayTick vào WeekView.
+- FilterBar: nút "Hôm nay" gọi onToday nếu có (fallback onAnchor(new Date())).
+- WeekView: todayRef gắn vào ô hôm nay (chế độ Đầy đủ: <tr> dòng Sáng si===0) và khối hôm
+  nay (chế độ Gọn: <div>); effect theo todayTick -> setTimeout 80ms -> scrollIntoView
+  {behavior:'smooth', block:'center'} (chờ view cập nhật tuần mới trước khi cuộn).
+- Month/Day không cần cuộn (anchor=hôm nay đã hiển thị đúng).
+
 ## 2026-06-16 — Đếm lượt truy cập (góc dưới phải) + thống kê khách trong Quản trị
 - Ghi login_log cho MỌI tài khoản kể cả KHÁCH (trước bỏ qua khách) -> dùng làm nguồn đếm.
   App: effect ghi 1 dòng/phiên (sessionStorage chống trùng) rồi nạp fetchLoginCount() ->

@@ -10,7 +10,7 @@ import { vi } from 'date-fns/locale';
  * props: view ('week'|'month'|'day'), anchor (Date), onAnchor,
  *        bans, leaders, filters {banIds[], leaderId, status}, onFilters
  */
-export default function FilterBar({ view, anchor, onAnchor, bans, leaders, truongBanIds, filters, onFilters }) {
+export default function FilterBar({ view, anchor, onAnchor, onToday, bans, leaders, truongBanIds, filters, onFilters }) {
   const [unitOpen, setUnitOpen] = useState(false);
   const unitCtx = { truongBanIds };
   const step = view === 'month' ? (d, n) => addMonths(d, n) : view === 'day' ? (d, n) => new Date(d.getTime() + n * 86400000) : (d, n) => addWeeks(d, n);
@@ -51,7 +51,7 @@ export default function FilterBar({ view, anchor, onAnchor, bans, leaders, truon
         <span className="px-2 text-[13px] font-bold text-slate-800 capitalize min-w-[180px] text-center">{label}</span>
         <button onClick={() => onAnchor(step(anchor, 1))} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-600" title="Sau"><ChevronRight className="w-4 h-4" /></button>
       </div>
-      <button onClick={() => onAnchor(new Date())} className="flex items-center gap-1 bg-white/90 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-slate-700 hover:bg-red-50 shadow-sm">
+      <button onClick={() => (onToday ? onToday() : onAnchor(new Date()))} className="flex items-center gap-1 bg-white/90 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-slate-700 hover:bg-red-50 shadow-sm" title="Về tuần/ngày hiện tại và cuộn tới hôm nay">
         <CalendarDays className="w-3.5 h-3.5" /> Hôm nay
       </button>
       {view === 'week' && (
