@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays, RotateCcw, ChevronDown } from 'lucide-react';
-import { STATUS, UNIT_GROUP_FILTERS, TRUONG_BAN_FILTER_KEY, TRUONG_BAN_GROUP_NAME, leaderInUnits } from '../lib/constants';
+import { UNIT_GROUP_FILTERS, TRUONG_BAN_FILTER_KEY, TRUONG_BAN_GROUP_NAME, leaderInUnits } from '../lib/constants';
 import { weekLabel, addWeeks, addMonths, fmtDMY } from '../lib/dates';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -95,10 +95,6 @@ export default function FilterBar({ view, anchor, onAnchor, onToday, bans, leade
       <select value={filters.leaderId || ''} onChange={(e) => onFilters({ ...filters, leaderId: e.target.value || null })} className={sel}>
         <option value="">Tất cả lãnh đạo / Ban</option>
         {visibleLeaders.map((l) => <option key={l.id} value={l.id}>{l.full_name}</option>)}
-      </select>
-      <select value={filters.status || ''} onChange={(e) => onFilters({ ...filters, status: e.target.value || null })} className={sel}>
-        <option value="">Mọi trạng thái</option>
-        {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
       </select>
       {(banIds.length > 0 || filters.leaderId || filters.status) && (
         <button onClick={() => onFilters({ banIds: [], leaderId: null, status: null })} className="flex items-center gap-1 text-[13px] text-slate-500 hover:text-red-700 font-medium" title="Xóa bộ lọc">
