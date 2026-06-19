@@ -4,7 +4,7 @@ import EntryCard from './EntryCard';
 import { canEditEntry, canSeeEntry, canCreateFor, canReview, canReviewEntry } from '../lib/permissions';
 import { reviewEntries } from '../lib/api';
 import { toISODate, dayName, fmtDMY } from '../lib/dates';
-import { isHqLocation, leaderInUnits, hidesDriver } from '../lib/constants';
+import { isHqLocation, leaderInUnits, hidesDriver, makeEntrySorter } from '../lib/constants';
 
 /**
  * Lịch ngày: 2 khối Sáng / Chiều, EntryCard đầy đủ thông tin.
@@ -13,6 +13,8 @@ import { isHqLocation, leaderInUnits, hidesDriver } from '../lib/constants';
 export default function DayView({ profile, anchor, entries, leaders, vehicles, truongBanIds, filters, dupMap, onEdit, onDelete, onDeleteMany, onDuplicate, onView, onChanged }) {
   const dISO = toISODate(anchor);
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
+  // Sắp xếp theo ƯU TIÊN LÃNH ĐẠO (giống Lịch tuần): Sáng->Chiều rồi STT lãnh đạo
+  const entrySorter = useMemo(() => makeEntrySorter(leaders), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
   // Xe riêng theo lãnh đạo: hiện lái xe mặc định khi entry chưa gán xe
   const dedicatedByLeader = useMemo(() => Object.fromEntries(
@@ -85,7 +87,7 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, t
   const renderList = (list) => (
     <div className="p-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
       {list.length === 0 && <p className="text-[13px] text-slate-400 italic col-span-full">Không có lịch.</p>}
-      {mergeEntries(list.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '')))
+      {mergeEntries([...list].sort(entrySorter))
         .map((m) => {
           const e = m.orig;
           const l = leaderById[e.leader_id];

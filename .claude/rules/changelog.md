@@ -1,5 +1,10 @@
 # Nhật ký dự án
 
+## 2026-06-19 — Lịch ngày sắp xếp theo ưu tiên lãnh đạo (giống Lịch tuần)
+- DayView: dùng makeEntrySorter(leaders) thay vì chỉ sort theo start_time. Mỗi khối
+  Sáng/Chiều: `mergeEntries([...list].sort(entrySorter))` -> trong buổi xếp theo STT
+  lãnh đạo (PCT trước, rồi các Ban...). Đồng nhất với WeekView.
+
 ## 2026-06-19 — Tìm kiếm thành Ô GÕ TRỰC TIẾP cạnh "Tuần sau" (bỏ tab)
 - Bỏ tab "Tìm kiếm"; thay bằng SearchBox.jsx — ô gõ trực tiếp đặt trong FilterBar ngay cạnh
   nút "Tuần sau" (placeholder mờ "Tìm kiếm", icon kính lúp, nút X xóa).
