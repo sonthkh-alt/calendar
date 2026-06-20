@@ -18,7 +18,7 @@
 | pct | xem tất cả; duyệt/điều chỉnh/từ chối MỌI lịch (Ban + Đoàn), kể cả lịch ĐÃ duyệt; NHẬP lịch cho mọi đối tượng → tự động da_duyet. Gồm PCT + Chủ tịch HĐND tỉnh (phongnh@thanhhoa.gov.vn, chức vụ "Chủ tịch HĐND tỉnh") |
 | pho_truong_doan | Phó Trưởng Đoàn ĐBQH: duyệt/điều chỉnh/từ chối CHỈ lịch Đoàn (doan); NHẬP lịch Đoàn → tự động da_duyet — đ/c Lương Thị Hoa |
 | cb_ban | CRUD lịch lãnh đạo thuộc ban_ids; chỉ sửa khi cho_duyet/tu_choi |
-| cb_tonghop | CRUD lịch PCT/Đoàn → khởi tạo da_duyet (hiện ngay) |
+| cb_tonghop | CRUD lịch MỌI đối tượng (PCT/Đoàn/các Ban/Văn phòng) + SỬA mọi lịch mọi lúc (vd thttdn@thanhhoa.gov.vn). Lịch PCT/Đoàn → da_duyet ngay; lịch Ban/VP → cho_duyet (PCT duyệt) |
 | cb_ctqh | Cán bộ Công tác Quốc hội: CRUD lịch Đoàn ĐBQH → khởi tạo cho_duyet (Phó Trưởng Đoàn duyệt) |
 | van_phong_xe | gán xe cho lịch đã duyệt / lịch PCT |
 | nguoi_xem | xem tất cả lịch (kể cả chờ duyệt/từ chối — phân biệt bằng màu), không sửa |

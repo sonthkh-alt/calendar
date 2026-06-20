@@ -11,8 +11,10 @@ export function canCreateFor(profile, leader) {
   if (profile.role === 'pho_truong_doan') return leader.leader_type === 'doan';
   if (profile.role === 'cb_ban')
     return leader.leader_type === 'ban' && (profile.ban_ids || []).includes(leader.ban_id);
+  // Cán bộ TH-TT-Dân nguyện (vd thttdn): NHẬP lịch cho MỌI đối tượng (PCT/Đoàn/các Ban/
+  // Văn phòng) + SỬA mọi lịch (xem canEditEntry). Lịch Ban vẫn vào cho_duyet để PCT duyệt.
   if (profile.role === 'cb_tonghop')
-    return leader.leader_type === 'pct' || leader.leader_type === 'doan';
+    return true;
   // Cán bộ Công tác Quốc hội: nhập lịch cho lãnh đạo Đoàn ĐBQH (cần Phó Trưởng Đoàn duyệt)
   if (profile.role === 'cb_ctqh')
     return leader.leader_type === 'doan';

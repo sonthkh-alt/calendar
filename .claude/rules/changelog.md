@@ -1,5 +1,11 @@
 # Nhật ký dự án
 
+## 2026-06-21 — cb_tonghop (thttdn) full quyền nhập + sửa MỌI lịch
+- permissions.canCreateFor: cb_tonghop -> true (nhập lịch cho MỌI đối tượng, không chỉ PCT/Đoàn)
+- Kéo theo canEditEntry: cb_tonghop sửa được MỌI lịch (nhánh "canCreateFor && cb_tonghop -> true")
+- initialStatus giữ nguyên: lịch PCT/Đoàn -> da_duyet, lịch Ban/VP -> cho_duyet (PCT duyệt)
+- KHÔNG cấp quyền quản trị hệ thống (khác quan_tri); không cần migration (thttdn vốn là cb_tonghop)
+
 ## 2026-06-19 — Lịch ngày sắp xếp theo ưu tiên lãnh đạo (giống Lịch tuần)
 - DayView: dùng makeEntrySorter(leaders) thay vì chỉ sort theo start_time. Mỗi khối
   Sáng/Chiều: `mergeEntries([...list].sort(entrySorter))` -> trong buổi xếp theo STT
