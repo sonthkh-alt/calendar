@@ -22,7 +22,9 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 - `ScheduleForm.jsx` — modal thêm/sửa; multi-leader (1 dòng/người, chung group_id); cảnh báo mềm trùng lịch
 - `ApprovalQueue.jsx` — hàng chờ PCT: Duyệt / Điều chỉnh (form inline + ghi chú bắt buộc) / Từ chối; "Duyệt cả tuần"
 - `VehicleBoard.jsx` — bảng xe×tuần + panel "Chuyến cần xe"; cảnh báo trùng xe (confirm) qua `findConflicts`
-- `AdminUsers/AdminLeaders/AdminVehicles.jsx` — tab Quản trị
+- `AdminUsers/AdminLeaders/AdminVehicles.jsx` — tab Quản trị. AdminUsers: TẠO tài khoản (form
+  + tick vai trò/Ban) gọi `api/admin-create-user.js` (Vercel Serverless, service_role) +
+  phân quyền tài khoản đã có. Cần env `SUPABASE_SERVICE_ROLE_KEY` trên Vercel.
 - `FilterBar.jsx` — điều hướng tuần/tháng/ngày + lọc Ban/lãnh đạo/trạng thái
 - `EntryCard.jsx` / `StatusBadge.jsx` — ô lịch + huy hiệu trạng thái dùng chung
 

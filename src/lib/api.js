@@ -24,6 +24,27 @@ export async function fetchProfiles() {
   return supabase.from('profiles').select('*').order('email');
 }
 
+// Tạo tài khoản mới (gọi serverless /api/admin-create-user dùng service_role).
+// Trả { data, error } như các hàm khác. Chỉ chạy trên bản deploy (Vercel có /api).
+export async function adminCreateUser({ email, password, full_name, position, role, ban_ids }) {
+  if (!supabase) return NO_DB;
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) return { data: null, error: { message: 'Chưa đăng nhập.' } };
+  try {
+    const res = await fetch('/api/admin-create-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ email, password, full_name, position, role, ban_ids }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return { data: null, error: { message: json.error || `Lỗi máy chủ (${res.status})` } };
+    return { data: json, error: null };
+  } catch (e) {
+    return { data: null, error: { message: 'Không gọi được máy chủ tạo tài khoản: ' + (e?.message || e) } };
+  }
+}
+
 export async function fetchParticipantGroups() {
   if (!supabase) return NO_DB;
   return supabase.from('participant_groups').select('*').order('sort_order');

@@ -1,5 +1,17 @@
 # Nhật ký dự án
 
+## 2026-06-21 — Quản trị: TẠO tài khoản + phân quyền bằng tick (serverless service_role)
+- api/admin-create-user.js (Vercel Serverless): dùng SUPABASE_SERVICE_ROLE_KEY tạo user qua
+  Admin API (email_confirm=true, user_metadata.pw_set=true) -> đăng nhập ngay bằng email+mk.
+  Bảo mật: xác thực JWT người gọi + chỉ cho Quản trị (email bootstrap hoặc profiles.role=quan_tri).
+  Upsert profiles (role/full_name/position/ban_ids). VALID_ROLES kiểm tra đầu vào.
+- api.js: adminCreateUser({...}) -> fetch POST /api/admin-create-user kèm Bearer access_token.
+- AdminUsers.jsx: thêm form "Tạo tài khoản mới" — email/mật khẩu/họ tên/chức vụ + TICK vai trò
+  (radio) + TICK các Ban (cho cb_ban); giữ bảng phân quyền tài khoản đã có (đổi role/ban/leader).
+- CẦN CẤU HÌNH 1 LẦN: Vercel → Settings → Environment Variables thêm SUPABASE_SERVICE_ROLE_KEY
+  (Supabase → Project Settings → API → service_role). Không có biến này thì nút tạo báo lỗi rõ.
+- Lưu ý: /api chỉ chạy trên bản deploy Vercel (vite dev không có); Vite KHÔNG bundle /api.
+
 ## 2026-06-21 — cb_tonghop (thttdn) full quyền nhập + sửa MỌI lịch
 - permissions.canCreateFor: cb_tonghop -> true (nhập lịch cho MỌI đối tượng, không chỉ PCT/Đoàn)
 - Kéo theo canEditEntry: cb_tonghop sửa được MỌI lịch (nhánh "canCreateFor && cb_tonghop -> true")

@@ -1,17 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { UserCog, Save, Info } from 'lucide-react';
-import { fetchProfiles, updateProfile } from '../lib/api';
+import { UserCog, Info, UserPlus, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { fetchProfiles, updateProfile, adminCreateUser } from '../lib/api';
 import { ROLES } from '../lib/constants';
 
 /**
- * Quản trị tài khoản: đặt vai trò, Ban theo dõi (cb_ban), lãnh đạo gắn (pct).
- * Tạo tài khoản mới: người dùng tự nhận magic link lần đầu (trigger tự tạo profile),
- * sau đó quản trị vào đây gán vai trò.
+ * Quản trị tài khoản:
+ *  - TẠO tài khoản mới (gọi serverless /api/admin-create-user, dùng service_role): nhập
+ *    email/mật khẩu/họ tên + TICK vai trò + TICK các Ban (cho cb_ban). Xác nhận email luôn.
+ *  - Phân quyền tài khoản đã có: đổi vai trò, Ban theo dõi (cb_ban), lãnh đạo gắn (pct).
  */
 export default function AdminUsers({ bans, leaders }) {
   const [profiles, setProfiles] = useState([]);
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState('');
+
+  // ----- Form tạo tài khoản -----
+  const empty = { email: '', password: '', full_name: '', position: '', role: 'nguoi_xem', ban_ids: [] };
+  const [form, setForm] = useState(empty);
+  const [creating, setCreating] = useState(false);
+  const [createMsg, setCreateMsg] = useState(null); // { ok, text }
 
   const load = async () => {
     const { data } = await fetchProfiles();
@@ -36,18 +43,106 @@ export default function AdminUsers({ bans, leaders }) {
     save(p, { ban_ids: next });
   };
 
+  const toggleFormBan = (banId) => {
+    setForm((f) => {
+      const cur = f.ban_ids || [];
+      return { ...f, ban_ids: cur.includes(banId) ? cur.filter((x) => x !== banId) : [...cur, banId] };
+    });
+  };
+
+  const submitCreate = async (e) => {
+    e.preventDefault();
+    setCreateMsg(null);
+    if (!form.email.trim() || !form.password) { setCreateMsg({ ok: false, text: 'Nhập email và mật khẩu.' }); return; }
+    if (form.password.length < 6) { setCreateMsg({ ok: false, text: 'Mật khẩu tối thiểu 6 ký tự.' }); return; }
+    setCreating(true);
+    const { error } = await adminCreateUser({
+      email: form.email.trim(), password: form.password,
+      full_name: form.full_name, position: form.position,
+      role: form.role, ban_ids: form.role === 'cb_ban' ? form.ban_ids : [],
+    });
+    setCreating(false);
+    if (error) { setCreateMsg({ ok: false, text: error.message }); return; }
+    setCreateMsg({ ok: true, text: `Đã tạo tài khoản ${form.email.trim()} (đăng nhập ngay bằng email + mật khẩu).` });
+    setForm(empty);
+    load();
+  };
+
   const sel = 'bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[13px] text-slate-700 outline-none focus:border-red-400';
+  const input = 'w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-[13px] outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 transition';
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3.5 text-[13px] text-sky-900 flex items-start gap-2">
-        <Info className="w-4 h-4 mt-0.5 shrink-0" />
-        <div>
-          <p className="font-bold">Cấp tài khoản mới</p>
-          <p className="mt-0.5">Hướng dẫn cán bộ mở trang đăng nhập → bấm <b>"Lần đầu đăng nhập"</b> → nhập email cơ quan → nhận liên kết kích hoạt → tạo mật khẩu. Tài khoản sẽ tự xuất hiện trong danh sách dưới đây với vai trò <b>Người xem</b>; quản trị gán vai trò phù hợp sau.</p>
+    <div className="space-y-5">
+      {/* ===== TẠO TÀI KHOẢN MỚI ===== */}
+      <form onSubmit={submitCreate} className="rounded-xl border border-red-200 bg-white shadow-sm p-4 space-y-3">
+        <p className="flex items-center gap-2 text-[14px] font-bold text-red-800"><UserPlus className="w-4 h-4" /> Tạo tài khoản mới</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-[11px] font-bold text-slate-500 uppercase">Email cơ quan <span className="text-rose-600">*</span></label>
+            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="vd: nguyenvana@thanhhoa.gov.vn" className={`${input} mt-1`} />
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-slate-500 uppercase">Mật khẩu <span className="text-rose-600">*</span></label>
+            <input type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="tối thiểu 6 ký tự" className={`${input} mt-1`} />
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-slate-500 uppercase">Họ và tên</label>
+            <input type="text" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Nguyễn Văn A" className={`${input} mt-1`} />
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-slate-500 uppercase">Chức vụ</label>
+            <input type="text" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} placeholder="Chuyên viên" className={`${input} mt-1`} />
+          </div>
         </div>
+
+        {/* TICK vai trò */}
+        <div>
+          <label className="text-[11px] font-bold text-slate-500 uppercase">Vai trò (tick chọn 1)</label>
+          <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {Object.entries(ROLES).map(([k, v]) => (
+              <label key={k} className={`flex items-center gap-2 text-[13px] rounded-lg px-2.5 py-1.5 cursor-pointer border transition ${form.role === k ? 'bg-red-50 border-red-300 text-red-900 font-semibold' : 'bg-white border-slate-200 text-slate-700 hover:border-red-200'}`}>
+                <input type="radio" name="new-role" checked={form.role === k} onChange={() => setForm({ ...form, role: k })} className="accent-red-700" />
+                {v}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* TICK các Ban (chỉ khi cb_ban) */}
+        {form.role === 'cb_ban' && (
+          <div>
+            <label className="text-[11px] font-bold text-slate-500 uppercase">Theo dõi các Ban (tick chọn nhiều)</label>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {(bans || []).map((b) => (
+                <label key={b.id} className={`flex items-center gap-1 text-[12px] rounded-lg px-2 py-1 cursor-pointer border transition ${form.ban_ids.includes(b.id) ? 'bg-red-50 border-red-300 text-red-900 font-semibold' : 'bg-white border-slate-200 text-slate-600'}`}>
+                  <input type="checkbox" checked={form.ban_ids.includes(b.id)} onChange={() => toggleFormBan(b.id)} className="accent-red-700" />
+                  {b.short_name || b.name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {createMsg && (
+          <p className={`text-[13px] font-semibold flex items-center gap-1.5 ${createMsg.ok ? 'text-emerald-700' : 'text-rose-600'}`}>
+            {createMsg.ok ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />} {createMsg.text}
+          </p>
+        )}
+
+        <div className="flex justify-end">
+          <button type="submit" disabled={creating} className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-red-700 to-red-600 hover:from-red-800 hover:to-red-700 disabled:opacity-60 shadow">
+            {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />} {creating ? 'Đang tạo…' : 'Tạo tài khoản'}
+          </button>
+        </div>
+      </form>
+
+      <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 text-[12px] text-sky-900 flex items-start gap-2">
+        <Info className="w-4 h-4 mt-0.5 shrink-0" />
+        <p>Tài khoản tạo ở đây <b>xác nhận email tự động</b>, đăng nhập ngay bằng email + mật khẩu. Tính năng cần <b>SUPABASE_SERVICE_ROLE_KEY</b> đã cấu hình trên Vercel. Cán bộ vẫn có thể tự kích hoạt qua <b>"Lần đầu đăng nhập"</b> (magic link) rồi quản trị gán vai trò bên dưới.</p>
       </div>
 
+      {/* ===== PHÂN QUYỀN TÀI KHOẢN ĐÃ CÓ ===== */}
       {msg && <p className="text-[13px] font-semibold text-emerald-700">{msg}</p>}
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
