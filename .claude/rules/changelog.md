@@ -1,5 +1,14 @@
 # Nhật ký dự án
 
+## 2026-06-28 — Xuất PDF/Word: CHỈ 7 ngày T2–CN của tuần đang hiển thị
+- Yêu cầu: file PDF chỉ in đúng tuần đang xem và CHỈ 7 ngày (không kèm 2 ngày cuối tuần
+  kề như lưới lịch 9 ngày).
+- dates.js: thêm workWeekStart(d) (= Thứ Hai tuần làm việc) + workWeekDays(d) (7 ngày T2–CN).
+- exporters.js: buildWeekPdfDocDefinition + pdfFileName + exportWeekDocx dùng workWeekDays/
+  workWeekStart thay weekDays/weekStart (9 ngày/Thứ Bảy). Tiêu đề + tên file lấy lại đúng số
+  tuần (getISOWeek của Thứ Hai) — sửa luôn lỗi số tuần lệch (26 -> 27) do đổi weekStart trước đó.
+  Áp dụng CẢ Word cho nhất quán (cùng là công văn lịch tuần). test:pdf 12/12 đạt, lint+build xanh.
+
 ## 2026-06-28 — "Tuần công tác" = Thứ Bảy → Chủ nhật tuần sau (9 ngày)
 - Yêu cầu: lịch tuần hiển thị cả cuối tuần TRƯỚC và cuối tuần SAU. Vd hôm nay 28/6/2026 (CN)
   -> tuần hiển thị 27/06 → 05/07/2026 (T7, CN, T2..T6, T7, CN = 9 ngày).

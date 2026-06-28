@@ -26,6 +26,11 @@ export { addDays, addWeeks, addMonths, startOfMonth, endOfMonth, isSameDay, isSa
 // 9 ngày của "tuần công tác" chứa d (Thứ Bảy -> Chủ nhật tuần sau)
 export const weekDays = (d) => Array.from({ length: 9 }, (_, i) => addDays(weekStart(d), i));
 
+// Tuần LÀM VIỆC 7 ngày (Thứ Hai -> Chủ nhật) — dùng cho XUẤT PDF/Word (văn bản công văn),
+// khớp nhãn "Tuần N: <T2> – <CN>". KHÁC weekDays (9 ngày, có kèm cuối tuần kề dùng cho lưới lịch).
+export const workWeekStart = (d) => workWeekMonday(d);
+export const workWeekDays = (d) => Array.from({ length: 7 }, (_, i) => addDays(workWeekMonday(d), i));
+
 // 'yyyy-MM-dd' cho cột date của Postgres
 export const toISODate = (d) => format(d, 'yyyy-MM-dd');
 

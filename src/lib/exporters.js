@@ -2,7 +2,7 @@
 // bám theo bản in (WeekPrintSheet). docx + file-saver được NẠP ĐỘNG (dynamic import)
 // để không làm phình bundle chính.
 import { makeEntrySorter, UNIT_NAME } from './constants';
-import { weekDays, toISODate, dayName, fmtDM, fmtDMY, fmtTime, weekStart, weekEnd, getISOWeek } from './dates';
+import { workWeekDays, workWeekStart, toISODate, dayName, fmtDM, fmtDMY, fmtTime, weekEnd, getISOWeek } from './dates';
 
 // ---- Chuẩn hóa tiếng Việt (khớp tên không phụ thuộc dấu / kính ngữ) ----
 const norm = (s) => (s || '')
@@ -116,10 +116,10 @@ export async function exportWeekDocx({ anchor, entries, leaders, groups }) {
   } = docx;
   const saveAs = fileSaverMod.saveAs || fileSaverMod.default;
 
-  const days = weekDays(anchor);
+  const days = workWeekDays(anchor); // 7 ngày T2–CN (đúng tuần đang hiển thị, không kèm cuối tuần kề)
   const leaderById = Object.fromEntries((leaders || []).map((l) => [l.id, l]));
   const entrySorter = makeEntrySorter(leaders, groups);
-  const ws = weekStart(anchor), we = weekEnd(anchor);
+  const ws = workWeekStart(anchor), we = weekEnd(anchor); // T2 -> CN của tuần làm việc
 
   const mergeDay = (list) => {
     const map = new Map();
@@ -225,7 +225,7 @@ export async function exportWeekDocx({ anchor, entries, leaders, groups }) {
 // ===== XUẤT PDF (pdfmake) =====
 const nfc = (s) => (s == null ? '' : String(s)).normalize('NFC'); // chuẩn dựng sẵn -> Roboto đủ glyph
 export const pdfFileName = (anchor) => {
-  const ws = weekStart(anchor);
+  const ws = workWeekStart(anchor);
   return `Lich-cong-tac-tuan-${getISOWeek(ws)}-${ws.getFullYear()}.pdf`;
 };
 
@@ -237,10 +237,10 @@ export const pdfFileName = (anchor) => {
  * - Nội dung CHỜ DUYỆT: thêm " (chờ duyệt)" IN ĐẬM; đã điều chỉnh -> ghi chú in nghiêng.
  */
 export function buildWeekPdfDocDefinition({ anchor, entries, leaders, groups }) {
-  const days = weekDays(anchor);
+  const days = workWeekDays(anchor); // 7 ngày T2–CN (đúng tuần đang hiển thị, không kèm cuối tuần kề)
   const leaderById = Object.fromEntries((leaders || []).map((l) => [l.id, l]));
   const entrySorter = makeEntrySorter(leaders, groups);
-  const ws = weekStart(anchor), we = weekEnd(anchor);
+  const ws = workWeekStart(anchor), we = weekEnd(anchor); // T2 -> CN của tuần làm việc
 
   const mergeDay = (list) => {
     const map = new Map();
