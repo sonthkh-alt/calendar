@@ -1,9 +1,9 @@
 # Nhật ký dự án
 
-## 2026-06-28 — Lịch tuần (màn hình): 7 ngày khi hôm nay là T2–T5, 9 ngày khi T6/T7/CN
-- Yêu cầu: nếu NGÀY HIỆN TẠI là Thứ Hai..Thứ Năm thì lịch tuần hiện 7 ngày T2–CN bình thường;
-  còn lại (Thứ Sáu/Thứ Bảy/Chủ nhật) giữ 9 ngày (T7 trước -> CN sau) để xem trước tuần kế.
-- dates.js: thêm isCompactWeek(today) (T2..T5) + displayWeekDays(anchor, today=new Date()) ->
+## 2026-06-28 — Lịch tuần (màn hình): 7 ngày khi hôm nay là T2–T6, 9 ngày khi T7/CN
+- Yêu cầu: nếu NGÀY HIỆN TẠI là Thứ Hai..Thứ Sáu thì lịch tuần hiện 7 ngày T2–CN bình thường;
+  còn lại (Thứ Bảy/Chủ nhật) giữ 9 ngày (T7 trước -> CN sau) để xem trước tuần kế.
+- dates.js: thêm isCompactWeek(today) (T2..T6) + displayWeekDays(anchor, today=new Date()) ->
   workWeekDays (7) nếu T2–T5, ngược lại weekDays (9).
 - WeekView: dùng displayWeekDays(anchor) thay weekDays. CHỈ áp dụng cho màn hình Lịch tuần;
   VehicleBoard (tab Điều xe) + WeekPrintSheet (bản in) vẫn 9 ngày; PDF/Word vẫn 7 ngày.
