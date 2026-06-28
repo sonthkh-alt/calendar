@@ -1,5 +1,20 @@
 # Nhật ký dự án
 
+## 2026-06-28 — "Tuần công tác" = Thứ Bảy → Chủ nhật tuần sau (9 ngày)
+- Yêu cầu: lịch tuần hiển thị cả cuối tuần TRƯỚC và cuối tuần SAU. Vd hôm nay 28/6/2026 (CN)
+  -> tuần hiển thị 27/06 → 05/07/2026 (T7, CN, T2..T6, T7, CN = 9 ngày).
+- dates.js: thêm workWeekMonday(d) — Thứ Hai của tuần làm việc; ngày CUỐI TUẦN (T7/CN) tính
+  thuộc tuần làm việc KẾ TIẾP. weekStart = workWeekMonday - 2 (Thứ Bảy trước), weekEnd =
+  workWeekMonday + 6 (Chủ nhật sau), weekDays = 9 ngày. weekLabel: số tuần theo getISOWeek của
+  workWeekMonday. RIÊNG dòng text rút gọn về tuần làm việc T2–CN 7 ngày: khoảng = workWeekMonday
+  -> Chủ nhật (vd "Tuần 27: 29/06 – 05/07/2026") dù lưới lịch vẫn 9 ngày.
+- monthGrid TÁCH KHỎI weekStart/weekEnd (đã đổi nghĩa) -> dùng thẳng startOfWeek/endOfWeek ISO
+  (T2–CN) để lưới THÁNG giữ nguyên 7 ngày/tuần.
+- Mọi consumer dùng weekDays/weekStart/weekEnd tự động theo cửa sổ mới: WeekView (9 dòng/cột
+  ngày), VehicleBoard, WeekPrintSheet, exporters (PDF/Word), ApprovalQueue "Duyệt cả tuần",
+  App.weekKey (cảnh báo trùng địa điểm trong tuần). "Tuần sau" (addWeeks +1) nhảy đúng 1 tuần
+  làm việc. Lint + build xanh.
+
 ## 2026-06-21 — Quản trị: TẠO tài khoản + phân quyền bằng tick (serverless service_role)
 - api/admin-create-user.js (Vercel Serverless): dùng SUPABASE_SERVICE_ROLE_KEY tạo user qua
   Admin API (email_confirm=true, user_metadata.pw_set=true) -> đăng nhập ngay bằng email+mk.

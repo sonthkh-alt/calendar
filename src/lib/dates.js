@@ -1,4 +1,5 @@
-// Tiện ích ngày tháng — tuần làm việc Việt Nam: Thứ Hai -> Chủ nhật
+// Tiện ích ngày tháng. "Tuần công tác" hiển thị = Thứ Bảy -> Chủ nhật tuần sau (9 ngày);
+// lưới THÁNG vẫn dùng tuần ISO Thứ Hai -> Chủ nhật.
 import {
   startOfWeek, endOfWeek, addDays, addWeeks, addMonths,
   startOfMonth, endOfMonth, format, isSameDay, isSameMonth, parseISO, getISOWeek,
@@ -7,12 +8,23 @@ import { vi } from 'date-fns/locale';
 
 export const WEEK_OPTS = { weekStartsOn: 1 }; // Thứ Hai
 
-export const weekStart = (d) => startOfWeek(d, WEEK_OPTS);
-export const weekEnd = (d) => endOfWeek(d, WEEK_OPTS);
+// Thứ Hai của tuần LÀM VIỆC ứng với ngày d. Quy ước: ngày CUỐI TUẦN (Thứ Bảy/Chủ nhật)
+// được tính thuộc TUẦN LÀM VIỆC KẾ TIẾP (vd Chủ nhật 28/6 -> tuần làm việc bắt đầu 29/6).
+const workWeekMonday = (d) => {
+  let mon = startOfWeek(d, WEEK_OPTS); // Thứ Hai của tuần ISO chứa d
+  const dow = d.getDay(); // 0 = Chủ nhật, 6 = Thứ Bảy
+  if (dow === 0 || dow === 6) mon = addDays(mon, 7); // cuối tuần -> tuần làm việc kế tiếp
+  return mon;
+};
+
+// "Tuần công tác": Thứ Bảy (cuối tuần TRƯỚC) -> Chủ nhật (cuối tuần SAU) = 9 ngày,
+// gồm T7+CN tuần trước, Thứ Hai..Thứ Sáu, rồi T7+CN tuần sau.
+export const weekStart = (d) => addDays(workWeekMonday(d), -2); // Thứ Bảy trước tuần làm việc
+export const weekEnd = (d) => addDays(workWeekMonday(d), 6);    // Chủ nhật sau tuần làm việc
 export { addDays, addWeeks, addMonths, startOfMonth, endOfMonth, isSameDay, isSameMonth, parseISO, getISOWeek };
 
-// 7 ngày của tuần chứa d (Thứ Hai -> Chủ nhật)
-export const weekDays = (d) => Array.from({ length: 7 }, (_, i) => addDays(weekStart(d), i));
+// 9 ngày của "tuần công tác" chứa d (Thứ Bảy -> Chủ nhật tuần sau)
+export const weekDays = (d) => Array.from({ length: 9 }, (_, i) => addDays(weekStart(d), i));
 
 // 'yyyy-MM-dd' cho cột date của Postgres
 export const toISODate = (d) => format(d, 'yyyy-MM-dd');
@@ -41,19 +53,20 @@ export const dmyToISO = (s) => {
   return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 };
 
-// Nhãn tuần: 'Tuần 24: 08/06 – 14/06/2026'
+// Nhãn tuần: số tuần + KHOẢNG 7 NGÀY làm việc Thứ Hai -> Chủ nhật, vd 'Tuần 27: 29/06 – 05/07/2026'.
+// (Lưới lịch vẫn hiển thị 9 ngày; riêng dòng text rút gọn về tuần T2–CN.)
 export const weekLabel = (d) => {
-  const ws = weekStart(d), we = weekEnd(d);
-  return `Tuần ${getISOWeek(ws)}: ${fmtDM(ws)} – ${fmtDMY(we)}`;
+  const mon = workWeekMonday(d);
+  return `Tuần ${getISOWeek(mon)}: ${fmtDM(mon)} – ${fmtDMY(weekEnd(d))}`;
 };
 
 // 'hh:mm' từ time Postgres ('08:30:00' -> '08:30')
 export const fmtTime = (t) => (t ? String(t).slice(0, 5) : '');
 
-// Lưới tháng: mảng các tuần (mỗi tuần 7 ngày) phủ kín tháng chứa d
+// Lưới tháng: mảng các tuần ISO (mỗi tuần 7 ngày, Thứ Hai -> Chủ nhật) phủ kín tháng chứa d
 export const monthGrid = (d) => {
-  const first = weekStart(startOfMonth(d));
-  const last = weekEnd(endOfMonth(d));
+  const first = startOfWeek(startOfMonth(d), WEEK_OPTS);
+  const last = endOfWeek(endOfMonth(d), WEEK_OPTS);
   const weeks = [];
   let cur = first;
   while (cur <= last) {
