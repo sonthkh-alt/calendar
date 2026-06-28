@@ -3,7 +3,7 @@ import { Plus, LayoutGrid, Rows3, CalendarDays, CheckCheck, FileText, FileDown }
 import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
 import { canCreateFor, canEditEntry, canSeeEntry, canReview, canReviewEntry } from '../lib/permissions';
-import { weekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
+import { displayWeekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
 import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation, hidesDriver, makeEntrySorter, canExportDocx } from '../lib/constants';
 import { reviewEntries } from '../lib/api';
 import { exportWeekDocx, exportWeekPdf } from '../lib/exporters';
@@ -23,7 +23,8 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
   // Điện thoại: luôn dùng chế độ Gọn (khối từng ngày, kéo dọc) cho dễ xem
   useEffect(() => { if (isMobile) setMode('compact'); }, [isMobile]);
   const effMode = isMobile ? 'compact' : mode;
-  const days = useMemo(() => weekDays(anchor), [anchor]);
+  // 7 ngày (T2–CN) nếu hôm nay là Thứ Hai..Thứ Năm; 9 ngày (kèm cuối tuần kề) nếu T6/T7/CN
+  const days = useMemo(() => displayWeekDays(anchor), [anchor]);
 
   // Bấm "Hôm nay" -> cuộn tới ô/khối hôm nay (chờ 1 nhịp để view cập nhật tuần mới)
   useEffect(() => {

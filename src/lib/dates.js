@@ -31,6 +31,16 @@ export const weekDays = (d) => Array.from({ length: 9 }, (_, i) => addDays(weekS
 export const workWeekStart = (d) => workWeekMonday(d);
 export const workWeekDays = (d) => Array.from({ length: 7 }, (_, i) => addDays(workWeekMonday(d), i));
 
+// Lịch tuần TRÊN MÀN HÌNH hiển thị 7 hay 9 ngày tùy NGÀY HIỆN TẠI:
+// - Hôm nay Thứ Hai..Thứ Năm: 7 ngày T2->CN (tuần làm việc bình thường).
+// - Hôm nay Thứ Sáu/Thứ Bảy/Chủ nhật: 9 ngày (T7 trước -> CN sau) để xem trước tuần kế tiếp.
+export const isCompactWeek = (today = new Date()) => {
+  const dow = today.getDay(); // 0=CN, 1=T2 ... 6=T7
+  return dow >= 1 && dow <= 4; // Thứ Hai..Thứ Năm
+};
+export const displayWeekDays = (anchor, today = new Date()) =>
+  (isCompactWeek(today) ? workWeekDays(anchor) : weekDays(anchor));
+
 // 'yyyy-MM-dd' cho cột date của Postgres
 export const toISODate = (d) => format(d, 'yyyy-MM-dd');
 
