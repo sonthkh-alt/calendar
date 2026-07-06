@@ -5,7 +5,7 @@ import { SESSIONS, COMMON_LOCATIONS, groupLeaderIds } from '../lib/constants';
 import { canCreateFor, initialStatus, canReviewEntry } from '../lib/permissions';
 import { createEntries, updateEntry, deleteEntry } from '../lib/api';
 import DateField from './DateField';
-import { toISODate, sessionsOverlap, parseISO, fmtDM } from '../lib/dates';
+import { toISODate, sessionsOverlap, parseISO, fmtDM, datesInRange } from '../lib/dates';
 
 // Suy ra các nhóm đã chọn từ chuỗi group_label đã lưu (khi Sửa/Nhân bản).
 // LƯU Ý: tên nhóm có thể CHỨA dấu ";" (vd "Thường trực HĐND tỉnh; lãnh đạo các Ban...")
@@ -38,6 +38,8 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const isAdjust = !editing && !!adjusting;
   const edit = editing || adjusting;
   const src = edit || duplicating; // nguồn dữ liệu điền sẵn
+  // Chọn khoảng "Từ ngày … đến ngày …" chỉ khi THÊM MỚI (kể cả nhân bản), không khi sửa/điều chỉnh.
+  const allowMultiDay = !edit;
   // Danh sách được chọn: theo quyền. Mở từ ô của một cột (prefill.leaderIds)
   // thì nhóm lãnh đạo của cột đó được ĐƯA LÊN ĐẦU, các nhóm khác vẫn chọn được.
   const allowed = useMemo(
@@ -56,6 +58,10 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     return prefill?.leaderId ? [prefill.leaderId] : [];
   });
   const [date, setDate] = useState(src?.date || (prefill?.date ? toISODate(prefill.date) : toISODate(new Date())));
+  // Nhập lịch NHIỀU NGÀY liên tiếp (chỉ khi THÊM MỚI): tạo một bộ mục cho mỗi ngày
+  // trong khoảng [date, endDate]. Mỗi ngày có group_id riêng -> hiển thị/in/gộp như bình thường.
+  const [multiDay, setMultiDay] = useState(false);
+  const [endDate, setEndDate] = useState('');
   const [session, setSession] = useState(src?.session || prefill?.session || 'sang');
   const [startTime, setStartTime] = useState(src?.start_time?.slice(0, 5) || '08:00');
   const [endTime, setEndTime] = useState(src?.end_time?.slice(0, 5) || '11:30');
@@ -162,6 +168,14 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     if (leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); setLeaderOpen(true); return; }
     if (isAdjust && !adjustNote.trim()) { setErr('Vui lòng nhập Ghi chú điều chỉnh để Văn phòng và Ban được biết.'); return; }
     if (isReEdit && !editReason.trim()) { setErr('Lịch đã được duyệt — vui lòng nêu Lý do chỉnh sửa (lịch sẽ chờ duyệt lại).'); return; }
+    // Nhiều ngày: kiểm tra khoảng hợp lệ
+    let rangeDays = [date];
+    if (allowMultiDay && multiDay) {
+      if (!endDate) { setErr('Vui lòng chọn “Đến ngày”, hoặc bỏ chọn “Nhiều ngày liên tiếp”.'); return; }
+      rangeDays = datesInRange(date, endDate);
+      if (!rangeDays.length) { setErr('“Đến ngày” phải bằng hoặc sau “Từ ngày”.'); return; }
+      if (rangeDays.length >= 60) { setErr('Khoảng ngày quá dài (tối đa 60 ngày). Vui lòng chia nhỏ.'); return; }
+    }
     setSaving(true); setErr('');
 
     const base = {
@@ -225,7 +239,10 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       res.error = results.find((r) => r?.error)?.error || null;
     } else {
       const pairs = leaderIds.map((leaderId) => ({ leaderId, status: statusFor(leaderId, null) }));
-      res = await createEntries(base, pairs);
+      // Mỗi ngày trong khoảng -> một lần createEntries với group_id RIÊNG (không truyền
+      // group_id) để mỗi ngày là một sự kiện độc lập; gộp nhiều lãnh đạo trong ngày vẫn đúng.
+      const results = await Promise.all(rangeDays.map((d) => createEntries({ ...base, date: d }, pairs)));
+      res.error = results.find((r) => r?.error)?.error || null;
     }
     setSaving(false);
     if (res.error) { setErr(res.error.message); return; }
@@ -333,7 +350,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
           {/* Thời gian */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Ngày <span className="text-rose-600">*</span></label>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{allowMultiDay && multiDay ? 'Từ ngày' : 'Ngày'} <span className="text-rose-600">*</span></label>
               <div className="mt-1.5"><DateField value={date} onChange={setDate} required className={input} /></div>
             </div>
             <div>
@@ -343,6 +360,33 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
               </select>
             </div>
           </div>
+
+          {/* Nhiều ngày liên tiếp — chỉ khi THÊM MỚI. Tạo một bản lịch giống nhau cho mỗi ngày. */}
+          {allowMultiDay && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={multiDay}
+                  onChange={(e) => { setMultiDay(e.target.checked); if (e.target.checked && !endDate) setEndDate(date); }}
+                  className="accent-red-700 mt-0.5 w-4 h-4"
+                />
+                <span className="text-[13px] text-slate-700">
+                  <span className="font-bold text-slate-700">Nhiều ngày liên tiếp</span>
+                  <span className="block text-[12px] text-slate-500 mt-0.5">Tạo cùng một nội dung lịch cho từng ngày trong khoảng “Từ ngày → Đến ngày”.</span>
+                </span>
+              </label>
+              {multiDay && (
+                <div className="mt-2.5">
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Đến ngày <span className="text-rose-600">*</span></label>
+                  <div className="mt-1.5"><DateField value={endDate} onChange={setEndDate} className={input} /></div>
+                  {datesInRange(date, endDate).length > 1 && (
+                    <p className="mt-1.5 text-[12px] text-slate-600">Sẽ tạo lịch cho <b>{datesInRange(date, endDate).length}</b> ngày: {datesInRange(date, endDate).map((d) => fmtDM(parseISO(d))).join(', ')}.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           {session === 'gio' && (
             <div className="grid grid-cols-2 gap-3">
               <div>

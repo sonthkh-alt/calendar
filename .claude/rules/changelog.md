@@ -1,5 +1,16 @@
 # Nhật ký dự án
 
+## 2026-07-06 — Thêm lịch: chọn "Từ ngày … đến ngày …" (nhiều ngày liên tiếp)
+- Yêu cầu: khi THÊM lịch công tác, cho phép nhập lịch trải nhiều ngày liên tiếp (vd giám sát 3 ngày).
+- Cách làm (không đổi schema): mỗi ngày vẫn là mục lịch riêng. Nhập "nhiều ngày" -> tạo một bộ
+  mục CHO MỖI NGÀY trong khoảng [date, endDate]; mỗi ngày có group_id RIÊNG (createEntries không
+  truyền group_id) nên gộp nhiều lãnh đạo trong ngày + hiển thị/in/xuất/cảnh báo vẫn đúng như cũ.
+- dates.js: thêm datesInRange(startISO, endISO, cap=60) — liệt kê ISO 2 đầu; [] nếu end<start; cắt tối đa 60.
+- ScheduleForm: state multiDay + endDate; allowMultiDay = !edit (CHỈ khi thêm mới, kể cả nhân bản;
+  KHÔNG khi sửa/điều chỉnh). Checkbox "Nhiều ngày liên tiếp" -> hiện ô "Đến ngày" + xem trước số ngày.
+  Nhãn "Ngày" đổi thành "Từ ngày" khi bật. Validate khoảng hợp lệ (>=, tối đa 60). Nhánh tạo mới
+  lặp rangeDays -> Promise.all(createEntries({...base, date:d}, pairs)). Lint + build xanh.
+
 ## 2026-06-28 — Lịch tuần (màn hình): 7 ngày khi hôm nay là T2–T6, 9 ngày khi T7/CN
 - Yêu cầu: nếu NGÀY HIỆN TẠI là Thứ Hai..Thứ Sáu thì lịch tuần hiện 7 ngày T2–CN bình thường;
   còn lại (Thứ Bảy/Chủ nhật) giữ 9 ngày (T7 trước -> CN sau) để xem trước tuần kế.

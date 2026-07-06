@@ -44,6 +44,18 @@ export const displayWeekDays = (anchor, today = new Date()) =>
 // 'yyyy-MM-dd' cho cột date của Postgres
 export const toISODate = (d) => format(d, 'yyyy-MM-dd');
 
+// Danh sách ISO ('yyyy-MM-dd') từ startISO -> endISO (bao gồm cả hai đầu).
+// Trả [] nếu chuỗi sai hoặc end < start; cắt tối đa `cap` ngày để chặn khoảng quá dài.
+export const datesInRange = (startISO, endISO, cap = 60) => {
+  if (!startISO || !endISO) return [];
+  const s = parseISO(startISO), e = parseISO(endISO);
+  if (Number.isNaN(+s) || Number.isNaN(+e) || e < s) return [];
+  const out = [];
+  let cur = s;
+  while (cur <= e && out.length < cap) { out.push(toISODate(cur)); cur = addDays(cur, 1); }
+  return out;
+};
+
 // 'Thứ Hai', 'Chủ Nhật'...
 export const dayName = (d) => {
   const s = format(d, 'EEEE', { locale: vi });
