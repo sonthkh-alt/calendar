@@ -121,15 +121,34 @@ export async function deleteParticipantGroup(id) {
 
 // ===== Mục lịch =====
 // Lấy lịch trong khoảng ngày [fromISO, toISO] (yyyy-MM-dd)
+// QUAN TRỌNG: Supabase/PostgREST giới hạn số dòng trả về mỗi lần gọi ("Max rows",
+// mặc định 1000). Khoảng nạp là CẢ NĂM nên khi dữ liệu vượt 1000 dòng, các mục
+// ngày CUỐI (sắp xếp tăng dần theo ngày) bị cắt âm thầm -> lịch mới nhập không
+// hiện trên lịch và bấm thông báo báo "lịch không còn / ngoài phạm vi đang tải".
+// -> Nạp theo TRANG (range) cho tới khi hết dữ liệu.
+const ENTRIES_PAGE = 1000;   // xin tối đa 1000 dòng/lần (máy chủ có thể trả ít hơn)
+const ENTRIES_MAX = 50000;   // chốt an toàn, tránh vòng lặp vô hạn
 export async function fetchEntries(fromISO, toISO) {
   if (!supabase) return NO_DB;
-  return supabase
-    .from('schedule_entries')
-    .select('*')
-    .gte('date', fromISO)
-    .lte('date', toISO)
-    .order('date')
-    .order('session');
+  const all = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from('schedule_entries')
+      .select('*')
+      .gte('date', fromISO)
+      .lte('date', toISO)
+      .order('date')
+      .order('session')
+      .order('id') // thứ tự ổn định giữa các trang (tránh trùng/sót khi trùng khóa sắp xếp)
+      .range(from, from + ENTRIES_PAGE - 1);
+    if (error) return { data: all.length ? all : null, error };
+    const got = data?.length || 0;
+    if (got) all.push(...data);
+    if (!got || all.length >= ENTRIES_MAX) break;
+    from += got;
+  }
+  return { data: all, error: null };
 }
 
 // Tạo lịch cho nhiều lãnh đạo: 1 dòng / lãnh đạo, chung group_id

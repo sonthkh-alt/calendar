@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-08-06 — SỬA LỖI: lịch mới nhập KHÔNG hiện (bị cắt ở dòng thứ 1000)
+- Triệu chứng: lịch vừa tạo (vd 10–12/08/2026) không thấy trên Lịch tuần; bấm thông báo ->
+  "Lịch trong thông báo này không còn (có thể đã bị xóa) hoặc nằm ngoài phạm vi đang tải."
+- Nguyên nhân: App nạp CẢ NĂM qua fetchEntries, nhưng Supabase/PostgREST giới hạn "Max rows"
+  (mặc định 1000) cho mỗi lần gọi. Dữ liệu năm 2026 đã vượt 1000 dòng -> vì sắp xếp theo ngày
+  TĂNG DẦN nên các mục NGÀY CUỐI (tức lịch mới nhập) bị cắt âm thầm, không báo lỗi.
+- Sửa api.fetchEntries: nạp theo TRANG bằng .range(from, from+999), lặp tới khi trang rỗng
+  (cộng dồn theo số dòng THỰC nhận, phòng khi máy chủ đặt Max rows nhỏ hơn); thêm .order('id')
+  làm khóa sắp xếp phụ để thứ tự ổn định giữa các trang; chốt an toàn 50.000 dòng. Lint + build xanh.
+
 ## 2026-08-06 — Tài khoản cán bộ Ban Dân tộc
 - supabase/migrations/2026-08-06-tai-khoan-ban-dan-toc.sql: bandt@thanhhoa.gov.vn / mật khẩu `6`,
   vai trò `cb_ban`, ban_ids = Ban Dân tộc (tra theo `bans.name ilike '%Dân tộc%'`).
