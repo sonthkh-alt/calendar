@@ -1,5 +1,13 @@
 # Nhật ký dự án
 
+## 2026-08-06 — Tài khoản cán bộ Ban Dân tộc
+- supabase/migrations/2026-08-06-tai-khoan-ban-dan-toc.sql: bandt@thanhhoa.gov.vn / mật khẩu `6`,
+  vai trò `cb_ban`, ban_ids = Ban Dân tộc (tra theo `bans.name ilike '%Dân tộc%'`).
+- Theo pattern tài khoản cũ: chèn thẳng auth.users + auth.identities, token = '' (NULL gây lỗi
+  "Database error querying schema"), user_metadata.pw_set = true -> đăng nhập ngay bằng email + mật khẩu.
+- An toàn khi Actions chạy lại mỗi deploy: cờ `created` -> CHỈ ghi role/full_name/position/ban_ids
+  lúc tạo mới, không ghi đè phân quyền quản trị viên đã sửa trên web.
+
 ## 2026-07-06 — Thêm lịch: chọn "Từ ngày … đến ngày …" (nhiều ngày liên tiếp)
 - Yêu cầu: khi THÊM lịch công tác, cho phép nhập lịch trải nhiều ngày liên tiếp (vd giám sát 3 ngày).
 - Cách làm (không đổi schema): mỗi ngày vẫn là mục lịch riêng. Nhập "nhiều ngày" -> tạo một bộ
