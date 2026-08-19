@@ -116,6 +116,7 @@ export function buildVehicleSlipDocDefinition(d = {}) {
         margin: [0, 0, 0, 5],
       },
       line('Địa điểm xuất phát:', d.departure),
+      ...(d.requesterStaff ? [line('Chuyên viên đề nghị:', d.requesterStaff, true)] : []),
 
       {
         columns: [

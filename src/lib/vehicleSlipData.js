@@ -84,6 +84,11 @@ export function buildSlipPayload({ entry, entries, leaders, vehicles, profiles, 
     purposeMore: entry.location ? `Địa điểm: ${entry.location}` : '',
     timeText: `${timeLabel}, ngày ${fmtDMY(d)}`,
     riderText: entry.rider_count ? String(entry.rider_count) : '',
+    // CHUYÊN VIÊN ĐỀ NGHỊ (người trực tiếp báo xe) — khác với lãnh đạo chủ trì ở phần
+    // "Tên tôi là". Ưu tiên tên nhập trên biểu mẫu, dự phòng hồ sơ tài khoản đã đề nghị.
+    requesterStaff: entry.vehicle_requester_name
+      || profileById[entry.vehicle_requested_by]?.full_name
+      || profileById[entry.created_by]?.full_name || '',
     departure: entry.departure_place || DEFAULT_DEPARTURE,
     plateText: cars.map((v) => v.plate).join('; '),
     driverText: cars.map((v) => [v.driver_name, v.driver_phone].filter(Boolean).join(' - ')).join('; '),

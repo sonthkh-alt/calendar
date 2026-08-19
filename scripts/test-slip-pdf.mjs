@@ -31,6 +31,7 @@ const data = {
   timeText: 'Sáng, ngày 20/08/2026',
   riderText: '5',
   departure: 'Trụ sở Đoàn ĐBQH và HĐND tỉnh',
+  requesterStaff: 'Nguyễn Thị Hồng Vân',
   plateText: '36A-1234',
   driverText: 'Lê Văn B - 0912345678',
   hctcqtBlock: 'Ý KIẾN CỦA PHÒNG HÀNH CHÍNH, TỔ CHỨC, QUẢN TRỊ',
@@ -71,6 +72,7 @@ ok('ý kiến Phòng HC-TC-QT + biển số + lái xe', txt.includes('HÀNH CHÍ
 ok('ô ký Phòng HC-TC-QT', txt.includes('KT. TRƯỞNG PHÒNG') && txt.includes('Ngô Ngọc Quyến'));
 ok('ý kiến + ô ký Lãnh đạo Văn phòng', txt.includes('Đồng ý bố trí xe theo đề nghị.') && txt.includes('KT. CHÁNH VĂN PHÒNG') && txt.includes('Hà Ngọc Sơn'));
 ok('dòng xác thực phê duyệt điện tử', txt.includes('A1B2-C3D4'));
+ok('in tên chuyên viên đề nghị', txt.includes('Chuyên viên đề nghị: Nguyễn Thị Hồng Vân'), txt.slice(0, 0));
 ok('không lẫn ký tự lỗi phông', !txt.includes('�'));
 ok('tên tệp không dấu, có mã xác thực', vehicleSlipFileName(data) === 'Phieu-dieu-xe-20260820-A1B2-C3D4.pdf');
 

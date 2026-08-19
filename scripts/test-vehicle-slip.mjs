@@ -16,6 +16,7 @@ const html = buildVehicleSlipHtml({
   timeText: 'Sáng, ngày 20/08/2026',
   riderText: '5',
   departure: 'Trụ sở Đoàn ĐBQH và HĐND tỉnh',
+  requesterStaff: 'Nguyễn Thị Hồng Vân',
   plateText: '36A-1234',
   driverText: 'Lê Văn B - 0912345678',
   hctcqtBlock: 'Ý KIẾN CỦA PHÒNG HÀNH CHÍNH, TỔ CHỨC, QUẢN TRỊ',
@@ -36,6 +37,7 @@ ok('đủ quốc hiệu + tiêu ngữ', html.includes('CỘNG HÒA XÃ HỘI CH�
 ok('tiêu đề phiếu', html.includes('Đề nghị sử dụng xe ô tô công vụ'));
 ok('người báo xe + chức vụ', html.includes('Nguyễn Văn A') && html.includes('Chuyên viên phòng Công tác HĐND'));
 ok('nội dung / thời gian / số người / xuất phát', html.includes('Sáng, ngày 20/08/2026') && html.includes('>5<') && html.includes('Trụ sở Đoàn ĐBQH và HĐND tỉnh'));
+ok('in tên chuyên viên đề nghị', html.includes('Chuyên viên đề nghị:') && html.includes('Nguyễn Thị Hồng Vân'));
 ok('ý kiến Phòng HC-TC-QT: biển số + lái xe', html.includes('36A-1234') && html.includes('Lê Văn B - 0912345678'));
 ok('ô ký 2 dòng (xuống dòng bằng <br/>)', html.includes('KT. TRƯỞNG PHÒNG<br/>PHÓ TRƯỞNG PHÒNG'));
 ok('ý kiến + người ký của Lãnh đạo Văn phòng', html.includes('Đồng ý bố trí xe theo đề nghị.') && html.includes('Hà Ngọc Sơn'));

@@ -74,6 +74,11 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const [wantVehicle, setWantVehicle] = useState(!!src?.vehicle_requested);
   const [riderCount, setRiderCount] = useState(src?.rider_count ? String(src.rider_count) : '');
   const [departure, setDeparture] = useState(src?.departure_place || DEFAULT_DEPARTURE);
+  // Họ và tên CHUYÊN VIÊN ĐỀ NGHỊ — in trên phiếu điều xe. Mặc định là người đang nhập lịch,
+  // sửa được (nhập hộ đồng nghiệp, hoặc tài khoản dùng chung của phòng).
+  const [staffName, setStaffName] = useState(
+    src?.vehicle_requester_name || profile?.full_name || profile?.email || ''
+  );
   const [groupLabel, setGroupLabel] = useState(src?.group_label || '');
   // Nguồn sự thật cho ô tick nhóm: danh sách TÊN nhóm đã chọn (không tách từ group_label
   // vì tên nhóm có thể chứa dấu ";"). groupLabel = các tên này nối "; " để lưu/hiển thị.
@@ -174,6 +179,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     if (isAdjust && !adjustNote.trim()) { setErr('Vui lòng nhập Ghi chú điều chỉnh để Văn phòng và Ban được biết.'); return; }
     if (isReEdit && !editReason.trim()) { setErr('Lịch đã được duyệt — vui lòng nêu Lý do chỉnh sửa (lịch sẽ chờ duyệt lại).'); return; }
     if (!atOffice && wantVehicle && !departure.trim()) { setErr('Vui lòng nhập Địa điểm xuất phát để Phòng HC-TC-QT bố trí xe.'); return; }
+    if (!atOffice && wantVehicle && !staffName.trim()) { setErr('Vui lòng nhập họ và tên Chuyên viên đề nghị (in trên phiếu điều xe).'); return; }
     if (!atOffice && wantVehicle && riderCount && !(Number(riderCount) > 0)) { setErr('Số người đi phải là số lớn hơn 0.'); return; }
     // Nhiều ngày: kiểm tra khoảng hợp lệ
     let rangeDays = [date];
@@ -192,6 +198,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       vehicle_requested: wantVeh,
       rider_count: wantVeh && riderCount ? Number(riderCount) : null,
       departure_place: wantVeh ? (departure.trim() || null) : null,
+      vehicle_requester_name: wantVeh ? (staffName.trim() || null) : null,
       no_vehicle: !wantVeh,
     };
     // Thông tin chuyến (ảnh hưởng phiếu điều xe) có thay đổi so với mục đang có không?
@@ -202,7 +209,9 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       || (ex.content || '') !== content.trim()
       || (ex.location || '') !== (atOffice ? '' : location.trim())
       || (ex.rider_count ?? null) !== vehicleBase.rider_count
-      || (ex.departure_place || '') !== (vehicleBase.departure_place || '');
+      || (ex.departure_place || '') !== (vehicleBase.departure_place || '')
+      // Đổi cả tên chuyên viên đề nghị -> phiếu đã ký số sẽ sai, phải duyệt/ký lại
+      || (ex.vehicle_requester_name || '') !== (vehicleBase.vehicle_requester_name || '');
     // Trạng thái phiếu xe cho từng mục:
     //  - bỏ tick        -> 'none' + gỡ xe đã gán
     //  - mới đề nghị    -> 'de_xuat' (chờ Phòng HC-TC-QT phân xe)
@@ -473,14 +482,21 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
                 </span>
               </label>
               {wantVehicle && (
-                <div className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <div>
-                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Số người</label>
-                    <input type="number" min="1" value={riderCount} onChange={(e) => setRiderCount(e.target.value)} placeholder="VD: 5" className={`${input} mt-1.5`} />
+                <div className="px-3 pb-3 space-y-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Số người</label>
+                      <input type="number" min="1" value={riderCount} onChange={(e) => setRiderCount(e.target.value)} placeholder="VD: 5" className={`${input} mt-1.5`} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm xuất phát <span className="text-rose-600">*</span></label>
+                      <input type="text" list="goi-y-dia-diem" value={departure} onChange={(e) => setDeparture(e.target.value)} placeholder="VD: Trụ sở Đoàn ĐBQH và HĐND tỉnh" className={`${input} mt-1.5`} />
+                    </div>
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm xuất phát <span className="text-rose-600">*</span></label>
-                    <input type="text" list="goi-y-dia-diem" value={departure} onChange={(e) => setDeparture(e.target.value)} placeholder="VD: Trụ sở Đoàn ĐBQH và HĐND tỉnh" className={`${input} mt-1.5`} />
+                  <div>
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Chuyên viên đề nghị (họ và tên) <span className="text-rose-600">*</span></label>
+                    <input type="text" value={staffName} onChange={(e) => setStaffName(e.target.value)} placeholder="VD: Nguyễn Văn A" className={`${input} mt-1.5`} />
+                    <p className="mt-1 text-[12px] text-slate-500">Tên này được in trên <b>Phiếu đề nghị sử dụng xe ô tô công vụ</b>. Mặc định là người đang nhập lịch — sửa được nếu nhập hộ đồng chí khác.</p>
                   </div>
                 </div>
               )}

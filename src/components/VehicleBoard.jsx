@@ -464,6 +464,7 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold border ${st.bg} ${st.text} ${st.border}`}>{st.label}</span>
                       {e.rider_count ? <span className="ml-2">Số người: <b>{e.rider_count}</b></span> : null}
                       {e.departure_place ? <span className="ml-2">Xuất phát: <b>{e.departure_place}</b></span> : null}
+                      {e.vehicle_requester_name ? <span className="ml-2">CV đề nghị: <b>{e.vehicle_requester_name}</b></span> : null}
                     </p>
                     </div>
                   </div>

@@ -11,7 +11,8 @@
 - `vehicles` — 4 xe: `rieng` (gắn PCT qua assigned_leader_id) | `dung_chung`
 - `schedule_entries` — group_id (sự kiện nhiều lãnh đạo), leader_id, date, session `sang|chieu|ca_ngay|gio`(+start/end_time), content/location/participants, status, review_note/reviewed_by/at, vehicle_id/vehicle_ids/vehicle_note/_by/_at, created_by
   + ĐỀ NGHỊ XE: `vehicle_requested` (ô tick khi nhập lịch), `rider_count`, `departure_place`,
-  `vehicle_status`, `vehicle_requested_by/_at`, `vehicle_approve_note`, `vehicle_approved_by/_at`, `vehicle_sign_code`
+  `vehicle_status`, `vehicle_requested_by/_at`, `vehicle_requester_name` (họ tên chuyên viên đề nghị,
+  in trên phiếu), `vehicle_approve_note`, `vehicle_approved_by/_at`, `vehicle_sign_code`
 - `profiles.signature_data` — ảnh chữ ký (data URI) in trên phiếu điều xe khi Quản trị duyệt
 
 ## Vai trò (profiles.role)

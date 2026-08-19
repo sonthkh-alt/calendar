@@ -92,6 +92,7 @@ export function buildVehicleSlipHtml(d = {}) {
     <span>Số người:</span><span class="val" style="max-width:28%">${esc(d.riderText || '')}</span>
   </div>
   <div class="row"><span>Địa điểm xuất phát:</span><span class="val">${esc(d.departure || '')}</span></div>
+  ${d.requesterStaff ? `<div class="row"><span>Chuyên viên đề nghị:</span><span class="val b">${esc(d.requesterStaff)}</span></div>` : ''}
 
   <table style="margin-top:10px"><tr>
     <td style="width:50%"></td>

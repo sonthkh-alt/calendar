@@ -1,5 +1,19 @@
 # Nhật ký dự án
 
+## 2026-08-19 — Phiếu điều xe ghi tên CHUYÊN VIÊN ĐỀ NGHỊ (đầy đủ họ tên)
+- Khối "Đề nghị bố trí xe" trong ScheduleForm (hiện cả khi THÊM và khi SỬA lịch — chỉ ẩn khi tick
+  "Làm việc tại cơ quan") thêm ô **Chuyên viên đề nghị (họ và tên)**, bắt buộc khi có đề nghị xe.
+  Mặc định điền họ tên tài khoản đang nhập, SỬA ĐƯỢC (nhập hộ đồng chí khác / tài khoản dùng chung).
+- schema.sql: `schedule_entries.vehicle_requester_name text`.
+- Phiếu in ra (cả PDF ký số lẫn bản in nhanh) có dòng **"Chuyên viên đề nghị: <họ tên>"** ngay dưới
+  Địa điểm xuất phát — khác với "Tên tôi là" (là LÃNH ĐẠO CHỦ TRÌ). Không nhập tay thì lấy họ tên
+  hồ sơ tài khoản đã đề nghị/tạo lịch.
+- Hiển thị thêm: hộp chi tiết lịch ("Chuyên viên đề nghị: …") và danh sách ở tab Điều xe
+  ("CV đề nghị: …") để Phòng HC-TC-QT biết liên hệ ai.
+- Sửa tên chuyên viên trên lịch ĐÃ DUYỆT phiếu -> tính là đổi thông tin chuyến, phiếu quay lại
+  "chờ Lãnh đạo Văn phòng duyệt" để ký lại (tránh bản PDF đã ký ghi sai người).
+- Test: test:slip-data 22/22, test:slip-pdf 21/21, test:slip 15/15.
+
 ## 2026-08-19 — Phân xe & phê duyệt HÀNG LOẠT cho nhiều ngày (tab Điều xe)
 - **Khoảng ngày:** panel "Đề nghị bố trí xe" thêm ô *Từ ngày … đến ngày …* (mặc định = tuần đang
   xem, đổi tuần thì tự bám theo cho tới khi người dùng tự chỉnh; có nút "Về tuần đang xem").

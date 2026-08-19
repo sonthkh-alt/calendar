@@ -496,6 +496,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
               </p>
               <div className="text-[13px] text-slate-700 space-y-0.5">
                 {chairLeader && <p>Người đề nghị (chủ trì): <b>{chairLeader.full_name}</b>{chairLeader.position ? ' — ' + chairLeader.position : ''}</p>}
+                {entry.vehicle_requester_name && <p>Chuyên viên đề nghị: <b>{entry.vehicle_requester_name}</b></p>}
                 {entry.rider_count ? <p>Số người: <b>{entry.rider_count}</b></p> : null}
                 <p>Địa điểm xuất phát: <b>{entry.departure_place || DEFAULT_DEPARTURE}</b></p>
                 {slipVehicles.length > 0 && (

@@ -37,6 +37,7 @@ const base = {
   location: 'UBND xã Quảng Lộc', status: 'da_duyet', rider_count: 5, departure_place: 'Trụ sở Đoàn ĐBQH và HĐND tỉnh',
   vehicle_ids: ['v1', 'v2'], vehicle_status: 'da_phan_xe', vehicle_assigned_by: 'p-hc',
   vehicle_requested_by: 'p-cv', vehicle_requested_at: '2026-08-18T03:00:00.000Z', created_by: 'p-cv',
+  vehicle_requester_name: 'Nguyễn Thị Hồng Vân',
 };
 const entries = [
   { ...base, id: 'e1', leader_id: 'long' },
@@ -64,6 +65,11 @@ ok('thời gian ghi theo buổi + ngày', p.timeText === 'Sáng, ngày 20/08/202
 ok('nội dung + địa điểm', p.purpose.includes('Quảng Lộc') && p.purposeMore === 'Địa điểm: UBND xã Quảng Lộc');
 ok('người ký ô Phòng HC-TC-QT = người phân xe', p.hctcqtSigner === 'Ngô Ngọc Quyến' && p.hctcqtSign === 'data:image/png;base64,AAA');
 ok('chưa duyệt thì chưa có mã xác thực', p.signCode === '' && p.approvedAtText === '');
+ok('có tên CHUYÊN VIÊN ĐỀ NGHỊ (đầy đủ họ tên)', p.requesterStaff === 'Nguyễn Thị Hồng Vân', p.requesterStaff);
+ok('chuyên viên đề nghị KHÁC lãnh đạo chủ trì', p.requesterStaff !== p.requesterName);
+// Không nhập tay -> lấy họ tên tài khoản đã đề nghị
+const pStaff = buildSlipPayload({ entry: { ...entries[0], vehicle_requester_name: null }, entries, leaders, vehicles, profiles });
+ok('không nhập tay -> lấy họ tên tài khoản đề nghị', pStaff.requesterStaff === 'Chuyên viên Nguyễn Văn A', pStaff.requesterStaff);
 
 // Sau khi phê duyệt (dữ liệu ghi đè lúc vừa duyệt xong, entry chưa kịp làm mới)
 const p2 = buildSlipPayload({

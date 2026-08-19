@@ -177,6 +177,9 @@ alter table schedule_entries drop constraint if exists schedule_entries_vehicle_
 alter table schedule_entries add constraint schedule_entries_vehicle_status_check
   check (vehicle_status in ('none','de_xuat','da_phan_xe','da_duyet','tu_choi'));
 alter table schedule_entries add column if not exists vehicle_requested_by uuid references profiles(id);
+-- Họ và tên CHUYÊN VIÊN ĐỀ NGHỊ (ghi trên phiếu điều xe). Mặc định lấy họ tên tài khoản
+-- đang nhập lịch nhưng SỬA ĐƯỢC (nhập hộ người khác / tài khoản dùng chung).
+alter table schedule_entries add column if not exists vehicle_requester_name text;
 alter table schedule_entries add column if not exists vehicle_requested_at timestamptz;
 alter table schedule_entries add column if not exists vehicle_approve_note text;  -- ý kiến Lãnh đạo Văn phòng
 alter table schedule_entries add column if not exists vehicle_approved_by uuid references profiles(id);
