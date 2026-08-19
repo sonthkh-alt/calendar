@@ -122,6 +122,30 @@ cũng đã thử: trả về PDF có `/adbe.pkcs7.detached` và từ chối (403
 *Signatures*, còn phần nhìn thấy trên giấy là ảnh chữ ký + mã xác thực đã in sẵn trong phiếu. Muốn ô
 chữ ký số hiện thành hình trên trang thì phải dựng thêm "appearance stream", làm sau nếu cần.
 
+### 3.5. Đã cài sẵn trên máy Lãnh đạo Văn phòng (19/08/2026)
+
+| Mục | Giá trị |
+|---|---|
+| Thư mục cài | `C:\ky-so-agent` (để ngoài OneDrive cho khỏi đồng bộ thừa) |
+| Node.js | v24.15.0 (đã có sẵn trên máy) |
+| Cổng | `7878` — chỉ nghe trên `127.0.0.1` |
+| Cho phép gọi từ | `https://calendar-beta-lac.vercel.app`, `http://localhost:5173`, `http://127.0.0.1:5173` |
+| Chứng thư ghim sẵn | `3AE33E7147F770076C21B4192D056EA5585D5DB7` — *Hà Ngọc Sơn*, hết hạn 01/07/2028 |
+| Tự chạy khi bật máy | Lối tắt **"Tro ly ky so"** trong thư mục Startup (`shell:startup`), cửa sổ thu nhỏ |
+| Chạy tay | Bấm đúp `C:\ky-so-agent\chay-tro-ly.bat` |
+
+Kiểm tra nhanh bất cứ lúc nào: mở trình duyệt vào `http://127.0.0.1:7878/health` → thấy `{"ok":true,...}`.
+
+**Tắt trợ lý:** đóng cửa sổ đen "TRO LY KY SO" (hoặc kết thúc tiến trình `node.exe` đang giữ cổng 7878).
+**Bỏ tự chạy khi bật máy:** `Win + R` → `shell:startup` → xóa lối tắt *Tro ly ky so*.
+
+**Khi đổi/gia hạn chứng thư số:** thumbprint sẽ khác → sửa `certThumbprint` trong
+`C:\ky-so-agent\config.json` (xem thumbprint mới tại `http://127.0.0.1:7878/certs`), hoặc để trống
+chuỗi này nếu máy chỉ có duy nhất một chứng thư ký được.
+
+**Khi mã nguồn trợ lý được cập nhật:** chép đè các tệp `*.mjs`, `winsign.ps1` từ `tools/ky-so-agent/`
+trong dự án sang `C:\ky-so-agent` (giữ nguyên `config.json`), rồi khởi động lại trợ lý.
+
 ## 4. Mức 3 — ký số từ xa qua nhà cung cấp dịch vụ
 
 Phù hợp khi người duyệt hay đi công tác (ký bằng điện thoại, không cần cắm token).

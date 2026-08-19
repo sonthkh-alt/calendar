@@ -1,5 +1,13 @@
 # Nhật ký dự án
 
+## 2026-08-19 — Đã CÀI trợ lý ký số lên máy Lãnh đạo Văn phòng
+- Cài tại `C:\ky-so-agent` (ngoài OneDrive), Node.js v24.15.0 có sẵn; chép mã nguồn + node_modules.
+- `config.json`: cổng 7878, allowOrigins = calendar-beta-lac.vercel.app + localhost:5173,
+  **ghim chứng thư** `3AE33E7147F770076C21B4192D056EA5585D5DB7` (Hà Ngọc Sơn, hết hạn 01/07/2028).
+- `chay-tro-ly.bat` + lối tắt "Tro ly ky so" trong Startup (cửa sổ thu nhỏ) -> tự chạy khi bật máy.
+- Đã khởi động và kiểm tra: `/health` trả `{"ok":true}`, `/certs` thấy đúng chứng thư trên token
+  (canSignDocument = true). Cách gỡ/đổi chứng thư ghi trong docs/KY-SO.md mục 3.5.
+
 ## 2026-08-19 — TRỢ LÝ KÝ SỐ: bấm Phê duyệt là ký bằng USB token, ra PDF đã ký
 - Token của Văn phòng: SafeNet eToken 5110, chứng thư "Hà Ngọc Sơn" do *CA phục vụ các cơ quan Nhà
   nước G2* cấp, Key Usage có **DigitalSignature + NonRepudiation** -> ký văn bản hợp lệ (đã kiểm tra).
