@@ -47,37 +47,40 @@ cho tài khoản Quản trị và không dùng chung tài khoản.
 4. **Cài chứng thư gốc (Root CA) của Ban Cơ yếu** để máy tính/Adobe Reader hiểu chữ ký là hợp lệ.
    Thiếu bước này, file ký xong vẫn mở được nhưng Adobe báo *"Signature validity is unknown"*.
 
-### 3.2. Ký Phiếu điều xe — quy trình dùng được NGAY (không cần sửa phần mềm)
+### 3.2. Ký Phiếu điều xe — luồng đã cài sẵn trong hệ thống
 
-1. Trên hệ thống: mở **chi tiết lịch** → phê duyệt điều xe → bấm **In Phiếu điều xe**.
-2. Trong hộp in của trình duyệt, chọn máy in **"Microsoft Print to PDF"** (hoặc *Save as PDF*) →
-   lưu thành file, ví dụ `Phieu-dieu-xe-20-08-2026.pdf`.
-3. Mở **phần mềm ký số** → chọn file PDF vừa lưu → chọn chứng thư trên token → **đặt vị trí chữ ký
-   vào ô "KT. CHÁNH VĂN PHÒNG"** (góc dưới bên phải phiếu) → nhập PIN → lưu file đã ký.
-4. **Kiểm tra**: mở file đã ký bằng Adobe Acrobat Reader, xem bảng *Signatures* — phải hiện
-   *"Signed and all signatures are valid"*. Nếu báo *unknown* → quay lại bước 3.1.4 (cài Root CA).
-5. Lưu/gửi file PDF đã ký. Đây là bản có giá trị pháp lý; bản in giấy chỉ là bản sao để đối chiếu.
+Mọi thao tác nằm trong hộp **chi tiết lịch** của mục lịch có đề nghị bố trí xe.
 
-> Mẹo: hệ thống đã in sẵn mã xác thực + ảnh chữ ký ở ô Lãnh đạo Văn phòng. Chữ ký số nên đặt **cạnh
-> hoặc chồng lên** ô đó để người nhận thấy rõ đây là văn bản đã ký số.
+1. **Lãnh đạo Văn phòng bấm "Phê duyệt & ký số"** → nhập ý kiến → hệ thống ghi phê duyệt
+   (người duyệt, thời điểm, mã xác thực) và **tự tải về tệp PDF của phiếu** (`Phieu-dieu-xe-<ngày>-<mã>.pdf`).
+2. Mở **phần mềm ký số** của Ban Cơ yếu → chọn tệp PDF vừa tải → chọn chứng thư trên token →
+   đặt vị trí chữ ký vào ô **"KT. CHÁNH VĂN PHÒNG"** (góc dưới bên phải) → nhập PIN → lưu.
+3. Quay lại hộp chi tiết lịch, bấm **"Tải phiếu ĐÃ KÝ SỐ lên"** và chọn tệp vừa ký.
+   Hệ thống lưu tệp vào kho (Supabase Storage, bucket riêng tư `phieu-dieu-xe`).
+4. **Chuyên viên** vào đúng mục lịch đó, bấm **"Tải phiếu đã ký số (PDF)"** để lấy file — không phải
+   làm thêm bước nào. Khi chưa có bản ký số, họ vẫn xuất được bản PDF thường ("Xuất PDF phiếu") hoặc in giấy.
 
-### 3.3. Nâng cấp tiếp theo (tùy chọn, cần lập trình)
+Kiểm tra chữ ký: mở tệp bằng Adobe Acrobat Reader → bảng *Signatures* phải hiện
+*"Signed and all signatures are valid"*. Nếu báo *unknown* → làm lại bước 3.1.4 (cài Root CA).
 
-**Phương án A — lưu file đã ký vào hệ thống (đơn giản, khuyến nghị làm trước):**
-thêm nút *"Tải lên phiếu đã ký số"* trong hộp chi tiết lịch → file vào Supabase Storage → mọi người
-tải về từ chính mục lịch đó. Cần: tạo bucket + policy trên Supabase, thêm cột `vehicle_signed_pdf_url`.
+> Kho tệp: cột `schedule_entries.vehicle_signed_path` (+ `_name`, `_at`, `_by`) trỏ tới tệp trong bucket
+> `phieu-dieu-xe`. `schema.sql` tự tạo bucket khi cập nhật CSDL; nếu tài khoản migration không đủ quyền
+> trên schema `storage`, tạo tay: **Supabase → Storage → New bucket → tên `phieu-dieu-xe`, để Private**.
 
-**Phương án B — ký thẳng từ trang web:** phần mềm ký số của Ban Cơ yếu có bản chạy nền như một
-*dịch vụ cục bộ* trên máy người ký; trang web gửi file sang dịch vụ đó (địa chỉ `localhost`), người ký
-nhập PIN, dịch vụ trả lại file đã ký. Trước khi làm cần chuẩn bị:
+### 3.3. Có thể tự động hóa thêm không?
+
+Bước 2 (ký bằng phần mềm máy trạm) là bước duy nhất còn làm tay. Muốn ký thẳng trong trình duyệt thì
+dùng bản chạy nền (dịch vụ cục bộ) của phần mềm ký số: trang web gửi tệp sang `localhost`, người ký nhập
+PIN, dịch vụ trả lại tệp đã ký. Cần chuẩn bị trước khi lập trình:
 
 - [ ] **Tên + phiên bản** phần mềm ký số đang cài và **tài liệu API** kèm theo (địa chỉ/cổng dịch vụ,
-      tên hàm, tham số). Các thông số này khác nhau theo phiên bản — phải đọc đúng tài liệu của bản
-      đang dùng, không suy đoán.
-- [ ] Thử nghiệm rào cản **mixed content**: hệ thống chạy HTTPS (Vercel) mà dịch vụ ký chạy HTTP trên
-      `localhost` thì trình duyệt sẽ chặn. Cách xử lý: dùng cổng HTTPS nếu phần mềm có hỗ trợ, hoặc
-      giữ cách ký bằng ứng dụng máy trạm ở mục 3.2.
-- [ ] Xác định máy nào được ký (chỉ máy của Lãnh đạo Văn phòng có token).
+      tên hàm, tham số). Thông số khác nhau theo phiên bản — phải đọc đúng tài liệu bản đang dùng.
+- [ ] Thử rào cản **mixed content**: hệ thống chạy HTTPS (Vercel) mà dịch vụ ký chạy HTTP trên
+      `localhost` thì trình duyệt chặn. Xử lý: dùng cổng HTTPS nếu phần mềm hỗ trợ, hoặc giữ cách ở 3.2.
+- [ ] Xác định máy được phép ký (máy có cắm token của Lãnh đạo Văn phòng).
+
+Khi có đủ tài liệu, chỗ cần sửa: `src/lib/vehicleSlipPdf.js` đã có sẵn `getVehicleSlipPdfBlob()` trả về
+tệp PDF dạng Blob — chỉ việc gửi Blob đó sang dịch vụ ký rồi nhận kết quả, phần tải lên kho giữ nguyên.
 
 ## 4. Mức 3 — ký số từ xa qua nhà cung cấp dịch vụ
 

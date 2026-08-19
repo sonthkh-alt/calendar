@@ -1,5 +1,23 @@
 # Nhật ký dự án
 
+## 2026-08-19 — KÝ SỐ phiếu điều xe bằng USB token (sản phẩm là PDF đã ký)
+- Yêu cầu: admin phê duyệt là làm luôn thủ tục ký số; sản phẩm là **file PDF đã ký số**;
+  chuyên viên chỉ vào tải file.
+- `src/lib/vehicleSlipPdf.js`: dựng PHIẾU dạng PDF THẬT bằng pdfmake (lề 3/1.5/2/1cm như mẫu Word,
+  phông Roboto tự nhúng đủ dấu tiếng Việt). `buildVehicleSlipDocDefinition` (hàm thuần) +
+  `downloadVehicleSlipPdf` + `getVehicleSlipPdfBlob` (để sau này gửi thẳng sang dịch vụ ký).
+  Test: npm run test:slip-pdf — render bằng PdfPrinter + pdf-parse, 12/12 đạt.
+- EntryDetail: nút "Phê duyệt điều xe" -> **"Phê duyệt & ký số"**: ghi phê duyệt (mã xác thực,
+  người/thời điểm) rồi TỰ TẢI tệp PDF về máy; hiện khối hướng dẫn 3 bước + nút **"Tải phiếu ĐÃ KÝ SỐ lên"**.
+  Có tệp đã ký -> mọi tài khoản làm việc thấy nút **"Tải phiếu đã ký số (PDF)"** (link có hạn 1 giờ);
+  chưa ký -> vẫn "Xuất PDF phiếu" + "In giấy".
+- Kho tệp: Supabase Storage bucket RIÊNG TƯ `phieu-dieu-xe`; api.js thêm uploadSignedSlip /
+  getSignedSlipUrl / deleteSignedSlip. schema.sql tự tạo bucket + policy (bọc EXCEPTION: thiếu quyền
+  chỉ cảnh báo, không làm hỏng lần cập nhật CSDL -> khi đó tạo tay trong Dashboard).
+- schema.sql: thêm `vehicle_signed_path/_name/_at/_by` trên schedule_entries.
+- docs/KY-SO.md: viết lại mục 3 theo luồng thực tế (cài driver/phần mềm/Root CA -> phê duyệt ->
+  ký -> tải lên -> chuyên viên tải về) + việc cần chuẩn bị nếu muốn ký thẳng từ web.
+
 ## 2026-08-19 — ĐỀ XUẤT / ĐIỀU XE THEO PHIẾU + in Phiếu đề nghị sử dụng xe ô tô công vụ
 - **(1) Ô tick khi nhập lịch:** ScheduleForm thêm "Đề nghị bố trí xe ô tô công vụ" (ẩn khi
   "Làm việc tại cơ quan"); tick -> hiện **Số người** + **Địa điểm xuất phát** (mặc định trụ sở).

@@ -187,6 +187,32 @@ alter table schedule_entries add column if not exists vehicle_sign_code text;   
 update schedule_entries set vehicle_requested = true, vehicle_status = 'da_duyet'
   where vehicle_status = 'none' and array_length(vehicle_ids, 1) >= 1;
 
+-- Phiếu điều xe ĐÃ KÝ SỐ (USB token chuyên dùng): tệp PDF lưu trong Supabase Storage
+-- (bucket 'phieu-dieu-xe'), bảng chỉ giữ đường dẫn. Xem docs/KY-SO.md.
+alter table schedule_entries add column if not exists vehicle_signed_path text;
+alter table schedule_entries add column if not exists vehicle_signed_name text;
+alter table schedule_entries add column if not exists vehicle_signed_at timestamptz;
+alter table schedule_entries add column if not exists vehicle_signed_by uuid references profiles(id);
+
+-- Kho tệp phiếu đã ký số. Bọc EXCEPTION: nếu tài khoản chạy migration không đủ quyền
+-- trên schema storage thì CHỈ cảnh báo, không làm hỏng cả lần cập nhật CSDL — khi đó
+-- tạo thủ công: Supabase Dashboard -> Storage -> New bucket 'phieu-dieu-xe' (Private).
+do $$
+begin
+  if to_regclass('storage.buckets') is not null then
+    begin
+      insert into storage.buckets (id, name, public)
+      values ('phieu-dieu-xe', 'phieu-dieu-xe', false)
+      on conflict (id) do nothing;
+      execute 'drop policy if exists "phieu_dieu_xe_rw" on storage.objects';
+      execute 'create policy "phieu_dieu_xe_rw" on storage.objects for all to authenticated'
+        || ' using (bucket_id = ''phieu-dieu-xe'') with check (bucket_id = ''phieu-dieu-xe'')';
+    exception when others then
+      raise notice 'Khong tu tao duoc bucket phieu-dieu-xe (%): hay tao thu cong trong Supabase Dashboard -> Storage.', sqlerrm;
+    end;
+  end if;
+end $$;
+
 -- Ảnh chữ ký của tài khoản (data URI PNG/JPG) — Lãnh đạo Văn phòng ký duyệt phiếu
 -- điều xe; in kèm trên phiếu cùng mã xác thực. Xem docs/KY-SO.md.
 alter table profiles add column if not exists signature_data text;

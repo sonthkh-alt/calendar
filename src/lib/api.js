@@ -236,6 +236,32 @@ export async function assignVehicles(ids, vehicleId, note, assignerId) {
 }
 
 // ===== Quản trị danh mục =====
+// ===== Phiếu điều xe đã KÝ SỐ (Supabase Storage) =====
+export const SLIP_BUCKET = 'phieu-dieu-xe';
+
+// Tải tệp PDF đã ký số lên kho; trả về đường dẫn để lưu vào schedule_entries
+export async function uploadSignedSlip(entryId, file) {
+  if (!supabase) return NO_DB;
+  const safe = (file?.name || 'phieu.pdf').replace(/[^\w.-]+/g, '_');
+  const path = `${entryId}/${Date.now()}-${safe}`;
+  const { error } = await supabase.storage.from(SLIP_BUCKET)
+    .upload(path, file, { contentType: file?.type || 'application/pdf', upsert: false });
+  if (error) return { data: null, error };
+  return { data: { path, name: file?.name || safe }, error: null };
+}
+
+// Link tải tệp đã ký (có hạn 1 giờ — bucket để riêng tư)
+export async function getSignedSlipUrl(path) {
+  if (!supabase) return NO_DB;
+  return supabase.storage.from(SLIP_BUCKET).createSignedUrl(path, 3600);
+}
+
+// Xóa tệp đã ký khỏi kho (khi tải nhầm / thay bản khác)
+export async function deleteSignedSlip(path) {
+  if (!supabase) return NO_DB;
+  return supabase.storage.from(SLIP_BUCKET).remove([path]);
+}
+
 export async function upsertLeader(row) {
   if (!supabase) return NO_DB;
   return supabase.from('leaders').upsert(row).select();

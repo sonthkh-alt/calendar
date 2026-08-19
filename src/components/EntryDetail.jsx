@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy, Check, XCircle, Zap, SlidersHorizontal, UserCheck, ShieldCheck, Printer } from 'lucide-react';
+import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy, Check, XCircle, Zap, SlidersHorizontal, UserCheck, ShieldCheck, Printer, FileDown, Upload, FileCheck2, Loader2 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver, VEHICLE_STATUS, VEHICLE_SLIP, DEFAULT_DEPARTURE, isPrivateVehicle } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
 import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk, canAdmin, canApproveVehicle, canDispatchPrivateVehicle, canPrintVehicleSlip } from '../lib/permissions';
-import { reviewEntries, updateEntries } from '../lib/api';
+import { reviewEntries, updateEntries, uploadSignedSlip, getSignedSlipUrl } from '../lib/api';
 import { printVehicleSlip, makeSignCode } from '../lib/vehicleSlip';
+import { downloadVehicleSlipPdf } from '../lib/vehicleSlipPdf';
 
 /**
  * Modal chi tiết 1 mục lịch — hiển thị ĐẦY ĐỦ, không cắt chữ.
@@ -17,6 +18,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   const dupWeek = dupInfo?.severity === 'week';
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [signBusy, setSignBusy] = useState(false); // đang tạo PDF / tải tệp ký số
   const [note, setNote] = useState('');
   // Từ chối theo TỪNG thành viên: id các mục được chọn áp dụng
   const [selIds, setSelIds] = useState([]);
@@ -182,38 +184,21 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
       .map((id) => vehicleById[id]).filter(Boolean).map((v) => [v.id, v])
   ).values()];
 
-  const doApproveVehicle = async () => {
-    const note = window.prompt('Ý kiến của Lãnh đạo Văn phòng (in trên phiếu):', 'Đồng ý bố trí xe theo đề nghị.');
-    if (note === null) return;
-    setBusy(true);
-    await updateEntries(mergedIds, {
-      vehicle_status: 'da_duyet', vehicle_approve_note: note.trim() || 'Đồng ý.',
-      vehicle_approved_by: profile.id, vehicle_approved_at: new Date().toISOString(),
-      vehicle_sign_code: makeSignCode(),
-    });
-    setBusy(false); onChanged?.();
-  };
-  const doRejectVehicle = async () => {
-    const note = window.prompt('Lý do KHÔNG bố trí xe (hiện cho chuyên viên):', '');
-    if (note === null) return;
-    setBusy(true);
-    await updateEntries(mergedIds, {
-      vehicle_status: 'tu_choi', vehicle_approve_note: note.trim() || 'Không bố trí được xe.',
-      vehicle_approved_by: profile.id, vehicle_approved_at: new Date().toISOString(),
-      no_vehicle: true, vehicle_sign_code: null,
-    });
-    setBusy(false); onChanged?.();
-  };
-
-  const doPrintSlip = () => {
+  // Dữ liệu điền vào phiếu (dùng chung cho bản in nhanh và bản PDF để ký số).
+  // `extra` cho phép ghi đè khi vừa phê duyệt xong (entry trong props chưa kịp làm mới).
+  const slipPayload = (extra = {}) => {
     const requester = profileById[entry.vehicle_requested_by] || profileById[entry.created_by] || {};
     const dispatcher = profileById[entry.vehicle_assigned_by];
-    const approver = profileById[entry.vehicle_approved_by];
+    const approver = profileById[extra.approvedById || entry.vehicle_approved_by] || {};
     const reqD = parseISO((entry.vehicle_requested_at || entry.created_at || new Date().toISOString()).slice(0, 10));
-    const appD = entry.vehicle_approved_at ? new Date(entry.vehicle_approved_at) : null;
-    const ok = printVehicleSlip({
+    const appAt = extra.approvedAt || entry.vehicle_approved_at;
+    const appD = appAt ? new Date(appAt) : null;
+    return {
+      dateISO: entry.date,
       fileTitle: `Phieu dieu xe ${entry.date}`,
       unitName: 'VĂN PHÒNG ĐOÀN ĐBQH\nVÀ HĐND TỈNH THANH HÓA',
+      unitName1: 'VĂN PHÒNG ĐOÀN ĐBQH',
+      unitName2: 'VÀ HĐND TỈNH THANH HÓA',
       recipient: VEHICLE_SLIP.recipient,
       placeDateText: `${VEHICLE_SLIP.place}, ngày ${reqD.getDate()} tháng ${reqD.getMonth() + 1} năm ${reqD.getFullYear()}`,
       requesterName: requester.full_name || requester.email || '',
@@ -230,13 +215,91 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
       hctcqtSigner: dispatcher?.full_name || VEHICLE_SLIP.hctcqt.signer,
       hctcqtSign: dispatcher?.signature_data || '',
       vpBlock: VEHICLE_SLIP.vp.block,
-      vpNote: entry.vehicle_approve_note || '',
+      vpNote: extra.approveNote || entry.vehicle_approve_note || '',
       vpSignTitle: VEHICLE_SLIP.vp.signTitle,
-      vpSigner: approver?.full_name || VEHICLE_SLIP.vp.signer,
-      vpSign: approver?.signature_data || '',
+      vpSigner: approver.full_name || VEHICLE_SLIP.vp.signer,
+      vpSign: approver.signature_data || '',
       approvedAtText: appD ? `${appD.getHours()}:${String(appD.getMinutes()).padStart(2, '0')} ngày ${fmtDMY(appD)}` : '',
-      signCode: entry.vehicle_sign_code || '',
+      signCode: extra.signCode || entry.vehicle_sign_code || '',
+    };
+  };
+
+  // PHÊ DUYỆT = bắt đầu luôn thủ tục KÝ SỐ: ghi phê duyệt -> tải ngay tệp PDF phiếu về
+  // máy để đưa vào phần mềm ký số USB token, rồi tải bản đã ký lên (xem docs/KY-SO.md).
+  const doApproveVehicle = async () => {
+    const note = window.prompt('Ý kiến của Lãnh đạo Văn phòng (in trên phiếu):', 'Đồng ý bố trí xe theo đề nghị.');
+    if (note === null) return;
+    const code = makeSignCode();
+    const at = new Date().toISOString();
+    const approveNote = note.trim() || 'Đồng ý.';
+    setBusy(true);
+    const { error } = await updateEntries(mergedIds, {
+      vehicle_status: 'da_duyet', vehicle_approve_note: approveNote,
+      vehicle_approved_by: profile.id, vehicle_approved_at: at, vehicle_sign_code: code,
     });
+    setBusy(false);
+    if (error) { alert('Không lưu được phê duyệt: ' + error.message); return; }
+    onChanged?.();
+    try {
+      await downloadVehicleSlipPdf(slipPayload({ signCode: code, approvedAt: at, approvedById: profile.id, approveNote }));
+    } catch (e) {
+      alert('Đã phê duyệt nhưng chưa tải được tệp PDF: ' + (e?.message || e) + '\nBấm “Tải phiếu PDF để ký số” để tải lại.');
+    }
+  };
+
+  // Tải lại tệp PDF phiếu (chưa ký) — để đưa vào phần mềm ký số
+  const doDownloadPdf = async () => {
+    setSignBusy(true);
+    try { await downloadVehicleSlipPdf(slipPayload()); }
+    catch (e) { alert('Không tạo được tệp PDF: ' + (e?.message || e)); }
+    setSignBusy(false);
+  };
+
+  // Tải TỆP ĐÃ KÝ SỐ lên hệ thống -> chuyên viên vào tải về là xong
+  const doUploadSigned = async (file) => {
+    if (!file) return;
+    if (!/pdf$/i.test(file.name || '') && file.type !== 'application/pdf') {
+      alert('Chỉ nhận tệp PDF đã ký số.'); return;
+    }
+    setSignBusy(true);
+    const { data, error } = await uploadSignedSlip(entry.id, file);
+    if (error) {
+      setSignBusy(false);
+      alert('Không tải tệp lên được: ' + error.message
+        + '\n(Nếu báo thiếu kho lưu trữ: vào Supabase -> Storage -> tạo bucket “phieu-dieu-xe” dạng Private.)');
+      return;
+    }
+    const { error: e2 } = await updateEntries(mergedIds, {
+      vehicle_signed_path: data.path, vehicle_signed_name: data.name,
+      vehicle_signed_at: new Date().toISOString(), vehicle_signed_by: profile.id,
+    });
+    setSignBusy(false);
+    if (e2) { alert('Đã tải tệp lên nhưng chưa lưu được vào lịch: ' + e2.message); return; }
+    onChanged?.();
+  };
+
+  // Mở / tải tệp phiếu đã ký số
+  const doOpenSigned = async () => {
+    setSignBusy(true);
+    const { data, error } = await getSignedSlipUrl(entry.vehicle_signed_path);
+    setSignBusy(false);
+    if (error || !data?.signedUrl) { alert('Không lấy được tệp đã ký: ' + (error?.message || 'không rõ nguyên nhân')); return; }
+    window.open(data.signedUrl, '_blank', 'noopener');
+  };
+  const doRejectVehicle = async () => {
+    const note = window.prompt('Lý do KHÔNG bố trí xe (hiện cho chuyên viên):', '');
+    if (note === null) return;
+    setBusy(true);
+    await updateEntries(mergedIds, {
+      vehicle_status: 'tu_choi', vehicle_approve_note: note.trim() || 'Không bố trí được xe.',
+      vehicle_approved_by: profile.id, vehicle_approved_at: new Date().toISOString(),
+      no_vehicle: true, vehicle_sign_code: null,
+    });
+    setBusy(false); onChanged?.();
+  };
+
+  const doPrintSlip = () => {
+    const ok = printVehicleSlip(slipPayload());
     if (!ok) alert('Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép cửa sổ bật lên (pop-up) cho trang này rồi bấm lại.');
   };
 
@@ -406,25 +469,74 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                   <p className="text-[12px] text-slate-500">Mã xác thực phê duyệt: <b>{entry.vehicle_sign_code}</b></p>
                 )}
               </div>
+              {/* Đã có tệp PDF ĐÃ KÝ SỐ -> ai cũng tải về được (trừ tài khoản chỉ xem) */}
+              {entry.vehicle_signed_path && (
+                <div className="rounded-lg border border-emerald-300 bg-white p-2.5 space-y-1.5">
+                  <p className="text-[12px] text-emerald-800 font-semibold flex items-center gap-1.5">
+                    <FileCheck2 className="w-4 h-4" /> Phiếu đã ký số
+                    {entry.vehicle_signed_at && <span className="font-normal text-slate-500">· {fmtDMY(new Date(entry.vehicle_signed_at))}</span>}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {canPrintSlip && (
+                      <button onClick={doOpenSigned} disabled={signBusy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60">
+                        {signBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} Tải phiếu đã ký số (PDF)
+                      </button>
+                    )}
+                    {canApproveVehicle(profile) && (
+                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-slate-700 border border-slate-300 hover:bg-slate-50">
+                        <Upload className="w-3.5 h-3.5" /> Thay bằng tệp khác
+                        <input type="file" accept="application/pdf,.pdf" className="hidden" disabled={signBusy} onChange={(e) => { doUploadSigned(e.target.files?.[0]); e.target.value = ''; }} />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 {canApproveVeh && (
                   <>
                     <button onClick={doApproveVehicle} disabled={busy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60">
-                      <ShieldCheck className="w-4 h-4" /> Phê duyệt điều xe
+                      <ShieldCheck className="w-4 h-4" /> Phê duyệt &amp; ký số
                     </button>
                     <button onClick={doRejectVehicle} disabled={busy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60">
                       <XCircle className="w-4 h-4" /> Không bố trí xe
                     </button>
                   </>
                 )}
-                {canPrintSlip ? (
-                  <button onClick={doPrintSlip} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-slate-700 hover:bg-slate-800">
-                    <Printer className="w-4 h-4" /> In Phiếu điều xe
-                  </button>
-                ) : (
-                  <span className="text-[12px] text-slate-500 italic">In được phiếu sau khi Lãnh đạo Văn phòng phê duyệt.</span>
+                {canPrintSlip && !entry.vehicle_signed_path && (
+                  <>
+                    <button onClick={doDownloadPdf} disabled={signBusy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-slate-700 hover:bg-slate-800 disabled:opacity-60">
+                      {signBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} Xuất PDF phiếu
+                    </button>
+                    <button onClick={doPrintSlip} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-slate-700 border border-slate-300 hover:bg-white">
+                      <Printer className="w-4 h-4" /> In giấy
+                    </button>
+                  </>
+                )}
+                {!canPrintSlip && !canApproveVeh && (
+                  <span className="text-[12px] text-slate-500 italic">Xuất được phiếu sau khi Lãnh đạo Văn phòng phê duyệt.</span>
                 )}
               </div>
+
+              {/* Thủ tục KÝ SỐ — hiện cho Lãnh đạo Văn phòng ngay sau khi phê duyệt */}
+              {canApproveVehicle(profile) && vStatus === 'da_duyet' && !entry.vehicle_signed_path && (
+                <div className="rounded-lg border border-emerald-300 bg-white p-3 space-y-2">
+                  <p className="text-[12px] font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4" /> Ký số phiếu bằng USB token
+                  </p>
+                  <ol className="text-[12.5px] text-slate-700 list-decimal list-inside space-y-1">
+                    <li>Tệp PDF của phiếu đã được tải về máy (nếu chưa có, bấm <b>“Xuất PDF phiếu”</b> ở trên).</li>
+                    <li>Mở phần mềm ký số của Ban Cơ yếu → chọn tệp PDF → chọn chứng thư trên token →
+                      đặt chữ ký vào ô <b>“KT. CHÁNH VĂN PHÒNG”</b> → nhập PIN → lưu.</li>
+                    <li>Tải tệp đã ký lên đây để chuyên viên tải về dùng.</li>
+                  </ol>
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-emerald-700 hover:bg-emerald-800">
+                    {signBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Tải phiếu ĐÃ KÝ SỐ lên
+                    <input type="file" accept="application/pdf,.pdf" className="hidden" disabled={signBusy} onChange={(e) => { doUploadSigned(e.target.files?.[0]); e.target.value = ''; }} />
+                  </label>
+                  <p className="text-[11.5px] text-slate-500 italic">Chi tiết cài đặt token và kiểm tra chữ ký: xem docs/KY-SO.md.</p>
+                </div>
+              )}
             </div>
           )}
 

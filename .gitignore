@@ -18,3 +18,4 @@ Thumbs.db
 
 # File bundle tạm của test PDF
 scripts/.exporters.cjs
+scripts/.vehicleSlipPdf.cjs

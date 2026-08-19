@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test:pdf": "node scripts/test-pdf.mjs",
-    "test:slip": "node scripts/test-vehicle-slip.mjs"
+    "test:slip": "node scripts/test-vehicle-slip.mjs",
+    "test:slip-pdf": "node scripts/test-slip-pdf.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",

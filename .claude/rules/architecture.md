@@ -5,7 +5,9 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 ## src/lib/
 - `supabase.js` — createClient từ env (null nếu chưa cấu hình)
 - `auth.js` — getSession/onAuthChange/signInWithOtp/signInWithPassword/setPassword(pw_set)/getMyProfile
-- `api.js` — toàn bộ CRUD (entries, leaders, vehicles, profiles); mọi hàm trả `{data, error}`
+- `api.js` — toàn bộ CRUD (entries, leaders, vehicles, profiles); mọi hàm trả `{data, error}`.
+  Kho tệp phiếu đã ký số: `uploadSignedSlip` / `getSignedSlipUrl` / `deleteSignedSlip`
+  (Supabase Storage, bucket riêng tư `phieu-dieu-xe`)
 - `permissions.js` — ma trận quyền: canCreateFor / canEditEntry / canReview / canAssignVehicle / canSeeEntry / initialStatus
 - `dates.js` — "tuần công tác" = Thứ Bảy → Chủ nhật tuần sau (9 ngày: cuối tuần trước + T2–T6 +
   cuối tuần sau); ngày cuối tuần (T7/CN) tính thuộc tuần làm việc KẾ TIẾP (workWeekMonday). weekStart/
@@ -17,6 +19,9 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   công vụ" theo mẫu docs/Đề nghị sử dụng xe oto.docx: A4 dọc, Times New Roman, lề 1.5/2/1/3cm)
   + `printVehicleSlip` (mở cửa sổ in riêng) + `makeSignCode`. Test: scripts/test-vehicle-slip.mjs
   (npm run test:slip)
+- `vehicleSlipPdf.js` — CÙNG phiếu nhưng dựng PDF THẬT bằng pdfmake (nạp động pdfmake + pdfFonts):
+  `buildVehicleSlipDocDefinition` (hàm thuần), `downloadVehicleSlipPdf`, `getVehicleSlipPdfBlob`
+  (dành cho tích hợp ký số trực tiếp sau này). Test: scripts/test-slip-pdf.mjs (npm run test:slip-pdf)
 - `exporters.js` — `exportWeekDocx` xuất .docx (NẠP ĐỘNG docx + file-saver); bảng công văn
   A4 dọc như WeekPrintSheet; thêm "Đồng chí" trước tên cán bộ (withComrade), in đậm "(chờ
   duyệt)". `buildWeekPdfDocDefinition` (hàm thuần) + `exportWeekPdf` xuất .pdf MỘT CÚ BẤM

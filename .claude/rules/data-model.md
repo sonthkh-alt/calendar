@@ -49,7 +49,10 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
 - **Xe riêng** (`vehicles.vehicle_type='rieng'`): KHÔNG hiển thị trên lịch tuần/ngày/chi tiết; chỉ
   `quan_tri` mới chọn được khi điều xe (permissions.canDispatchPrivateVehicle).
 - Phê duyệt ghi `vehicle_approved_by/_at` + `vehicle_sign_code` (mã xác thực in trên phiếu) và in kèm
-  ảnh chữ ký `profiles.signature_data` nếu có. Ký số USB token/từ xa: xem `docs/KY-SO.md`.
+  ảnh chữ ký `profiles.signature_data` nếu có.
+- **Ký số USB token**: bấm "Phê duyệt & ký số" -> tự tải PDF phiếu -> Lãnh đạo VP ký bằng phần mềm
+  Ban Cơ yếu -> tải tệp đã ký lên (Supabase Storage bucket `phieu-dieu-xe`) -> lưu
+  `vehicle_signed_path/_name/_at/_by`. Chuyên viên chỉ bấm "Tải phiếu đã ký số (PDF)". Xem `docs/KY-SO.md`.
 
 ## Trùng giờ (dates.js → sessionsOverlap)
 - ca_ngay giao mọi buổi; gio×gio so khoảng; gio×buổi: trước 12:00 = sáng
