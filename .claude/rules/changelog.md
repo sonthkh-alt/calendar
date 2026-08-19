@@ -1,5 +1,27 @@
 # Nhật ký dự án
 
+## 2026-08-19 — ĐỀ XUẤT / ĐIỀU XE THEO PHIẾU + in Phiếu đề nghị sử dụng xe ô tô công vụ
+- **(1) Ô tick khi nhập lịch:** ScheduleForm thêm "Đề nghị bố trí xe ô tô công vụ" (ẩn khi
+  "Làm việc tại cơ quan"); tick -> hiện **Số người** + **Địa điểm xuất phát** (mặc định trụ sở).
+  KHÔNG tick = mặc định không cần xe (`no_vehicle = true`, `vehicle_status='none'`).
+- **(2) Luồng duyệt:** `vehicle_status` none -> `de_xuat` (chuyên viên) -> `da_phan_xe` (Phòng
+  HC-TC-QT gán xe trong tab Điều xe / hộp chi tiết) -> `da_duyet` (Quản trị = Lãnh đạo Văn phòng
+  phê duyệt, nhập ý kiến) | `tu_choi`. Sửa lịch đã duyệt phiếu mà đổi thông tin chuyến -> quay lại
+  `da_phan_xe` (duyệt lại). VehicleBoard chỉ liệt kê chuyến CÓ đề nghị (dữ liệu cũ đã gán xe vẫn hiện).
+- **(3) In phiếu:** `src/lib/vehicleSlip.js` — buildVehicleSlipHtml (hàm thuần) dựng đúng mẫu
+  docs/Đề nghị sử dụng xe oto.docx (A4 dọc, Times New Roman, lề 1.5/2/1/3cm, bảng 2 cột không kẻ
+  viền); printVehicleSlip mở CỬA SỔ IN RIÊNG (không lẫn CSS ứng dụng). Nút "In Phiếu điều xe" trong
+  EntryDetail, hiện khi phiếu `da_duyet` (trừ tài khoản `nguoi_xem`). Test: npm run test:slip (14/14).
+- **(4) Xe riêng:** KHÔNG còn hiển thị trên Lịch tuần / Lịch ngày / chi tiết (bỏ luôn gợi ý "xe riêng
+  mặc định" theo lãnh đạo); chỉ `quan_tri` chọn được xe riêng khi điều (canDispatchPrivateVehicle).
+- **(5) Ký số:** đã làm mức "chữ ký ảnh + mã xác thực": `profiles.signature_data` (tải ảnh chữ ký ở
+  Quản trị → Tài khoản, tự thu nhỏ ≤400px), khi duyệt sinh `vehicle_sign_code` (XXXX-XXXX) + ghi
+  người/thời điểm; phiếu in kèm ảnh chữ ký và dòng xác thực. Phương án USB token của Ban Cơ yếu và ký
+  số từ xa (điều kiện, luồng, việc phải làm): **docs/KY-SO.md**.
+- schema.sql: thêm cột vehicle_requested / rider_count / departure_place / vehicle_status (+check) /
+  vehicle_requested_by/_at / vehicle_approve_note / vehicle_approved_by/_at / vehicle_sign_code +
+  profiles.signature_data; chuyến CŨ đã gán xe -> đánh dấu đã đề nghị + đã duyệt để không mất dữ liệu.
+
 ## 2026-08-06 — SỬA LỖI: lịch mới nhập KHÔNG hiện (bị cắt ở dòng thứ 1000)
 - Triệu chứng: lịch vừa tạo (vd 10–12/08/2026) không thấy trên Lịch tuần; bấm thông báo ->
   "Lịch trong thông báo này không còn (có thể đã bị xóa) hoặc nằm ngoài phạm vi đang tải."

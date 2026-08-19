@@ -10,7 +10,13 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 - `dates.js` — "tuần công tác" = Thứ Bảy → Chủ nhật tuần sau (9 ngày: cuối tuần trước + T2–T6 +
   cuối tuần sau); ngày cuối tuần (T7/CN) tính thuộc tuần làm việc KẾ TIẾP (workWeekMonday). weekStart/
   weekEnd/weekDays(9)/weekLabel theo cửa sổ này; monthGrid vẫn tuần ISO T2–CN. `sessionsOverlap` (trùng buổi/giờ)
-- `constants.js` — BOOTSTRAP_ADMIN_EMAILS, ROLES, STATUS (màu), SESSIONS, VEHICLE_TYPES
+- `constants.js` — BOOTSTRAP_ADMIN_EMAILS, ROLES, STATUS (màu), SESSIONS, VEHICLE_TYPES,
+  VEHICLE_STATUS (trạng thái phiếu điều xe), VEHICLE_SLIP (mẫu phiếu), DEFAULT_DEPARTURE,
+  isPrivateVehicle / hasVehicleRequest
+- `vehicleSlip.js` — `buildVehicleSlipHtml` (HÀM THUẦN, dựng "Phiếu đề nghị sử dụng xe ô tô
+  công vụ" theo mẫu docs/Đề nghị sử dụng xe oto.docx: A4 dọc, Times New Roman, lề 1.5/2/1/3cm)
+  + `printVehicleSlip` (mở cửa sổ in riêng) + `makeSignCode`. Test: scripts/test-vehicle-slip.mjs
+  (npm run test:slip)
 - `exporters.js` — `exportWeekDocx` xuất .docx (NẠP ĐỘNG docx + file-saver); bảng công văn
   A4 dọc như WeekPrintSheet; thêm "Đồng chí" trước tên cán bộ (withComrade), in đậm "(chờ
   duyệt)". `buildWeekPdfDocDefinition` (hàm thuần) + `exportWeekPdf` xuất .pdf MỘT CÚ BẤM
@@ -23,12 +29,16 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 - `MonthView.jsx` / `DayView.jsx` — lưới tháng (click ngày → DayView), ngày chia 2 khối Sáng/Chiều
 - `ScheduleForm.jsx` — modal thêm/sửa; multi-leader (1 dòng/người, chung group_id); cảnh báo mềm trùng lịch
 - `ApprovalQueue.jsx` — hàng chờ PCT: Duyệt / Điều chỉnh (form inline + ghi chú bắt buộc) / Từ chối; "Duyệt cả tuần"
-- `VehicleBoard.jsx` — bảng xe×tuần + panel "Chuyến cần xe"; cảnh báo trùng xe (confirm) qua `findConflicts`
+- `VehicleBoard.jsx` — bảng xe×tuần + panel "Đề nghị bố trí xe" (CHỈ chuyến chuyên viên đã tick
+  đề nghị); phân xe -> `da_phan_xe`, Quản trị phê duyệt -> `da_duyet`; xe RIÊNG chỉ Quản trị thấy
+  trong danh sách chọn; cảnh báo trùng xe (confirm) qua `findConflicts`
 - `AdminUsers/AdminLeaders/AdminVehicles.jsx` — tab Quản trị. AdminUsers: TẠO tài khoản (form
   + tick vai trò/Ban) gọi `api/admin-create-user.js` (Vercel Serverless, service_role) +
   phân quyền tài khoản đã có. Cần env `SUPABASE_SERVICE_ROLE_KEY` trên Vercel.
 - `FilterBar.jsx` — điều hướng tuần/tháng/ngày + lọc Ban/lãnh đạo/trạng thái
 - `EntryCard.jsx` / `StatusBadge.jsx` — ô lịch + huy hiệu trạng thái dùng chung
+- `EntryDetail.jsx` — chi tiết lịch; khối "Đề nghị bố trí xe" (trạng thái/số người/nơi xuất phát/
+  xe/ý kiến), nút Phê duyệt điều xe (Quản trị) và **In Phiếu điều xe** (sau khi duyệt)
 
 ## Nạp dữ liệu (App.jsx)
 - Khoảng fetch = lưới tháng chứa `anchor` (luôn phủ tuần/ngày đang xem); refetch sau mỗi mutation (không realtime)

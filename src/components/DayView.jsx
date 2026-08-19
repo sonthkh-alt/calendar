@@ -4,7 +4,7 @@ import EntryCard from './EntryCard';
 import { canEditEntry, canSeeEntry, canCreateFor, canReview, canReviewEntry } from '../lib/permissions';
 import { reviewEntries } from '../lib/api';
 import { toISODate, dayName, fmtDMY } from '../lib/dates';
-import { isHqLocation, leaderInUnits, hidesDriver, makeEntrySorter } from '../lib/constants';
+import { leaderInUnits, hidesDriver, makeEntrySorter, isPrivateVehicle } from '../lib/constants';
 
 /**
  * Lịch ngày: 2 khối Sáng / Chiều, EntryCard đầy đủ thông tin.
@@ -16,11 +16,6 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, t
   // Sắp xếp theo ƯU TIÊN LÃNH ĐẠO (giống Lịch tuần): Sáng->Chiều rồi STT lãnh đạo
   const entrySorter = useMemo(() => makeEntrySorter(leaders), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
-  // Xe riêng theo lãnh đạo: hiện lái xe mặc định khi entry chưa gán xe
-  const dedicatedByLeader = useMemo(() => Object.fromEntries(
-    (vehicles || []).filter((v) => v.active && v.vehicle_type === 'rieng' && v.assigned_leader_id)
-      .map((v) => [v.assigned_leader_id, v])
-  ), [vehicles]);
 
   const dayEntries = useMemo(
     () => (entries || []).filter((e) => {
@@ -97,7 +92,7 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, t
               key={e.id}
               entry={{ ...e, participants: m.parts.join('; ') }}
               leader={l ? { ...l, full_name: names.join('; ') } : null}
-              vehicle={hidesDriver(l?.leader_type) ? null : ((e.vehicle_id ? vehicleById[e.vehicle_id] : null) || (!isHqLocation(e.location) ? dedicatedByLeader[e.leader_id] : null) || null)}
+              vehicle={hidesDriver(l?.leader_type) ? null : ((e.vehicle_ids || []).map((id) => vehicleById[id]).find((v) => v && !isPrivateVehicle(v)) || null)}
               canEdit={canEditEntry(profile, e, l)}
               canDuplicate={canCreateFor(profile, l)}
               dupInfo={dupMap?.get(e.id)}

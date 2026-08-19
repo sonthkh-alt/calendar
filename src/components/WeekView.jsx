@@ -4,7 +4,7 @@ import EntryCard from './EntryCard';
 import WeekPrintSheet from './WeekPrintSheet';
 import { canCreateFor, canEditEntry, canSeeEntry, canReview, canReviewEntry } from '../lib/permissions';
 import { displayWeekDays, toISODate, dayName, fmtDM, fmtDMY } from '../lib/dates';
-import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, isHqLocation, hidesDriver, makeEntrySorter, canExportDocx } from '../lib/constants';
+import { PCT_GROUP_LABEL, DOAN_GROUP_LABEL, hidesDriver, makeEntrySorter, canExportDocx, isPrivateVehicle } from '../lib/constants';
 import { reviewEntries } from '../lib/api';
 import { exportWeekDocx, exportWeekPdf } from '../lib/exporters';
 
@@ -37,11 +37,6 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
   // Sắp xếp trong ngày: Sáng->Chiều, rồi theo STT nhóm/lãnh đạo (xem makeEntrySorter)
   const entrySorter = useMemo(() => makeEntrySorter(leaders, groups), [leaders, groups]);
-  // Xe riêng theo lãnh đạo (PCT / Phó Trưởng Đoàn): hiện lái xe mặc định khi entry chưa gán xe
-  const dedicatedByLeader = useMemo(() => Object.fromEntries(
-    (vehicles || []).filter((v) => v.active && v.vehicle_type === 'rieng' && v.assigned_leader_id)
-      .map((v) => [v.assigned_leader_id, v])
-  ), [vehicles]);
 
   // Cột đơn vị: Lãnh đạo HĐND tỉnh (gộp PCT) | từng Ban | Văn phòng (nếu bật)
   const units = useMemo(() => {
@@ -175,7 +170,11 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     const orig = m.orig;
     const lead = leaderById[orig.leader_id];
     const names = m.leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean);
-    const veh = hidesDriver(lead?.leader_type) ? null : ((m.vehicleIds[0] ? vehicleById[m.vehicleIds[0]] : null) || (!isHqLocation(orig.location) ? dedicatedByLeader[orig.leader_id] : null) || null);
+    // XE RIÊNG (phục vụ lãnh đạo) KHÔNG hiển thị trên lịch công tác — chỉ hiện xe
+    // dùng chung đã được điều và phê duyệt.
+    const veh = hidesDriver(lead?.leader_type)
+      ? null
+      : (m.vehicleIds.map((id) => vehicleById[id]).find((v) => v && !isPrivateVehicle(v)) || null);
     return (
       <EntryCard
         key={orig.id}

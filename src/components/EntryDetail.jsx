@@ -1,17 +1,18 @@
 import { useMemo, useState } from 'react';
-import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy, Check, XCircle, Zap, SlidersHorizontal, UserCheck } from 'lucide-react';
+import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy, Check, XCircle, Zap, SlidersHorizontal, UserCheck, ShieldCheck, Printer } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver } from '../lib/constants';
+import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver, VEHICLE_STATUS, VEHICLE_SLIP, DEFAULT_DEPARTURE, isPrivateVehicle } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
-import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk, canAdmin } from '../lib/permissions';
+import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk, canAdmin, canApproveVehicle, canDispatchPrivateVehicle, canPrintVehicleSlip } from '../lib/permissions';
 import { reviewEntries, updateEntries } from '../lib/api';
+import { printVehicleSlip, makeSignCode } from '../lib/vehicleSlip';
 
 /**
  * Modal chi tiết 1 mục lịch — hiển thị ĐẦY ĐỦ, không cắt chữ.
  * Các mục TRÙNG nội dung + thời gian được GỘP: thành phần nối lại với nhau.
  * Khu "Xử lý nhanh": Duyệt/Từ chối (PCT, Quản trị) + chọn xe (Văn phòng, Quản trị).
  */
-export default function EntryDetail({ entry, entries, leaders, vehicles, profile, reviewer, canEdit, canDuplicate, dupInfo, onEdit, onAdjust, onDelete, onDuplicate, onChanged, onClose }) {
+export default function EntryDetail({ entry, entries, leaders, vehicles, profiles, profile, reviewer, canEdit, canDuplicate, dupInfo, onEdit, onAdjust, onDelete, onDuplicate, onChanged, onClose }) {
   const dupOthers = dupInfo?.others;
   const dupWeek = dupInfo?.severity === 'week';
   const [busy, setBusy] = useState(false);
@@ -61,17 +62,13 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
 
   const mergedParticipants = [...new Set(merged.map((e) => (e.participants || '').trim()).filter(Boolean))].join('; ');
 
-  // Xe: xe đã gán; nếu chưa gán thì xe riêng của lãnh đạo (PCT / Phó Trưởng Đoàn)
-  const dedicatedByLeader = Object.fromEntries(
-    (vehicles || []).filter((v) => v.active && v.vehicle_type === 'rieng' && v.assigned_leader_id)
-      .map((v) => [v.assigned_leader_id, v])
-  );
+  // Xe hiển thị = xe ĐÃ GÁN, KHÔNG tính XE RIÊNG (xe riêng không lên lịch công tác,
+  // chỉ Quản trị điều — xem constants.isPrivateVehicle).
   const mergedVehicles = [...new Map(
     merged.flatMap((e) => {
       if (hidesDriver(leaderById[e.leader_id]?.leader_type)) return [];
       const ids = (e.vehicle_ids && e.vehicle_ids.length) ? e.vehicle_ids : (e.vehicle_id ? [e.vehicle_id] : []);
-      if (ids.length) return ids.map((id) => vehicleById[id]).filter(Boolean);
-      return (!e.no_vehicle && !isHqLocation(e.location) && dedicatedByLeader[e.leader_id]) ? [dedicatedByLeader[e.leader_id]] : [];
+      return ids.map((id) => vehicleById[id]).filter((v) => v && !isPrivateVehicle(v));
     }).map((v) => [v.id, v])
   ).values()];
 
@@ -87,11 +84,16 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   // Cho phép xử lý cả khi đã duyệt: điều chỉnh / từ chối lịch đã phê duyệt
   const canModerate = isReviewerOfEntry && ['cho_duyet', 'da_duyet', 'da_dieu_chinh'].includes(entry.status);
   const canApproveNow = entry.status !== 'da_duyet'; // đã duyệt rồi thì không cần nút Phê duyệt
-  // Lãnh đạo HĐND tỉnh / Đoàn ĐBQH: ô Lái xe luôn để trống -> không hiện cả khu gán xe nhanh
+  // Khu PHÂN XE nhanh (Phòng HC-TC-QT): chỉ hiện khi chuyến CÓ đề nghị bố trí xe.
+  // Lãnh đạo HĐND tỉnh / Đoàn ĐBQH: ô Lái xe luôn để trống -> không hiện khu này.
   const showVehicle = canAssignVehicle(profile) && entryNeedsVehicleOk(entry, leader)
+    && (entry.vehicle_status || 'none') !== 'none'
     && !isHqLocation(entry.location) && !hidesDriver(leader?.leader_type);
   const activeVehicles = (vehicles || []).filter((v) => v.active);
-  const vehicleOptions = [...activeVehicles].sort((a, b) => {
+  // Xe RIÊNG chỉ Quản trị mới được điều
+  const vehicleOptions = [...activeVehicles]
+    .filter((v) => canDispatchPrivateVehicle(profile) || !isPrivateVehicle(v))
+    .sort((a, b) => {
     const ap = a.assigned_leader_id === leader?.id ? 0 : a.vehicle_type === 'dung_chung' ? 1 : 2;
     const bp = b.assigned_leader_id === leader?.id ? 0 : b.vehicle_type === 'dung_chung' ? 1 : 2;
     return ap - bp;
@@ -150,11 +152,92 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
     }
     setBusy(true);
     const ids = [...new Set(merged.map((x) => x.id))];
+    // Phân xe -> chờ Lãnh đạo Văn phòng duyệt; bỏ xe -> quay lại chờ phân xe
     const patch = vehId
-      ? { vehicle_ids: [vehId], vehicle_id: vehId, no_vehicle: false, vehicle_assigned_by: profile.id, vehicle_assigned_at: new Date().toISOString() }
-      : { vehicle_ids: [], vehicle_id: null };
+      ? {
+        vehicle_ids: [vehId], vehicle_id: vehId, no_vehicle: false, vehicle_requested: true,
+        vehicle_status: 'da_phan_xe', vehicle_approved_by: null, vehicle_approved_at: null, vehicle_sign_code: null,
+        vehicle_assigned_by: profile.id, vehicle_assigned_at: new Date().toISOString(),
+      }
+      : {
+        vehicle_ids: [], vehicle_id: null, vehicle_status: 'de_xuat',
+        vehicle_approved_by: null, vehicle_approved_at: null, vehicle_sign_code: null,
+      };
     await updateEntries(ids, patch);
     setBusy(false); onChanged?.(); onClose?.();
+  };
+
+  // ===== PHIẾU ĐỀ NGHỊ SỬ DỤNG XE Ô TÔ CÔNG VỤ =====
+  // Luồng: chuyên viên tick đề nghị -> Phòng HC-TC-QT phân xe -> Lãnh đạo Văn phòng
+  // (Quản trị) phê duyệt -> in phiếu theo mẫu (docs/Đề nghị sử dụng xe oto.docx).
+  const profileById = useMemo(() => Object.fromEntries((profiles || []).map((x) => [x.id, x])), [profiles]);
+  const vStatus = entry.vehicle_status || 'none';
+  const vSt = VEHICLE_STATUS[vStatus] || VEHICLE_STATUS.none;
+  const hasRequest = vStatus !== 'none';
+  const canApproveVeh = canApproveVehicle(profile) && ['de_xuat', 'da_phan_xe'].includes(vStatus);
+  const canPrintSlip = canPrintVehicleSlip(profile, entry);
+  // Xe ghi trên PHIẾU: lấy đủ mọi xe đã gán (kể cả xe riêng do Quản trị điều)
+  const slipVehicles = [...new Map(
+    merged.flatMap((e) => ((e.vehicle_ids && e.vehicle_ids.length) ? e.vehicle_ids : (e.vehicle_id ? [e.vehicle_id] : [])))
+      .map((id) => vehicleById[id]).filter(Boolean).map((v) => [v.id, v])
+  ).values()];
+
+  const doApproveVehicle = async () => {
+    const note = window.prompt('Ý kiến của Lãnh đạo Văn phòng (in trên phiếu):', 'Đồng ý bố trí xe theo đề nghị.');
+    if (note === null) return;
+    setBusy(true);
+    await updateEntries(mergedIds, {
+      vehicle_status: 'da_duyet', vehicle_approve_note: note.trim() || 'Đồng ý.',
+      vehicle_approved_by: profile.id, vehicle_approved_at: new Date().toISOString(),
+      vehicle_sign_code: makeSignCode(),
+    });
+    setBusy(false); onChanged?.();
+  };
+  const doRejectVehicle = async () => {
+    const note = window.prompt('Lý do KHÔNG bố trí xe (hiện cho chuyên viên):', '');
+    if (note === null) return;
+    setBusy(true);
+    await updateEntries(mergedIds, {
+      vehicle_status: 'tu_choi', vehicle_approve_note: note.trim() || 'Không bố trí được xe.',
+      vehicle_approved_by: profile.id, vehicle_approved_at: new Date().toISOString(),
+      no_vehicle: true, vehicle_sign_code: null,
+    });
+    setBusy(false); onChanged?.();
+  };
+
+  const doPrintSlip = () => {
+    const requester = profileById[entry.vehicle_requested_by] || profileById[entry.created_by] || {};
+    const dispatcher = profileById[entry.vehicle_assigned_by];
+    const approver = profileById[entry.vehicle_approved_by];
+    const reqD = parseISO((entry.vehicle_requested_at || entry.created_at || new Date().toISOString()).slice(0, 10));
+    const appD = entry.vehicle_approved_at ? new Date(entry.vehicle_approved_at) : null;
+    const ok = printVehicleSlip({
+      fileTitle: `Phieu dieu xe ${entry.date}`,
+      unitName: 'VĂN PHÒNG ĐOÀN ĐBQH\nVÀ HĐND TỈNH THANH HÓA',
+      recipient: VEHICLE_SLIP.recipient,
+      placeDateText: `${VEHICLE_SLIP.place}, ngày ${reqD.getDate()} tháng ${reqD.getMonth() + 1} năm ${reqD.getFullYear()}`,
+      requesterName: requester.full_name || requester.email || '',
+      requesterPosition: requester.position || '',
+      purpose: entry.content || '',
+      purposeMore: entry.location ? `Địa điểm: ${entry.location}` : '',
+      timeText: `${timeLabel}, ngày ${fmtDMY(d)}`,
+      riderText: entry.rider_count ? String(entry.rider_count) : '',
+      departure: entry.departure_place || DEFAULT_DEPARTURE,
+      plateText: slipVehicles.map((v) => v.plate).join('; '),
+      driverText: slipVehicles.map((v) => [v.driver_name, v.driver_phone].filter(Boolean).join(' - ')).join('; '),
+      hctcqtBlock: VEHICLE_SLIP.hctcqt.block,
+      hctcqtSignTitle: VEHICLE_SLIP.hctcqt.signTitle,
+      hctcqtSigner: dispatcher?.full_name || VEHICLE_SLIP.hctcqt.signer,
+      hctcqtSign: dispatcher?.signature_data || '',
+      vpBlock: VEHICLE_SLIP.vp.block,
+      vpNote: entry.vehicle_approve_note || '',
+      vpSignTitle: VEHICLE_SLIP.vp.signTitle,
+      vpSigner: approver?.full_name || VEHICLE_SLIP.vp.signer,
+      vpSign: approver?.signature_data || '',
+      approvedAtText: appD ? `${appD.getHours()}:${String(appD.getMinutes()).padStart(2, '0')} ngày ${fmtDMY(appD)}` : '',
+      signCode: entry.vehicle_sign_code || '',
+    });
+    if (!ok) alert('Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép cửa sổ bật lên (pop-up) cho trang này rồi bấm lại.');
   };
 
   const row = 'flex items-start gap-2.5';
@@ -302,6 +385,45 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
               <div>
                 <p className={lab}>Người phê duyệt</p>
                 <p className={`${val} font-semibold`}>{[reviewer.position, reviewer.full_name].filter(Boolean).join(' — ') || reviewer.email}</p>
+              </div>
+            </div>
+          )}
+
+          {/* ===== PHIẾU ĐỀ NGHỊ SỬ DỤNG XE Ô TÔ CÔNG VỤ ===== */}
+          {hasRequest && (
+            <div className={`rounded-xl border p-3.5 space-y-2 ${vSt.bg} ${vSt.border}`}>
+              <p className={`flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide ${vSt.text}`}>
+                <Car className="w-4 h-4" /> Đề nghị bố trí xe — {vSt.label}
+              </p>
+              <div className="text-[13px] text-slate-700 space-y-0.5">
+                {entry.rider_count ? <p>Số người: <b>{entry.rider_count}</b></p> : null}
+                <p>Địa điểm xuất phát: <b>{entry.departure_place || DEFAULT_DEPARTURE}</b></p>
+                {slipVehicles.length > 0 && (
+                  <p>Xe được điều: <b>{slipVehicles.map((v) => [v.plate, v.driver_name].filter(Boolean).join(' · ')).join('; ')}</b></p>
+                )}
+                {entry.vehicle_approve_note && <p className="italic">Ý kiến Lãnh đạo Văn phòng: “{entry.vehicle_approve_note}”</p>}
+                {entry.vehicle_sign_code && (
+                  <p className="text-[12px] text-slate-500">Mã xác thực phê duyệt: <b>{entry.vehicle_sign_code}</b></p>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {canApproveVeh && (
+                  <>
+                    <button onClick={doApproveVehicle} disabled={busy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60">
+                      <ShieldCheck className="w-4 h-4" /> Phê duyệt điều xe
+                    </button>
+                    <button onClick={doRejectVehicle} disabled={busy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60">
+                      <XCircle className="w-4 h-4" /> Không bố trí xe
+                    </button>
+                  </>
+                )}
+                {canPrintSlip ? (
+                  <button onClick={doPrintSlip} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-slate-700 hover:bg-slate-800">
+                    <Printer className="w-4 h-4" /> In Phiếu điều xe
+                  </button>
+                ) : (
+                  <span className="text-[12px] text-slate-500 italic">In được phiếu sau khi Lãnh đạo Văn phòng phê duyệt.</span>
+                )}
               </div>
             </div>
           )}

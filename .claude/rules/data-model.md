@@ -9,7 +9,10 @@
   + "Đoàn ĐBQH tỉnh" (gộp 2 lãnh đạo Đoàn) + 4 Ban + "Lãnh đạo Văn phòng" (trực cuối tuần).
 - `profiles` — 1-1 auth.users (trigger `handle_new_user` tự tạo); role + ban_ids[] + leader_id
 - `vehicles` — 4 xe: `rieng` (gắn PCT qua assigned_leader_id) | `dung_chung`
-- `schedule_entries` — group_id (sự kiện nhiều lãnh đạo), leader_id, date, session `sang|chieu|ca_ngay|gio`(+start/end_time), content/location/participants, status, review_note/reviewed_by/at, vehicle_id/vehicle_note/_by/_at, created_by
+- `schedule_entries` — group_id (sự kiện nhiều lãnh đạo), leader_id, date, session `sang|chieu|ca_ngay|gio`(+start/end_time), content/location/participants, status, review_note/reviewed_by/at, vehicle_id/vehicle_ids/vehicle_note/_by/_at, created_by
+  + ĐỀ NGHỊ XE: `vehicle_requested` (ô tick khi nhập lịch), `rider_count`, `departure_place`,
+  `vehicle_status`, `vehicle_requested_by/_at`, `vehicle_approve_note`, `vehicle_approved_by/_at`, `vehicle_sign_code`
+- `profiles.signature_data` — ảnh chữ ký (data URI) in trên phiếu điều xe khi Quản trị duyệt
 
 ## Vai trò (profiles.role)
 | role | quyền |
@@ -20,7 +23,7 @@
 | cb_ban | CRUD lịch lãnh đạo thuộc ban_ids; chỉ sửa khi cho_duyet/tu_choi |
 | cb_tonghop | CRUD lịch MỌI đối tượng (PCT/Đoàn/các Ban/Văn phòng) + SỬA mọi lịch mọi lúc (vd thttdn@thanhhoa.gov.vn). Lịch PCT/Đoàn → da_duyet ngay; lịch Ban/VP → cho_duyet (PCT duyệt) |
 | cb_ctqh | Cán bộ Công tác Quốc hội: CRUD lịch Đoàn ĐBQH → khởi tạo cho_duyet (Phó Trưởng Đoàn duyệt) |
-| van_phong_xe | gán xe cho lịch đã duyệt / lịch PCT |
+| van_phong_xe | Phòng HC-TC-QT: PHÂN xe cho các chuyến có đề nghị (không tự phê duyệt; không điều được xe riêng) |
 | nguoi_xem | xem tất cả lịch (kể cả chờ duyệt/từ chối — phân biệt bằng màu), không sửa |
 
 permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_doan) để hiện tab Chờ duyệt;
@@ -35,6 +38,18 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
 - Từ chối MỘT VÀI thành viên của sự kiện nhóm (EntryDetail): các thành viên CÒN LẠI đang
   `cho_duyet` được tự động `da_duyet`; thẻ bị từ chối gạch ngang tách riêng (merge key thêm cờ 'tc')
 - Nhịp nghiệp vụ: thứ Sáu nhập lịch TUẦN SAU (nút "Tuần sau →" trên FilterBar)
+
+## Điều xe (phiếu đề nghị sử dụng xe ô tô công vụ)
+- Ô tick **"Đề nghị bố trí xe"** trong form nhập lịch. KHÔNG tick = `no_vehicle`, không vào danh sách điều xe.
+- `vehicle_status`: `none` → `de_xuat` (chuyên viên đề nghị) → `da_phan_xe` (Phòng HC-TC-QT gán xe/lái xe)
+  → `da_duyet` (Lãnh đạo Văn phòng = vai trò `quan_tri` phê duyệt) | `tu_choi` (không bố trí được xe).
+- Sửa lịch đã duyệt phiếu mà đổi thông tin chuyến (ngày/buổi/nội dung/địa điểm/số người/nơi xuất phát)
+  → quay về `da_phan_xe` để duyệt lại. Bỏ tick → `none` + gỡ xe đã gán.
+- **In Phiếu điều xe** ở hộp chi tiết lịch, chỉ khi `da_duyet` và không phải tài khoản `nguoi_xem`.
+- **Xe riêng** (`vehicles.vehicle_type='rieng'`): KHÔNG hiển thị trên lịch tuần/ngày/chi tiết; chỉ
+  `quan_tri` mới chọn được khi điều xe (permissions.canDispatchPrivateVehicle).
+- Phê duyệt ghi `vehicle_approved_by/_at` + `vehicle_sign_code` (mã xác thực in trên phiếu) và in kèm
+  ảnh chữ ký `profiles.signature_data` nếu có. Ký số USB token/từ xa: xem `docs/KY-SO.md`.
 
 ## Trùng giờ (dates.js → sessionsOverlap)
 - ca_ngay giao mọi buổi; gio×gio so khoảng; gio×buổi: trước 12:00 = sáng

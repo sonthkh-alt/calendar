@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { UserCog, Info, UserPlus, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { UserCog, Info, UserPlus, Loader2, CheckCircle2, AlertTriangle, PenTool, Trash2 } from 'lucide-react';
 import { fetchProfiles, updateProfile, adminCreateUser } from '../lib/api';
 import { ROLES } from '../lib/constants';
 
@@ -9,7 +9,7 @@ import { ROLES } from '../lib/constants';
  *    email/mật khẩu/họ tên + TICK vai trò + TICK các Ban (cho cb_ban). Xác nhận email luôn.
  *  - Phân quyền tài khoản đã có: đổi vai trò, Ban theo dõi (cb_ban), lãnh đạo gắn (pct).
  */
-export default function AdminUsers({ bans, leaders }) {
+export default function AdminUsers({ bans, leaders, profile }) {
   const [profiles, setProfiles] = useState([]);
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState('');
@@ -25,6 +25,58 @@ export default function AdminUsers({ bans, leaders }) {
     setProfiles(data || []);
   };
   useEffect(() => { load(); }, []);
+
+  // ----- Ảnh chữ ký của CHÍNH MÌNH (in trên Phiếu điều xe khi phê duyệt) -----
+  // Ảnh được thu nhỏ về tối đa 400px ngang, lưu dạng data URI PNG trong profiles.signature_data.
+  // Đây là chữ ký ẢNH (chữ ký scan), KHÔNG phải chữ ký số USB token — xem docs/KY-SO.md.
+  const [sigBusy, setSigBusy] = useState(false);
+  const [sigMsg, setSigMsg] = useState('');
+  const me = useMemo(() => profiles.find((x) => x.id === profile?.id) || null, [profiles, profile]);
+
+  const shrinkImage = (file) => new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error('Không đọc được tệp ảnh.'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Tệp không phải ảnh hợp lệ.'));
+      img.onload = () => {
+        const maxW = 400;
+        const scale = Math.min(1, maxW / (img.width || maxW));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round((img.width || maxW) * scale);
+        cv.height = Math.round((img.height || 120) * scale);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        resolve(cv.toDataURL('image/png'));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+
+  const pickSignature = async (file) => {
+    if (!file || !profile?.id) return;
+    setSigBusy(true); setSigMsg('');
+    try {
+      const data = await shrinkImage(file);
+      if (data.length > 400000) throw new Error('Ảnh chữ ký quá lớn — hãy cắt gọn phần chữ ký rồi tải lại.');
+      const { error } = await updateProfile(profile.id, { signature_data: data });
+      if (error) throw new Error(error.message);
+      setSigMsg('Đã lưu ảnh chữ ký.');
+      load();
+    } catch (e) {
+      setSigMsg(e.message);
+    }
+    setSigBusy(false);
+  };
+
+  const clearSignature = async () => {
+    if (!profile?.id || !window.confirm('Xóa ảnh chữ ký đang lưu?')) return;
+    setSigBusy(true);
+    const { error } = await updateProfile(profile.id, { signature_data: null });
+    setSigBusy(false);
+    setSigMsg(error ? error.message : 'Đã xóa ảnh chữ ký.');
+    load();
+  };
 
   const pctLeaders = useMemo(() => (leaders || []).filter((l) => l.leader_type === 'pct'), [leaders]);
 
@@ -73,6 +125,32 @@ export default function AdminUsers({ bans, leaders }) {
 
   return (
     <div className="space-y-5">
+      {/* ===== CHỮ KÝ CỦA TÔI (ký duyệt Phiếu điều xe) ===== */}
+      <div className="rounded-xl border border-sky-200 bg-white shadow-sm p-4 space-y-2">
+        <p className="flex items-center gap-2 text-[14px] font-bold text-sky-800"><PenTool className="w-4 h-4" /> Ảnh chữ ký của tôi (in trên Phiếu điều xe)</p>
+        <p className="text-[12px] text-slate-500">
+          Tải ảnh chữ ký (nền trắng, đã cắt gọn). Khi bạn phê duyệt điều xe, ảnh này được in vào ô ký
+          của phiếu kèm mã xác thực. Đây là chữ ký ảnh phục vụ lưu hành nội bộ — chữ ký số theo
+          USB token của Ban Cơ yếu xem hướng dẫn trong <b>docs/KY-SO.md</b>.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          {me?.signature_data
+            ? <img src={me.signature_data} alt="Chữ ký" className="h-14 border border-slate-200 rounded bg-white" />
+            : <span className="text-[13px] text-slate-400 italic">Chưa có ảnh chữ ký</span>}
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-sky-600 hover:bg-sky-700">
+            <PenTool className="w-3.5 h-3.5" /> {me?.signature_data ? 'Đổi ảnh chữ ký' : 'Tải ảnh chữ ký'}
+            <input type="file" accept="image/*" className="hidden" disabled={sigBusy} onChange={(e) => { pickSignature(e.target.files?.[0]); e.target.value = ''; }} />
+          </label>
+          {me?.signature_data && (
+            <button onClick={clearSignature} disabled={sigBusy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-rose-700 border border-rose-200 hover:bg-rose-50 disabled:opacity-60">
+              <Trash2 className="w-3.5 h-3.5" /> Xóa
+            </button>
+          )}
+          {sigBusy && <Loader2 className="w-4 h-4 animate-spin text-sky-600" />}
+          {sigMsg && <span className="text-[12px] text-slate-600">{sigMsg}</span>}
+        </div>
+      </div>
+
       {/* ===== TẠO TÀI KHOẢN MỚI ===== */}
       <form onSubmit={submitCreate} className="rounded-xl border border-red-200 bg-white shadow-sm p-4 space-y-3">
         <p className="flex items-center gap-2 text-[14px] font-bold text-red-800"><UserPlus className="w-4 h-4" /> Tạo tài khoản mới</p>

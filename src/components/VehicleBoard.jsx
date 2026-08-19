@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Car, Printer, AlertTriangle, Phone, CircleSlash, X, CheckCircle2 } from 'lucide-react';
+import { Car, Printer, AlertTriangle, Phone, CircleSlash, X, CheckCircle2, ShieldCheck, Lock } from 'lucide-react';
 import { updateEntries } from '../lib/api';
-import { entryNeedsVehicleOk } from '../lib/permissions';
-import { SESSIONS, UNIT_NAME, VEHICLE_TYPES, isHqLocation } from '../lib/constants';
+import { entryNeedsVehicleOk, canApproveVehicle, canDispatchPrivateVehicle } from '../lib/permissions';
+import { SESSIONS, UNIT_NAME, VEHICLE_TYPES, isHqLocation, VEHICLE_STATUS, isPrivateVehicle, hasVehicleRequest } from '../lib/constants';
 import { weekDays, toISODate, dayName, fmtDM, fmtDMY, fmtTime, sessionsOverlap, weekStart, weekEnd, parseISO } from '../lib/dates';
 import { printPage } from '../lib/print';
+import { makeSignCode } from '../lib/vehicleSlip';
 
 /**
  * Bảng điều xe tuần — dành cho Văn phòng (van_phong_xe) / Quản trị.
@@ -18,23 +19,19 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
   const leaderById = useMemo(() => Object.fromEntries((leaders || []).map((l) => [l.id, l])), [leaders]);
   const vehicleById = useMemo(() => Object.fromEntries((vehicles || []).map((v) => [v.id, v])), [vehicles]);
   const activeVehicles = useMemo(() => (vehicles || []).filter((v) => v.active), [vehicles]);
-  // Lãnh đạo có xe riêng -> mọi chuyến mặc định đi xe đó, không cần điều
-  const dedicatedByLeader = useMemo(() => Object.fromEntries(
-    activeVehicles.filter((v) => v.vehicle_type === 'rieng' && v.assigned_leader_id)
-      .map((v) => [v.assigned_leader_id, v])
-  ), [activeVehicles]);
-
   const ws = toISODate(weekStart(anchor)), we = toISODate(weekEnd(anchor));
   const weekEntries = useMemo(
     () => (entries || []).filter((e) => e.date >= ws && e.date <= we && e.status !== 'tu_choi'),
     [entries, ws, we]
   );
 
-  // Các chuyến CẦN ĐIỀU PHỐI: đủ điều kiện (đã duyệt / lịch lãnh đạo).
-  // KHÔNG tính: làm việc tại cơ quan; họp tại cơ quan; lãnh đạo có XE RIÊNG (đồng chí tự lo).
+  // Các chuyến CẦN ĐIỀU PHỐI: chuyên viên đã TICK "Đề nghị bố trí xe" khi nhập lịch
+  // (không tick = không cần xe, không vào danh sách này) và lịch đủ điều kiện (đã duyệt /
+  // lịch lãnh đạo). KHÔNG tính: làm việc tại cơ quan; họp tại cơ quan.
+  // Dữ liệu CŨ đã gán xe trước khi có ô tick vẫn hiện (hasVehicleRequest) để không sót.
   const eligible = useMemo(() => weekEntries
-    .filter((e) => !e.at_office && !isHqLocation(e.location) && !dedicatedByLeader[e.leader_id] && entryNeedsVehicleOk(e, leaderById[e.leader_id])),
-  [weekEntries, dedicatedByLeader, leaderById]);
+    .filter((e) => hasVehicleRequest(e) && !e.at_office && !isHqLocation(e.location) && entryNeedsVehicleOk(e, leaderById[e.leader_id])),
+  [weekEntries, leaderById]);
 
   const carsOf = (e) => e.vehicle_ids || [];
 
@@ -46,12 +43,16 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
       if (!map.has(key)) { const it = { key, rep: e, ids: [e.id], leaderIds: [e.leader_id] }; map.set(key, it); out.push(it); }
       else { const it = map.get(key); it.ids.push(e.id); if (!it.leaderIds.includes(e.leader_id)) it.leaderIds.push(e.leader_id); }
     }
-    // Sắp xếp: chưa có xe (cần xe) trước -> đã gán -> không cần xe; trong nhóm theo ngày
-    const rank = (g) => g.rep.no_vehicle ? 2 : (carsOf(g.rep).length === 0 ? 0 : 1);
+    // Sắp xếp: chờ phân xe trước -> chờ duyệt -> đã duyệt/từ chối; trong nhóm theo ngày
+    const rankOf = { de_xuat: 0, da_phan_xe: 1, da_duyet: 2, tu_choi: 3, none: 4 };
+    const rank = (g) => rankOf[g.rep.vehicle_status || 'de_xuat'] ?? 4;
     return out.sort((a, b) => rank(a) - rank(b) || a.rep.date.localeCompare(b.rep.date));
   }, [eligible]);
 
-  const needCount = tripGroups.filter((g) => !g.rep.no_vehicle && carsOf(g.rep).length === 0).length;
+  const needCount = tripGroups.filter((g) => carsOf(g.rep).length === 0 && g.rep.vehicle_status !== 'tu_choi').length;
+  const waitApproveCount = tripGroups.filter((g) => g.rep.vehicle_status === 'da_phan_xe').length;
+  const canApprove = canApproveVehicle(profile);
+  const canPrivate = canDispatchPrivateVehicle(profile);
 
   // Tất cả id mục cùng sự kiện (để gán/bỏ gán cả nhóm)
   const groupIdsOf = (e) => (e.group_id ? weekEntries.filter((x) => x.group_id === e.group_id).map((x) => x.id) : [e.id]);
@@ -87,24 +88,44 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
       if (!window.confirm(`⚠️ CẢNH BÁO TRÙNG XE\n\nXe ${v?.plate} đã được điều cho:\n• ${who} — ${SESSIONS[c.session] || ''} ${fmtDM(parseISO(c.date))}: ${c.content}\n\nVẫn gán thêm xe này?`)) return;
     }
     const arr = [...cur, vehicleId];
-    await runGroup(ids, rep.id, { vehicle_ids: arr, vehicle_id: arr[0], no_vehicle: false });
+    // Phân xe xong -> chờ Lãnh đạo Văn phòng phê duyệt (phiếu đã duyệt mà đổi xe thì duyệt lại)
+    await runGroup(ids, rep.id, {
+      vehicle_ids: arr, vehicle_id: arr[0], no_vehicle: false, vehicle_requested: true,
+      vehicle_status: 'da_phan_xe', vehicle_approved_by: null, vehicle_approved_at: null, vehicle_sign_code: null,
+    });
   };
-  // Bỏ 1 xe khỏi nhóm
+  // Bỏ 1 xe khỏi nhóm — hết xe thì quay về "chờ phân xe"
   const removeCar = async (ids, rep, vehicleId) => {
     const arr = carsOf(rep).filter((x) => x !== vehicleId);
-    await runGroup(ids, rep.id, { vehicle_ids: arr, vehicle_id: arr[0] || null });
+    await runGroup(ids, rep.id, {
+      vehicle_ids: arr, vehicle_id: arr[0] || null,
+      vehicle_status: arr.length ? 'da_phan_xe' : 'de_xuat',
+      vehicle_approved_by: null, vehicle_approved_at: null, vehicle_sign_code: null,
+    });
   };
-  // Đặt / bỏ "Không cần xe"
+  // Kết luận "Không bố trí được xe" (từ chối đề nghị) / mở lại đề nghị
   const setNoVehicle = async (ids, rep, val) => {
     await runGroup(ids, rep.id, val
-      ? { no_vehicle: true, vehicle_ids: [], vehicle_id: null }
-      : { no_vehicle: false });
+      ? { vehicle_status: 'tu_choi', no_vehicle: true, vehicle_ids: [], vehicle_id: null }
+      : { vehicle_status: 'de_xuat', no_vehicle: false });
+  };
+
+  // Lãnh đạo Văn phòng (Quản trị) PHÊ DUYỆT phiếu điều xe -> chuyên viên in được phiếu
+  const approveTrip = async (ids, rep) => {
+    const note = window.prompt('Ý kiến của Lãnh đạo Văn phòng (in trên phiếu):', 'Đồng ý bố trí xe theo đề nghị.');
+    if (note === null) return;
+    await runGroup(ids, rep.id, {
+      vehicle_status: 'da_duyet', vehicle_approve_note: note.trim() || 'Đồng ý.',
+      vehicle_approved_by: profile.id, vehicle_approved_at: new Date().toISOString(),
+      vehicle_sign_code: makeSignCode(),
+    });
   };
 
   // Gợi ý xe: xe riêng của PCT đó đứng đầu danh sách
   const vehicleOptions = (entry) => {
     const leader = leaderById[entry.leader_id];
-    return [...activeVehicles].sort((a, b) => {
+    // Xe RIÊNG chỉ Quản trị mới được điều (Phòng HC-TC-QT chỉ thấy xe dùng chung)
+    return [...activeVehicles].filter((v) => canPrivate || !isPrivateVehicle(v)).sort((a, b) => {
       const ap = a.assigned_leader_id === leader?.id ? 0 : a.vehicle_type === 'dung_chung' ? 1 : 2;
       const bp = b.assigned_leader_id === leader?.id ? 0 : b.vehicle_type === 'dung_chung' ? 1 : 2;
       return ap - bp;
@@ -195,10 +216,10 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
       {/* Điều phối xe cho từng chuyến */}
       <div className="no-print rounded-xl border border-amber-200 bg-white shadow-sm overflow-hidden">
         <div className="bg-amber-500 text-white px-4 py-2 text-[13px] font-bold flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" /> Điều phối xe các chuyến trong tuần — còn {needCount} chuyến cần xe
+          <AlertTriangle className="w-4 h-4" /> Đề nghị bố trí xe trong tuần — {needCount} chuyến chờ phân xe · {waitApproveCount} chuyến chờ Lãnh đạo Văn phòng duyệt
         </div>
         {tripGroups.length === 0 ? (
-          <p className="p-4 text-[13px] text-slate-500 italic">Không có chuyến công tác nào cần điều xe trong tuần.</p>
+          <p className="p-4 text-[13px] text-slate-500 italic">Không có đề nghị bố trí xe nào trong tuần (chuyên viên tick “Đề nghị bố trí xe” khi nhập lịch).</p>
         ) : (
           <div className="divide-y divide-slate-100">
             {tripGroups.map((item) => {
@@ -208,21 +229,28 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
               const unitLabel = e.group_label || names.join('; ');
               const timeLabel = e.session === 'gio' ? `${fmtTime(e.start_time)} - ${fmtTime(e.end_time)}` : SESSIONS[e.session];
               const cars = carsOf(e);
-              const noVeh = e.no_vehicle;
+              const vs = e.vehicle_status || 'de_xuat';
+              const st = VEHICLE_STATUS[vs] || VEHICLE_STATUS.de_xuat;
+              const refused = vs === 'tu_choi';
               const addable = vehicleOptions(e).filter((v) => !cars.includes(v.id));
               return (
-                <div key={item.key} className={`px-4 py-3 flex flex-wrap items-center justify-between gap-3 ${noVeh ? 'bg-slate-50' : cars.length === 0 ? 'bg-amber-50/40' : ''}`}>
+                <div key={item.key} className={`px-4 py-3 flex flex-wrap items-center justify-between gap-3 ${refused ? 'bg-slate-50' : cars.length === 0 ? 'bg-amber-50/40' : ''}`}>
                   <div className="min-w-0">
                     <p className="text-[13px] font-bold text-slate-800">{e.content}{item.ids.length > 1 ? <span className="font-normal text-amber-700"> · cả nhóm ({item.ids.length} đơn vị)</span> : null}</p>
                     <p className="text-[12px] text-slate-600 mt-0.5">
                       <span className="font-semibold text-red-800">{unitLabel}</span> · {dayName(parseISO(e.date))} {fmtDM(parseISO(e.date))} · {timeLabel}{e.location ? ` · ${e.location}` : ''}
                     </p>
+                    <p className="text-[12px] text-slate-500 mt-0.5">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold border ${st.bg} ${st.text} ${st.border}`}>{st.label}</span>
+                      {e.rider_count ? <span className="ml-2">Số người: <b>{e.rider_count}</b></span> : null}
+                      {e.departure_place ? <span className="ml-2">Xuất phát: <b>{e.departure_place}</b></span> : null}
+                    </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {noVeh ? (
+                    {refused ? (
                       <>
-                        <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-slate-500 bg-slate-100 rounded-full px-2.5 py-1"><CircleSlash className="w-3.5 h-3.5" /> Không cần xe</span>
-                        <button onClick={() => setNoVehicle(item.ids, e, false)} disabled={busy === e.id} className="text-[12px] font-semibold text-amber-700 hover:text-amber-900">Cần xe lại</button>
+                        <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-slate-500 bg-slate-100 rounded-full px-2.5 py-1"><CircleSlash className="w-3.5 h-3.5" /> Không bố trí được xe</span>
+                        <button onClick={() => setNoVehicle(item.ids, e, false)} disabled={busy === e.id} className="text-[12px] font-semibold text-amber-700 hover:text-amber-900">Xem xét lại</button>
                       </>
                     ) : (
                       <>
@@ -257,11 +285,20 @@ export default function VehicleBoard({ profile, anchor, entries, leaders, vehicl
                             })}
                           </select>
                         )}
-                        {/* Không cần xe */}
+                        {/* Không bố trí được xe */}
                         {cars.length === 0 && (
                           <button onClick={() => setNoVehicle(item.ids, e, true)} disabled={busy === e.id} className="inline-flex items-center gap-1 text-[12px] font-semibold text-slate-500 border border-slate-200 rounded-lg px-2 py-1.5 hover:bg-slate-50">
-                            <CircleSlash className="w-3.5 h-3.5" /> Không cần xe
+                            <CircleSlash className="w-3.5 h-3.5" /> Không bố trí được xe
                           </button>
+                        )}
+                        {/* Phê duyệt điều xe — Lãnh đạo Văn phòng (Quản trị) */}
+                        {vs === 'da_phan_xe' && canApprove && (
+                          <button onClick={() => approveTrip(item.ids, e)} disabled={busy === e.id} className="inline-flex items-center gap-1 text-[12px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg px-2.5 py-1.5 disabled:opacity-60">
+                            <ShieldCheck className="w-3.5 h-3.5" /> Phê duyệt điều xe
+                          </button>
+                        )}
+                        {vs === 'da_phan_xe' && !canApprove && (
+                          <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-slate-400"><Lock className="w-3.5 h-3.5" /> Chờ Lãnh đạo Văn phòng duyệt</span>
                         )}
                       </>
                     )}

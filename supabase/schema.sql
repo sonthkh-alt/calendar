@@ -163,6 +163,34 @@ alter table schedule_entries add column if not exists no_vehicle boolean not nul
 update schedule_entries set vehicle_ids = array[vehicle_id]
   where vehicle_id is not null and array_length(vehicle_ids, 1) is null;
 
+-- ---------------------------------------------------------------------
+-- Nâng cấp ĐỀ XUẤT SỬ DỤNG XE (quy trình phiếu điều xe):
+--   Chuyên viên tick "Đề nghị bố trí xe" khi nhập lịch (không tick = KHÔNG cần xe)
+--   -> Phòng HC-TC-QT phân xe/lái xe -> Lãnh đạo Văn phòng (Quản trị) phê duyệt
+--   -> in "Phiếu đề nghị sử dụng xe ô tô công vụ".
+--   vehicle_status: none | de_xuat | da_phan_xe | da_duyet | tu_choi
+alter table schedule_entries add column if not exists vehicle_requested boolean not null default false;
+alter table schedule_entries add column if not exists rider_count int;            -- Số người đi
+alter table schedule_entries add column if not exists departure_place text;       -- Địa điểm xuất phát
+alter table schedule_entries add column if not exists vehicle_status text not null default 'none';
+alter table schedule_entries drop constraint if exists schedule_entries_vehicle_status_check;
+alter table schedule_entries add constraint schedule_entries_vehicle_status_check
+  check (vehicle_status in ('none','de_xuat','da_phan_xe','da_duyet','tu_choi'));
+alter table schedule_entries add column if not exists vehicle_requested_by uuid references profiles(id);
+alter table schedule_entries add column if not exists vehicle_requested_at timestamptz;
+alter table schedule_entries add column if not exists vehicle_approve_note text;  -- ý kiến Lãnh đạo Văn phòng
+alter table schedule_entries add column if not exists vehicle_approved_by uuid references profiles(id);
+alter table schedule_entries add column if not exists vehicle_approved_at timestamptz;
+alter table schedule_entries add column if not exists vehicle_sign_code text;     -- mã xác thực phê duyệt (in trên phiếu)
+-- Dữ liệu CŨ (trước khi có ô tick): chuyến đã được gán xe coi như đã đề xuất + đã duyệt
+-- để không mất thông tin điều xe đang có. An toàn chạy lại (chỉ chạm dòng còn 'none').
+update schedule_entries set vehicle_requested = true, vehicle_status = 'da_duyet'
+  where vehicle_status = 'none' and array_length(vehicle_ids, 1) >= 1;
+
+-- Ảnh chữ ký của tài khoản (data URI PNG/JPG) — Lãnh đạo Văn phòng ký duyệt phiếu
+-- điều xe; in kèm trên phiếu cùng mã xác thực. Xem docs/KY-SO.md.
+alter table profiles add column if not exists signature_data text;
+
 -- 6) RLS: chỉ người ĐÃ ĐĂNG NHẬP mới đọc/ghi; phân quyền chi tiết do app xử lý.
 do $$ declare t text;
 begin

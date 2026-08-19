@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { X, Save, AlertTriangle, CalendarPlus, ChevronDown } from 'lucide-react';
-import { SESSIONS, COMMON_LOCATIONS, groupLeaderIds } from '../lib/constants';
+import { SESSIONS, COMMON_LOCATIONS, groupLeaderIds, DEFAULT_DEPARTURE } from '../lib/constants';
 // `locations` (prop) là danh sách địa điểm gợi ý quản trị được; rỗng -> mặc định COMMON_LOCATIONS
 import { canCreateFor, initialStatus, canReviewEntry } from '../lib/permissions';
 import { createEntries, updateEntry, deleteEntry } from '../lib/api';
@@ -69,6 +69,11 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
   const [location, setLocation] = useState(src?.location || '');
   const [participants, setParticipants] = useState(src?.participants || '');
   const [atOffice, setAtOffice] = useState(src?.at_office || false);
+  // ĐỀ NGHỊ BỐ TRÍ XE: không tick = mặc định KHÔNG cần xe. Tick -> chuyến vào danh
+  // sách chờ Phòng HC-TC-QT phân xe, sau đó Lãnh đạo Văn phòng phê duyệt (in phiếu).
+  const [wantVehicle, setWantVehicle] = useState(!!src?.vehicle_requested);
+  const [riderCount, setRiderCount] = useState(src?.rider_count ? String(src.rider_count) : '');
+  const [departure, setDeparture] = useState(src?.departure_place || DEFAULT_DEPARTURE);
   const [groupLabel, setGroupLabel] = useState(src?.group_label || '');
   // Nguồn sự thật cho ô tick nhóm: danh sách TÊN nhóm đã chọn (không tách từ group_label
   // vì tên nhóm có thể chứa dấu ";"). groupLabel = các tên này nối "; " để lưu/hiển thị.
@@ -168,6 +173,8 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
     if (leaderIds.length === 0) { setErr('Vui lòng chọn ít nhất một lãnh đạo.'); setLeaderOpen(true); return; }
     if (isAdjust && !adjustNote.trim()) { setErr('Vui lòng nhập Ghi chú điều chỉnh để Văn phòng và Ban được biết.'); return; }
     if (isReEdit && !editReason.trim()) { setErr('Lịch đã được duyệt — vui lòng nêu Lý do chỉnh sửa (lịch sẽ chờ duyệt lại).'); return; }
+    if (!atOffice && wantVehicle && !departure.trim()) { setErr('Vui lòng nhập Địa điểm xuất phát để Phòng HC-TC-QT bố trí xe.'); return; }
+    if (!atOffice && wantVehicle && riderCount && !(Number(riderCount) > 0)) { setErr('Số người đi phải là số lớn hơn 0.'); return; }
     // Nhiều ngày: kiểm tra khoảng hợp lệ
     let rangeDays = [date];
     if (allowMultiDay && multiDay) {
@@ -177,6 +184,45 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       if (rangeDays.length >= 60) { setErr('Khoảng ngày quá dài (tối đa 60 ngày). Vui lòng chia nhỏ.'); return; }
     }
     setSaving(true); setErr('');
+
+    // ===== Đề nghị bố trí xe =====
+    // "Làm việc tại cơ quan" thì không đặt vấn đề xe. Không tick -> no_vehicle = true.
+    const wantVeh = !atOffice && wantVehicle;
+    const vehicleBase = {
+      vehicle_requested: wantVeh,
+      rider_count: wantVeh && riderCount ? Number(riderCount) : null,
+      departure_place: wantVeh ? (departure.trim() || null) : null,
+      no_vehicle: !wantVeh,
+    };
+    // Thông tin chuyến (ảnh hưởng phiếu điều xe) có thay đổi so với mục đang có không?
+    const tripChanged = (ex) => !ex
+      || ex.date !== date
+      || ex.session !== session
+      || (ex.start_time || '').slice(0, 5) !== (session === 'gio' ? startTime : '')
+      || (ex.content || '') !== content.trim()
+      || (ex.location || '') !== (atOffice ? '' : location.trim())
+      || (ex.rider_count ?? null) !== vehicleBase.rider_count
+      || (ex.departure_place || '') !== (vehicleBase.departure_place || '');
+    // Trạng thái phiếu xe cho từng mục:
+    //  - bỏ tick        -> 'none' + gỡ xe đã gán
+    //  - mới đề nghị    -> 'de_xuat' (chờ Phòng HC-TC-QT phân xe)
+    //  - đang trong quy trình -> giữ nguyên; riêng phiếu ĐÃ DUYỆT mà đổi thông tin
+    //    chuyến -> quay lại 'da_phan_xe' để Lãnh đạo Văn phòng duyệt lại
+    const vehicleFor = (existing) => {
+      if (!wantVeh) return {
+        vehicle_status: 'none', vehicle_ids: [], vehicle_id: null,
+        vehicle_approve_note: null, vehicle_approved_by: null, vehicle_approved_at: null, vehicle_sign_code: null,
+      };
+      const cur = existing?.vehicle_status || 'none';
+      if (cur === 'none' || cur === 'tu_choi') return {
+        vehicle_status: 'de_xuat', vehicle_requested_by: profile.id, vehicle_requested_at: new Date().toISOString(),
+      };
+      if (cur === 'da_duyet' && tripChanged(existing)) return {
+        vehicle_status: 'da_phan_xe', vehicle_approve_note: null,
+        vehicle_approved_by: null, vehicle_approved_at: null, vehicle_sign_code: null,
+      };
+      return {};
+    };
 
     const base = {
       date, session,
@@ -190,6 +236,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       at_office: atOffice,
       group_label: groupLabel.trim() || null,
       created_by: profile.id,
+      ...vehicleBase,
     };
     // Trạng thái cho 1 lãnh đạo (mục đang có / mới):
     // - ĐIỀU CHỈNH (người duyệt) -> 'da_dieu_chinh'
@@ -222,7 +269,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       const ops = [];
       for (const lid of leaderIds) {
         const existing = existingByLeader[lid];
-        const patch = { ...base, group_id: groupId, status: statusFor(lid, existing), ...(reviewPatch || {}) };
+        const patch = { ...base, group_id: groupId, status: statusFor(lid, existing), ...(reviewPatch || {}), ...vehicleFor(existing || edit) };
         if (!isAdjust && !atOffice && existing?.status === 'tu_choi') patch.review_note = null;
         // Sửa lịch đã duyệt -> lưu lý do chỉnh sửa + xóa thông tin duyệt cũ (chờ duyệt lại)
         if (isReEdit && existing && (existing.status === 'da_duyet' || existing.status === 'da_dieu_chinh')) {
@@ -230,7 +277,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
           patch.review_note = null; patch.reviewed_by = null; patch.reviewed_at = null;
         }
         if (existing) ops.push(updateEntry(existing.id, patch));
-        else ops.push(createEntries({ ...base, group_id: groupId, ...(reviewPatch || {}) }, [{ leaderId: lid, status: statusFor(lid, null) }]));
+        else ops.push(createEntries({ ...base, group_id: groupId, ...(reviewPatch || {}), ...vehicleFor(edit) }, [{ leaderId: lid, status: statusFor(lid, null) }]));
       }
       for (const e of eventEntries) {
         if (!leaderIds.includes(e.leader_id)) ops.push(deleteEntry(e.id));
@@ -241,7 +288,7 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
       const pairs = leaderIds.map((leaderId) => ({ leaderId, status: statusFor(leaderId, null) }));
       // Mỗi ngày trong khoảng -> một lần createEntries với group_id RIÊNG (không truyền
       // group_id) để mỗi ngày là một sự kiện độc lập; gộp nhiều lãnh đạo trong ngày vẫn đúng.
-      const results = await Promise.all(rangeDays.map((d) => createEntries({ ...base, date: d }, pairs)));
+      const results = await Promise.all(rangeDays.map((d) => createEntries({ ...base, date: d, ...vehicleFor(null) }, pairs)));
       res.error = results.find((r) => r?.error)?.error || null;
     }
     setSaving(false);
@@ -414,6 +461,31 @@ export default function ScheduleForm({ profile, leaders, entries, groups: pGroup
               <span className="block text-[12px] text-slate-500 mt-0.5">Không cần phê duyệt; trên lịch chỉ hiển thị Nội dung và dòng chữ in đậm “Làm việc tại cơ quan”.</span>
             </span>
           </label>
+
+          {/* Đề nghị bố trí xe ô tô công vụ — KHÔNG tick = không cần xe */}
+          {!atOffice && (
+            <div className={`rounded-lg border transition ${wantVehicle ? 'bg-sky-50 border-sky-300' : 'bg-slate-50/60 border-slate-200 hover:border-sky-200'}`}>
+              <label className="flex items-start gap-2.5 p-3 cursor-pointer">
+                <input type="checkbox" checked={wantVehicle} onChange={(e) => setWantVehicle(e.target.checked)} className="accent-sky-600 mt-0.5 w-4 h-4" />
+                <span className="text-[13px] text-slate-700">
+                  <span className="font-bold text-sky-800">Đề nghị bố trí xe ô tô công vụ</span>
+                  <span className="block text-[12px] text-slate-500 mt-0.5">Không tick thì mặc định <b>không cần xe</b>. Tick để chuyển Phòng HC-TC-QT phân xe, Lãnh đạo Văn phòng phê duyệt rồi in Phiếu đề nghị sử dụng xe.</span>
+                </span>
+              </label>
+              {wantVehicle && (
+                <div className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Số người</label>
+                    <input type="number" min="1" value={riderCount} onChange={(e) => setRiderCount(e.target.value)} placeholder="VD: 5" className={`${input} mt-1.5`} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Địa điểm xuất phát <span className="text-rose-600">*</span></label>
+                    <input type="text" list="goi-y-dia-diem" value={departure} onChange={(e) => setDeparture(e.target.value)} placeholder="VD: Trụ sở Đoàn ĐBQH và HĐND tỉnh" className={`${input} mt-1.5`} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Địa điểm — ẩn khi "Làm việc tại cơ quan" (địa điểm là tại cơ quan) */}
           {!atOffice && (

@@ -152,3 +152,36 @@ export const VEHICLE_TYPES = {
   rieng: 'Xe riêng (phục vụ lãnh đạo)',
   dung_chung: 'Xe dùng chung',
 };
+
+// ===== ĐỀ XUẤT SỬ DỤNG XE Ô TÔ CÔNG VỤ =====
+// Quy trình: chuyên viên TICK "Đề nghị bố trí xe" khi nhập lịch (không tick = không
+// cần xe) -> Phòng HC-TC-QT phân xe/lái xe -> Lãnh đạo Văn phòng (Quản trị) phê duyệt
+// -> in "Phiếu đề nghị sử dụng xe ô tô công vụ" ở hộp chi tiết lịch.
+export const VEHICLE_STATUS = {
+  none: { label: 'Không cần xe', bg: 'bg-slate-100', text: 'text-slate-500', border: 'border-slate-200' },
+  de_xuat: { label: 'Đề nghị bố trí xe — chờ phân xe', bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-300' },
+  da_phan_xe: { label: 'Đã phân xe — chờ Lãnh đạo Văn phòng duyệt', bg: 'bg-sky-50', text: 'text-sky-800', border: 'border-sky-300' },
+  da_duyet: { label: 'Đã duyệt điều xe', bg: 'bg-emerald-50', text: 'text-emerald-800', border: 'border-emerald-300' },
+  tu_choi: { label: 'Không bố trí được xe', bg: 'bg-rose-50', text: 'text-rose-800', border: 'border-rose-300' },
+};
+
+// Địa điểm xuất phát mặc định của phiếu điều xe
+export const DEFAULT_DEPARTURE = 'Trụ sở Đoàn ĐBQH và HĐND tỉnh';
+
+// Mẫu "Phiếu đề nghị sử dụng xe ô tô công vụ" (docs/Đề nghị sử dụng xe oto.docx).
+// Tên người ký lấy theo hồ sơ tài khoản thực hiện; các giá trị dưới là DỰ PHÒNG khi
+// tài khoản chưa khai họ tên/chức vụ.
+export const VEHICLE_SLIP = {
+  recipient: 'Lãnh đạo Văn phòng Đoàn ĐBQH và HĐND tỉnh Thanh Hóa',
+  place: 'Thanh Hoá',
+  hctcqt: { block: 'Ý KIẾN CỦA PHÒNG HÀNH CHÍNH, TỔ CHỨC, QUẢN TRỊ', signTitle: 'KT. TRƯỞNG PHÒNG\nPHÓ TRƯỞNG PHÒNG', signer: 'Ngô Ngọc Quyến' },
+  vp: { block: 'Ý KIẾN CỦA LÃNH ĐẠO VĂN PHÒNG', signTitle: 'KT. CHÁNH VĂN PHÒNG\nPHÓ CHÁNH VĂN PHÒNG', signer: 'Hà Ngọc Sơn' },
+};
+
+// Xe RIÊNG (phục vụ lãnh đạo) KHÔNG hiển thị trên lịch công tác và chỉ Quản trị
+// mới được điều — dùng chung cho mọi nơi hiển thị/gán xe.
+export const isPrivateVehicle = (v) => v?.vehicle_type === 'rieng';
+
+// Chuyến này có đề nghị bố trí xe không (dữ liệu cũ: đã gán xe coi như có đề nghị)
+export const hasVehicleRequest = (e) =>
+  !!e?.vehicle_requested || (e?.vehicle_ids || []).length > 0;

@@ -59,9 +59,30 @@ export function canReviewEntry(profile, entry, leader) {
   return false;
 }
 
-// Được gán xe không?
+// Được PHÂN XE không? (Phòng HC-TC-QT — vai trò van_phong_xe; Quản trị làm thay được)
 export function canAssignVehicle(profile) {
   return profile?.role === 'van_phong_xe' || profile?.role === 'quan_tri';
+}
+
+// Được PHÊ DUYỆT điều xe không? — Lãnh đạo Văn phòng, trong hệ thống là Quản trị.
+// Phòng HC-TC-QT chỉ phân xe; phiếu chỉ in được sau khi khâu này duyệt.
+export function canApproveVehicle(profile) {
+  return profile?.role === 'quan_tri';
+}
+
+// Được điều XE RIÊNG (xe phục vụ lãnh đạo) không? — CHỈ Quản trị.
+// Xe riêng cũng không hiển thị trên lịch công tác (xem constants.isPrivateVehicle).
+export function canDispatchPrivateVehicle(profile) {
+  return profile?.role === 'quan_tri';
+}
+
+// Được IN "Phiếu đề nghị sử dụng xe ô tô công vụ" của mục lịch này không?
+// Điều kiện: phiếu ĐÃ ĐƯỢC PHÊ DUYỆT và người xem là tài khoản làm việc (không phải
+// tài khoản chỉ xem/khách).
+export function canPrintVehicleSlip(profile, entry) {
+  if (!profile || !entry) return false;
+  if (profile.role === 'nguoi_xem') return false;
+  return entry.vehicle_status === 'da_duyet';
 }
 
 // Mục lịch này đã đủ điều kiện gán xe chưa? (đã duyệt / đã điều chỉnh / lịch lãnh đạo)

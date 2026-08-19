@@ -459,7 +459,7 @@ export default function App() {
                 </button>
               ))}
             </div>
-            {adminTab === 'users' && <AdminUsers bans={bans} leaders={leaders} />}
+            {adminTab === 'users' && <AdminUsers bans={bans} leaders={leaders} profile={profile} />}
             {adminTab === 'leaders' && <AdminLeaders leaders={leaders} bans={bans} onChanged={loadCatalogs} />}
             {adminTab === 'vehicles' && <AdminVehicles vehicles={vehicles} leaders={leaders} onChanged={loadCatalogs} />}
             {adminTab === 'groups' && <AdminGroups groups={pGroups} leaders={leaders} onChanged={loadCatalogs} />}
@@ -499,6 +499,7 @@ export default function App() {
           entries={entries}
           leaders={leaders}
           vehicles={vehicles}
+          profiles={pProfiles}
           profile={profile}
           reviewer={reviewerById[viewing.reviewed_by]}
           onChanged={refresh}
