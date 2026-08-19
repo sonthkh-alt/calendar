@@ -12,10 +12,13 @@ const PS = process.env.SystemRoot
   ? path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
   : 'powershell.exe';
 
-function run(args, timeoutMs) {
+// windowsHide: ẩn cửa sổ PowerShell. RIÊNG lúc KÝ thì KHÔNG ẩn — tiến trình có cửa sổ
+// thật trên màn hình nền giúp hộp nhập mã PIN của SafeNet hiện ra đúng chỗ (ẩn đi dễ bị
+// CryptoAPI báo "The operation was canceled by the user").
+function run(args, timeoutMs, hide = true) {
   return new Promise((resolve, reject) => {
     execFile(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', PS1, ...args],
-      { timeout: timeoutMs, windowsHide: true, maxBuffer: 4 * 1024 * 1024 },
+      { timeout: timeoutMs, windowsHide: hide, maxBuffer: 4 * 1024 * 1024 },
       (err, stdout, stderr) => {
         if (err) {
           const msg = (stderr || stdout || err.message || '').toString().trim();
@@ -53,7 +56,7 @@ export async function signDetachedCms(content, thumbprint, { sha1 = false, timeo
     await fs.writeFile(inFile, content);
     const args = ['-Mode', 'sign', '-In', inFile, '-Out', outFile, '-Thumbprint', thumbprint];
     if (sha1) args.push('-Sha1');
-    await run(args, timeoutMs);
+    await run(args, timeoutMs, false);
     return await fs.readFile(outFile);
   } finally {
     await fs.rm(inFile, { force: true });
