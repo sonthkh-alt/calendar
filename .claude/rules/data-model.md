@@ -41,8 +41,15 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
 
 ## Điều xe (phiếu đề nghị sử dụng xe ô tô công vụ)
 - Ô tick **"Đề nghị bố trí xe"** trong form nhập lịch. KHÔNG tick = `no_vehicle`, không vào danh sách điều xe.
-- `vehicle_status`: `none` → `de_xuat` (chuyên viên đề nghị) → `da_phan_xe` (Phòng HC-TC-QT gán xe/lái xe)
-  → `da_duyet` (Lãnh đạo Văn phòng = vai trò `quan_tri` phê duyệt) | `tu_choi` (không bố trí được xe).
+- `vehicle_status`: `none` → `de_xuat` (chuyên viên đề nghị) → `da_phan_xe` (lãnh đạo Phòng HC-TC-QT
+  xem xét, phân bổ xe/lái xe) → `da_duyet` (Lãnh đạo Văn phòng = vai trò `quan_tri` ký duyệt) |
+  `tu_choi` (không bố trí được xe).
+- TRÌNH TỰ BẮT BUỘC: nút "Phê duyệt & ký số" CHỈ hiện khi `vehicle_status = 'da_phan_xe'` — chưa phân
+  xe thì Lãnh đạo Văn phòng không duyệt được (chỉ có thể "Không bố trí xe").
+- Người đề nghị in trên phiếu ("Tên tôi là / Chức vụ / NGƯỜI BÁO XE") = **lãnh đạo CHỦ TRÌ cao nhất**
+  của sự kiện (STT `leaders.sort_order` nhỏ nhất trong các mục đã gộp), KHÔNG phải chuyên viên nhập lịch.
+- Lịch của **lãnh đạo Văn phòng** (`leader_type='vanphong'`) đề nghị xe được như pct/doan: vào thẳng
+  danh sách điều xe, không chờ bước duyệt lịch (`permissions.entryNeedsVehicleOk`).
 - Sửa lịch đã duyệt phiếu mà đổi thông tin chuyến (ngày/buổi/nội dung/địa điểm/số người/nơi xuất phát)
   → quay về `da_phan_xe` để duyệt lại. Bỏ tick → `none` + gỡ xe đã gán.
 - **In Phiếu điều xe** ở hộp chi tiết lịch, chỉ khi `da_duyet` và không phải tài khoản `nguoi_xem`.

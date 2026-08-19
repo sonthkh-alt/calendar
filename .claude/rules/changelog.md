@@ -1,5 +1,15 @@
 # Nhật ký dự án
 
+## 2026-08-19 — Điều xe: siết TRÌNH TỰ + người đề nghị là lãnh đạo chủ trì + mở cho lãnh đạo VP
+- **Trình tự:** nút "Phê duyệt & ký số" CHỈ hiện khi phiếu ở `da_phan_xe` (Phòng HC-TC-QT đã xem xét,
+  phân bổ xe). Ở bước `de_xuat`, Lãnh đạo Văn phòng thấy dòng nhắc "Chờ lãnh đạo Phòng HC-TC-QT xem
+  xét, phân bổ xe…" và chỉ còn nút "Không bố trí xe" (canRefuseVeh).
+- **Người đề nghị trên phiếu** = LÃNH ĐẠO CHỦ TRÌ cao nhất của lịch (chairLeader = sort_order nhỏ nhất
+  trong các mục đã gộp) -> điền "Tên tôi là / Chức vụ / NGƯỜI BÁO XE" theo `leaders.full_name/position`,
+  KHÔNG lấy hồ sơ chuyên viên nhập lịch nữa. Hộp chi tiết hiện thêm dòng "Người đề nghị (chủ trì)".
+- **Lãnh đạo Văn phòng:** permissions.entryNeedsVehicleOk thêm `vanphong` -> lịch của các đ/c lãnh đạo
+  Văn phòng đề nghị xe được như pct/doan, vào thẳng bảng điều xe của Phòng HC-TC-QT (không chờ duyệt lịch).
+
 ## 2026-08-19 — KÝ SỐ phiếu điều xe bằng USB token (sản phẩm là PDF đã ký)
 - Yêu cầu: admin phê duyệt là làm luôn thủ tục ký số; sản phẩm là **file PDF đã ký số**;
   chuyên viên chỉ vào tải file.

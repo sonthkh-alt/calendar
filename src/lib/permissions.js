@@ -87,7 +87,9 @@ export function canPrintVehicleSlip(profile, entry) {
 
 // Mục lịch này đã đủ điều kiện gán xe chưa? (đã duyệt / đã điều chỉnh / lịch lãnh đạo)
 export function entryNeedsVehicleOk(entry, leader) {
-  if (leader?.leader_type === 'pct' || leader?.leader_type === 'doan') return true;
+  // Lãnh đạo TTr HĐND tỉnh / Đoàn ĐBQH / VĂN PHÒNG: đề nghị xe vào thẳng danh sách điều
+  // xe của Phòng HC-TC-QT, không phải chờ bước duyệt lịch.
+  if (['pct', 'doan', 'vanphong'].includes(leader?.leader_type)) return true;
   return entry.status === 'da_duyet' || entry.status === 'da_dieu_chinh';
 }
 

@@ -176,8 +176,17 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   const vStatus = entry.vehicle_status || 'none';
   const vSt = VEHICLE_STATUS[vStatus] || VEHICLE_STATUS.none;
   const hasRequest = vStatus !== 'none';
-  const canApproveVeh = canApproveVehicle(profile) && ['de_xuat', 'da_phan_xe'].includes(vStatus);
+  // Lãnh đạo Văn phòng CHỈ xem xét/ký duyệt SAU KHI Phòng HC-TC-QT đã phân xe.
+  // Đang ở 'de_xuat' (chưa có xe) thì không hiện nút duyệt — đúng trình tự nghiệp vụ.
+  const canApproveVeh = canApproveVehicle(profile) && vStatus === 'da_phan_xe';
+  // Từ chối (không bố trí được xe) thì làm được ở cả 2 bước
+  const canRefuseVeh = canApproveVehicle(profile) && ['de_xuat', 'da_phan_xe'].includes(vStatus);
   const canPrintSlip = canPrintVehicleSlip(profile, entry);
+  // Lãnh đạo CHỦ TRÌ của sự kiện = người có STT (sort_order) nhỏ nhất trong các mục đã gộp
+  const chairLeader = merged
+    .map((e) => leaderById[e.leader_id]).filter(Boolean)
+    .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))[0] || null;
+
   // Xe ghi trên PHIẾU: lấy đủ mọi xe đã gán (kể cả xe riêng do Quản trị điều)
   const slipVehicles = [...new Map(
     merged.flatMap((e) => ((e.vehicle_ids && e.vehicle_ids.length) ? e.vehicle_ids : (e.vehicle_id ? [e.vehicle_id] : [])))
@@ -187,7 +196,10 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   // Dữ liệu điền vào phiếu (dùng chung cho bản in nhanh và bản PDF để ký số).
   // `extra` cho phép ghi đè khi vừa phê duyệt xong (entry trong props chưa kịp làm mới).
   const slipPayload = (extra = {}) => {
-    const requester = profileById[entry.vehicle_requested_by] || profileById[entry.created_by] || {};
+    // "Tên tôi là / Chức vụ / NGƯỜI BÁO XE" ghi theo LÃNH ĐẠO CHỦ TRÌ CAO NHẤT của lịch
+    // (STT nhỏ nhất trong các lãnh đạo của sự kiện), không phải chuyên viên nhập lịch.
+    const requester = chairLeader
+      || profileById[entry.vehicle_requested_by] || profileById[entry.created_by] || {};
     const dispatcher = profileById[entry.vehicle_assigned_by];
     const approver = profileById[extra.approvedById || entry.vehicle_approved_by] || {};
     const reqD = parseISO((entry.vehicle_requested_at || entry.created_at || new Date().toISOString()).slice(0, 10));
@@ -459,6 +471,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                 <Car className="w-4 h-4" /> Đề nghị bố trí xe — {vSt.label}
               </p>
               <div className="text-[13px] text-slate-700 space-y-0.5">
+                {chairLeader && <p>Người đề nghị (chủ trì): <b>{chairLeader.full_name}</b>{chairLeader.position ? ' — ' + chairLeader.position : ''}</p>}
                 {entry.rider_count ? <p>Số người: <b>{entry.rider_count}</b></p> : null}
                 <p>Địa điểm xuất phát: <b>{entry.departure_place || DEFAULT_DEPARTURE}</b></p>
                 {slipVehicles.length > 0 && (
@@ -494,14 +507,17 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
 
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 {canApproveVeh && (
-                  <>
-                    <button onClick={doApproveVehicle} disabled={busy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60">
-                      <ShieldCheck className="w-4 h-4" /> Phê duyệt &amp; ký số
-                    </button>
-                    <button onClick={doRejectVehicle} disabled={busy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60">
-                      <XCircle className="w-4 h-4" /> Không bố trí xe
-                    </button>
-                  </>
+                  <button onClick={doApproveVehicle} disabled={busy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60">
+                    <ShieldCheck className="w-4 h-4" /> Phê duyệt &amp; ký số
+                  </button>
+                )}
+                {canRefuseVeh && (
+                  <button onClick={doRejectVehicle} disabled={busy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60">
+                    <XCircle className="w-4 h-4" /> Không bố trí xe
+                  </button>
+                )}
+                {canApproveVehicle(profile) && vStatus === 'de_xuat' && (
+                  <span className="text-[12px] text-amber-800 italic">Chờ lãnh đạo Phòng HC-TC-QT xem xét, phân bổ xe rồi mới ký duyệt được.</span>
                 )}
                 {canPrintSlip && !entry.vehicle_signed_path && (
                   <>
@@ -513,7 +529,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                     </button>
                   </>
                 )}
-                {!canPrintSlip && !canApproveVeh && (
+                {!canPrintSlip && !canApproveVeh && !canRefuseVeh && (
                   <span className="text-[12px] text-slate-500 italic">Xuất được phiếu sau khi Lãnh đạo Văn phòng phê duyệt.</span>
                 )}
               </div>

@@ -51,7 +51,8 @@ cho tài khoản Quản trị và không dùng chung tài khoản.
 
 Mọi thao tác nằm trong hộp **chi tiết lịch** của mục lịch có đề nghị bố trí xe.
 
-1. **Lãnh đạo Văn phòng bấm "Phê duyệt & ký số"** → nhập ý kiến → hệ thống ghi phê duyệt
+1. Sau khi **Phòng HC-TC-QT đã phân bổ xe** (phiếu chuyển sang *"Đã phân xe — chờ Lãnh đạo Văn phòng
+   duyệt"*), **Lãnh đạo Văn phòng bấm "Phê duyệt & ký số"** → nhập ý kiến → hệ thống ghi phê duyệt
    (người duyệt, thời điểm, mã xác thực) và **tự tải về tệp PDF của phiếu** (`Phieu-dieu-xe-<ngày>-<mã>.pdf`).
 2. Mở **phần mềm ký số** của Ban Cơ yếu → chọn tệp PDF vừa tải → chọn chứng thư trên token →
    đặt vị trí chữ ký vào ô **"KT. CHÁNH VĂN PHÒNG"** (góc dưới bên phải) → nhập PIN → lưu.
