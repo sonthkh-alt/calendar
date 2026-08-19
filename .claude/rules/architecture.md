@@ -52,7 +52,9 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   + tick vai trò/Ban) gọi `api/admin-create-user.js` (Vercel Serverless, service_role) +
   phân quyền tài khoản đã có. Cần env `SUPABASE_SERVICE_ROLE_KEY` trên Vercel.
 - `FilterBar.jsx` — điều hướng tuần/tháng/ngày + lọc Ban/lãnh đạo/trạng thái
-- `EntryCard.jsx` / `StatusBadge.jsx` — ô lịch + huy hiệu trạng thái dùng chung
+- `EntryCard.jsx` / `StatusBadge.jsx` — ô lịch + huy hiệu trạng thái dùng chung. EntryCard nhận
+  `vehicles` (mảng xe của chuyến, đã lọc bỏ xe riêng) -> dòng "Xe:"; chế độ Gọn chỉ hiện dòng này
+  khi lịch có đề nghị bố trí xe; kèm chip trạng thái phiếu xe
 - `EntryDetail.jsx` — chi tiết lịch; khối "Đề nghị bố trí xe" (trạng thái/số người/nơi xuất phát/
   xe/ý kiến), nút Phê duyệt điều xe (Quản trị) và **In Phiếu điều xe** (sau khi duyệt)
 

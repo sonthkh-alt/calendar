@@ -9,7 +9,7 @@ import { fmtTime, fmtDM, parseISO } from '../lib/dates';
  * `vehicle` do cha truyền vào: xe đã gán, hoặc xe riêng của lãnh đạo (PCT /
  * Phó Trưởng Đoàn) nếu chưa gán. Bấm vào ô để mở chi tiết đầy đủ.
  */
-export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicate, dupInfo, onEdit, onDelete, onDuplicate, onView, compact, brief, unitTint }) {
+export default function EntryCard({ entry, leader, vehicle, vehicles, canEdit, canDuplicate, dupInfo, onEdit, onDelete, onDuplicate, onView, compact, brief, unitTint }) {
   const dupOthers = dupInfo?.others;
   const dupWarn = dupOthers?.length > 0;
   const dupWeek = dupInfo?.severity === 'week'; // cùng tuần -> ĐỎ; cả năm -> VÀNG
@@ -28,8 +28,18 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
   const timeLabel = entry.session === 'gio'
     ? `${fmtTime(entry.start_time)}${entry.end_time ? ' - ' + fmtTime(entry.end_time) : ''}`
     : SESSIONS[entry.session];
-  const driverLabel = vehicle
-    ? [vehicle.driver_name, vehicle.plate].filter(Boolean).join(' · ')
+  // XE PHỤC VỤ — lịch CÓ ĐỀ NGHỊ BỐ TRÍ XE thì hiện thông tin xe ngay trên ô lịch
+  // (kể cả chế độ gọn của Lịch tuần) để người xem biết chuyến đó đi xe nào.
+  const cars = (vehicles && vehicles.length) ? vehicles : (vehicle ? [vehicle] : []);
+  const hasVehReq = !!entry.vehicle_status && entry.vehicle_status !== 'none';
+  const carLabel = cars.length
+    ? cars.slice(0, 2).map((v) => [v.plate, v.driver_name].filter(Boolean).join(' · ')).join('; ')
+      + (cars.length > 2 ? ` (+${cars.length - 2} xe)` : '')
+    : (entry.vehicle_status === 'de_xuat' ? 'chờ Phòng HC-TC-QT bố trí'
+      : entry.vehicle_status === 'tu_choi' ? 'không bố trí được xe'
+        : '—');
+  const driverLabel = cars.length
+    ? cars.map((v) => [v.driver_name, v.plate].filter(Boolean).join(' · ')).join('; ')
     : '—';
 
   return (
@@ -87,15 +97,18 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
           <>
             <p className="flex items-start gap-1"><MapPin className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" /> <span>{entry.location || '—'}</span></p>
             {!brief && (
-              <>
-                <p className="flex items-start gap-1" title={entry.participants || ''}>
-                  <Users className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" />
-                  <span className={compact ? 'line-clamp-3' : ''}><b className="font-semibold">TP:</b> {entry.participants || '—'}</span>
-                </p>
-                <p className="flex items-center gap-1 font-medium text-slate-700">
-                  <Car className="w-3 h-3 shrink-0 text-slate-500" /> <span><b className="font-semibold">Lái xe:</b> {driverLabel}</span>
-                </p>
-              </>
+              <p className="flex items-start gap-1" title={entry.participants || ''}>
+                <Users className="w-3 h-3 shrink-0 text-slate-400 mt-0.5" />
+                <span className={compact ? 'line-clamp-3' : ''}><b className="font-semibold">TP:</b> {entry.participants || '—'}</span>
+              </p>
+            )}
+            {/* Xe phục vụ: luôn hiện ở chế độ Đầy đủ; chế độ Gọn chỉ hiện khi lịch CÓ
+                đề nghị bố trí xe (để ô lịch không bị dài thêm một cách vô ích) */}
+            {(!brief || hasVehReq) && (
+              <p className={`flex items-start gap-1 font-medium ${cars.length ? 'text-emerald-800' : hasVehReq ? 'text-amber-800' : 'text-slate-700'}`}>
+                <Car className="w-3 h-3 shrink-0 mt-0.5" />
+                <span><b className="font-semibold">Xe:</b> {brief ? carLabel : driverLabel}</span>
+              </p>
             )}
           </>
         )}

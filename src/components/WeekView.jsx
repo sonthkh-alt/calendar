@@ -145,6 +145,9 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
 
   // Chế độ GỌN: gộp các mục giống nhau (cùng nội dung + buổi/giờ + địa điểm,
   // khác lãnh đạo/thành phần) thành MỘT thẻ — lãnh đạo và thành phần nối lại.
+  // Xe của một mục: ưu tiên mảng vehicle_ids (nhiều xe), dự phòng vehicle_id (dữ liệu cũ)
+  const carIdsOf = (e) => ((e.vehicle_ids && e.vehicle_ids.length) ? [...e.vehicle_ids] : (e.vehicle_id ? [e.vehicle_id] : []));
+
   const mergeEntries = (list) => {
     const map = new Map();
     const out = [];
@@ -154,13 +157,13 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
       const key = `${e.content}|${e.session}|${e.start_time || ''}|${(e.location || '').trim().toLowerCase()}|${e.status === 'tu_choi' ? 'tc' : ''}`;
       const m = map.get(key);
       if (!m) {
-        const item = { orig: e, ids: [e.id], leaderIds: [e.leader_id], parts: e.participants ? [e.participants] : [], vehicleIds: e.vehicle_id ? [e.vehicle_id] : [] };
+        const item = { orig: e, ids: [e.id], leaderIds: [e.leader_id], parts: e.participants ? [e.participants] : [], vehicleIds: carIdsOf(e) };
         map.set(key, item); out.push(item);
       } else {
         m.ids.push(e.id);
         if (!m.leaderIds.includes(e.leader_id)) m.leaderIds.push(e.leader_id);
         if (e.participants && !m.parts.includes(e.participants)) m.parts.push(e.participants);
-        if (e.vehicle_id && !m.vehicleIds.includes(e.vehicle_id)) m.vehicleIds.push(e.vehicle_id);
+        for (const vid of carIdsOf(e)) if (!m.vehicleIds.includes(vid)) m.vehicleIds.push(vid);
       }
     }
     return out;
@@ -171,16 +174,18 @@ export default function WeekView({ profile, anchor, entries, leaders, bans, vehi
     const lead = leaderById[orig.leader_id];
     const names = m.leaderIds.map((id) => leaderById[id]?.full_name).filter(Boolean);
     // XE RIÊNG (phục vụ lãnh đạo) KHÔNG hiển thị trên lịch công tác — chỉ hiện xe
-    // dùng chung đã được điều và phê duyệt.
-    const veh = hidesDriver(lead?.leader_type)
-      ? null
-      : (m.vehicleIds.map((id) => vehicleById[id]).find((v) => v && !isPrivateVehicle(v)) || null);
+    // dùng chung đã được điều và phê duyệt. Lịch của TTr HĐND / Đoàn ĐBQH vốn để trống
+    // ô lái xe, TRỪ KHI chuyến đó có đề nghị bố trí xe qua quy trình phiếu điều xe.
+    const hasVehReq = !!orig.vehicle_status && orig.vehicle_status !== 'none';
+    const vehs = (hidesDriver(lead?.leader_type) && !hasVehReq)
+      ? []
+      : m.vehicleIds.map((id) => vehicleById[id]).filter((v) => v && !isPrivateVehicle(v));
     return (
       <EntryCard
         key={orig.id}
         entry={{ ...orig, participants: m.parts.join('; ') }}
         leader={lead ? { ...lead, full_name: names.join('; ') } : null}
-        vehicle={veh}
+        vehicles={vehs}
         canEdit={canEditEntry(profile, orig, lead)}
         canDuplicate={canCreateFor(profile, lead)}
         dupInfo={dupMap?.get(orig.id)}

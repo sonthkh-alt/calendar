@@ -92,7 +92,10 @@ export default function DayView({ profile, anchor, entries, leaders, vehicles, t
               key={e.id}
               entry={{ ...e, participants: m.parts.join('; ') }}
               leader={l ? { ...l, full_name: names.join('; ') } : null}
-              vehicle={hidesDriver(l?.leader_type) ? null : ((e.vehicle_ids || []).map((id) => vehicleById[id]).find((v) => v && !isPrivateVehicle(v)) || null)}
+              vehicles={(hidesDriver(l?.leader_type) && !(e.vehicle_status && e.vehicle_status !== 'none'))
+                ? []
+                : ((e.vehicle_ids && e.vehicle_ids.length ? e.vehicle_ids : (e.vehicle_id ? [e.vehicle_id] : []))
+                  .map((id) => vehicleById[id]).filter((v) => v && !isPrivateVehicle(v)))}
               canEdit={canEditEntry(profile, e, l)}
               canDuplicate={canCreateFor(profile, l)}
               dupInfo={dupMap?.get(e.id)}

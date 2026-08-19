@@ -1,5 +1,17 @@
 # Nhật ký dự án
 
+## 2026-08-19 — Ô lịch hiện THÔNG TIN XE PHỤC VỤ với lịch có đề nghị bố trí xe
+- Yêu cầu: xem lịch là thấy luôn chuyến đó đi xe nào.
+- EntryCard: thêm prop `vehicles` (mảng) thay cho `vehicle` lẻ; dòng "Xe:" hiện
+  - chế độ ĐẦY ĐỦ (Lịch ngày): luôn hiện như trước, liệt kê ĐỦ các xe;
+  - chế độ GỌN (Lịch tuần): CHỈ hiện khi lịch có đề nghị bố trí xe -> "36A-1234 · Lái xe A"
+    (nhiều xe: 2 xe đầu + "(+N xe)"), chưa phân xe -> "chờ Phòng HC-TC-QT bố trí" (vàng),
+    từ chối -> "không bố trí được xe". Có xe -> chữ xanh lá.
+- WeekView.mergeEntries: gom xe theo `vehicle_ids` (trước chỉ lấy `vehicle_id` nên chuyến
+  nhiều xe chỉ thấy 1 xe); DayView cũng liệt kê đủ xe.
+- Xe RIÊNG vẫn KHÔNG hiển thị. Lịch TTr HĐND / Đoàn ĐBQH vẫn để trống ô lái xe như quy định
+  cũ, TRỪ KHI chuyến đó đi qua quy trình phiếu điều xe (có vehicle_status) -> hiện bình thường.
+
 ## 2026-08-19 — Ô "ĐÃ KÝ SỐ" hiện trên phiếu + nhắc việc điều xe cho HC-TC-QT / Lãnh đạo VP
 - **Ô ký số nhìn thấy được:** chữ ký mật mã vốn "vô hình" (nhiều trình xem PDF không mở bảng
   Signatures nên người dùng tưởng không có chứng thư — đã kiểm chứng: CMS luôn KÈM chứng thư,
