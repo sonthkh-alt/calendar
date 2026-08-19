@@ -16,6 +16,11 @@ dist/
 Thumbs.db
 *.log
 
+# Trợ lý ký số (chạy trên máy có USB token)
+tools/ky-so-agent/node_modules/
+tools/ky-so-agent/config.json
+tools/ky-so-agent/mau-phieu-da-ky.pdf
+
 # File bundle tạm của test PDF
 scripts/.exporters.cjs
 scripts/.vehicleSlipPdf.cjs

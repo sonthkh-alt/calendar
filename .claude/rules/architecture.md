@@ -29,6 +29,17 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   hóa NFC). WeekView: "Xuất PDF" cho MỌI tài khoản; "Xuất Word" chỉ với email trong
   constants.DOCX_EXPORT_EMAILS (canExportDocx). Test: scripts/test-pdf.mjs (npm run test:pdf).
 
+- `signAgent.js` — gọi TRỢ LÝ KÝ SỐ chạy trên máy có USB token (`http://127.0.0.1:7878`):
+  `probeAgent` (dò nhanh 2,5s), `listAgentCerts`, `signPdfViaAgent` (chờ tối đa 4 phút vì phải nhập PIN).
+  Đổi địa chỉ không cần build lại: `localStorage.kySoAgentUrl`.
+
+## tools/ky-so-agent/  (chạy trên máy Lãnh đạo Văn phòng, KHÔNG deploy lên web)
+- `agent.mjs` — HTTP cục bộ /health /certs /sign; CORS + Private Network Access; chỉ nghe 127.0.0.1
+- `pdfsign.mjs` — @signpdf: chèn ô chữ ký + nhúng PKCS#7 vào PDF
+- `winsign.mjs` + `winsign.ps1` — .NET SignedCms ký qua CSP/KSP SafeNet (hộp nhập PIN do SafeNet hiện)
+- `test-local.mjs` — kiểm thử toàn bộ bằng chứng thư TỰ KÝ tạm, không cần token (`npm test`)
+- README.md — hướng dẫn cài Node.js, chạy nền khi khởi động Windows, cấu hình allowOrigins
+
 ## src/components/
 - `WeekView.jsx` — màn chính: bảng ngày×(Sáng/Chiều)×cột lãnh đạo; chế độ Đầy đủ/Gọn; nút In
 - `MonthView.jsx` / `DayView.jsx` — lưới tháng (click ngày → DayView), ngày chia 2 khối Sáng/Chiều

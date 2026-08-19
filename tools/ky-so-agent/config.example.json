@@ -1,0 +1,8 @@
+{
+  "port": 7878,
+  "allowOrigins": [
+    "https://calendar-beta-lac.vercel.app",
+    "http://localhost:5173"
+  ],
+  "certThumbprint": ""
+}

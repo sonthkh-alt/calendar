@@ -1,0 +1,19 @@
+{
+  "name": "ky-so-agent",
+  "version": "1.0.0",
+  "description": "Tro ly ky so bang USB token cho He thong lich cong tac tuan",
+  "scripts": {
+    "start": "node agent.mjs",
+    "test": "node test-local.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@signpdf/placeholder-plain": "^3.3.0",
+    "@signpdf/signpdf": "^3.3.0",
+    "@signpdf/utils": "^3.3.0"
+  },
+  "private": true
+}

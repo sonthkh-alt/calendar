@@ -80,39 +80,47 @@ Kiểm tra chữ ký: mở tệp bằng Adobe Acrobat Reader → bảng *Signatu
 | Mã PIN | dài 6–16 ký tự, còn 15 lần thử sai |
 | Hỗ trợ | Cục Chứng thực số và BMTT — `ca@bcy.gov.vn` — https://ca.gov.vn |
 
-**Cần kiểm tra trước khi ký PDF:** mở chứng thư → tab *Details* → dòng **Key Usage**. Phải có
-`Digital Signature` (và tốt nhất là `Non-Repudiation`) thì Adobe Reader mới chấp nhận là chữ ký tài liệu.
-Ở tab *General*, chứng thư này liệt kê mục đích: xác thực máy chủ từ xa, bảo vệ thư điện tử,
-`2.16.704.1.1.1.1.1`, Smart Card Logon — **chưa thấy ghi rõ "ký tài liệu"**. Nếu Key Usage không có
-`Digital Signature`, phải xin Cục CTSBMTT cấp/bổ sung chứng thư dùng cho **ký số văn bản**.
+**Đã kiểm tra Key Usage (19/08/2026): `DigitalSignature, NonRepudiation, KeyEncipherment,
+DataEncipherment`** → chứng thư **ký được văn bản**, không phải xin cấp bổ sung.
+(Thumbprint `3AE33E7147F770076C21B4192D056EA5585D5DB7`, chủ thể *Hà Ngọc Sơn*,
+`E=sonhn@thanhhoa.gov.vn`.)
 
-### 3.4. Ghép "bấm Phê duyệt là ký luôn" — hai đường đi
+### 3.4. "Bấm Phê duyệt là ký luôn" — ĐÃ TRIỂN KHAI (Trợ lý ký số)
 
-Trình duyệt **không** truy cập trực tiếp được USB token (bảo mật của trình duyệt). Bắt buộc phải có một
-**chương trình chạy trên máy có cắm token**, web gọi sang chương trình đó qua `http://127.0.0.1:<cổng>`.
-Điểm kỹ thuật quan trọng: Chrome/Edge coi `127.0.0.1` là nguồn tin cậy nên trang HTTPS **gọi được**, nhưng
-chương trình cục bộ phải trả đúng các header CORS, gồm `Access-Control-Allow-Private-Network: true`
-(yêu cầu Private Network Access của Chrome đời mới).
+Trình duyệt **không** truy cập trực tiếp được USB token. Giải pháp đang dùng: một chương trình nhỏ
+(**Trợ lý ký số**) chạy nền trên chính máy có cắm token; trang web gửi tệp PDF sang
+`http://127.0.0.1:7878`, trợ lý ký bằng chứng thư trên token rồi trả lại tệp đã ký.
 
-**Đường A — dùng dịch vụ ký số sẵn có của Ban Cơ yếu (khuyến nghị).**
-Liên hệ `ca@bcy.gov.vn` (hoặc hotline trong VGCA Token Manager) xin:
-1. Bộ cài **phần mềm ký số dành cho ứng dụng web** (dịch vụ ký chạy nền, thường gọi là *vgca-sign-service*
-   / *plugin ký số* — không phải Token Manager, cũng không phải bản ký tay trên desktop);
-2. **Tài liệu tích hợp/API**: cổng dịch vụ, đường dẫn (endpoint), định dạng dữ liệu gửi/nhận, cách chỉ định
-   vị trí ô chữ ký trên trang PDF.
-Có 2 thứ đó là ghép vào nút "Phê duyệt & ký số" được ngay — phía ứng dụng đã chuẩn bị sẵn
-`getVehicleSlipPdfBlob()` trong `src/lib/vehicleSlipPdf.js` để lấy đúng tệp PDF cần ký.
+Mã nguồn + hướng dẫn cài đặt: **`tools/ky-so-agent/`** (xem `README.md` trong thư mục đó).
 
-**Đường B — tự viết "trợ lý ký số" chạy trên máy Lãnh đạo Văn phòng.**
-Một chương trình nhỏ (Node.js) chạy nền trên máy đã cắm token:
-- mở cổng `http://127.0.0.1:7878`, chỉ nhận yêu cầu từ đúng tên miền của hệ thống;
-- nhận tệp PDF → gọi **PKCS#11** của SafeNet (`eTPKCS11.dll`) → người ký nhập PIN → trả lại PDF đã ký;
-- chạy cùng Windows để lúc nào cũng sẵn sàng.
-Ưu điểm: không phụ thuộc lịch cấp phát phần mềm của cấp trên. Nhược: phải cài Node.js trên máy đó và
-**bắt buộc thử nghiệm trực tiếp trên máy có token** (không mô phỏng được ở nơi khác).
+**Luồng khi bấm "Phê duyệt & ký số":**
 
-Trong cả hai đường, luồng người dùng cuối giống nhau và không đổi:
-**bấm "Phê duyệt & ký số" → nhập PIN → hệ thống tự lưu PDF đã ký → chuyên viên vào tải về.**
+1. Hệ thống ghi phê duyệt (người duyệt, thời điểm, mã xác thực).
+2. Dựng phiếu PDF (pdfmake) → gửi sang trợ lý.
+3. Trợ lý ký PKCS#7 **detached, SHA-256** qua kho chứng thư Windows → **SafeNet hiện hộp nhập mã PIN**.
+4. Nhận lại PDF đã ký → tải lên Supabase Storage → ghi `vehicle_signed_path/_name/_at/_by`.
+5. Chuyên viên vào mục lịch bấm **"Tải phiếu đã ký số (PDF)"**.
+
+Trợ lý chưa chạy / ký lỗi → hệ thống **tự quay về cách thủ công** (tải PDF về, ký bằng phần mềm trên
+máy, rồi "Hoặc tải lên tệp đã ký sẵn") — không tắc việc.
+
+**Cách làm bên trong (không dùng thư viện phải biên dịch):**
+
+| Thành phần | Việc |
+|---|---|
+| `agent.mjs` | HTTP cục bộ `/health`, `/certs`, `/sign`; CORS + `Access-Control-Allow-Private-Network`; chỉ nghe trên `127.0.0.1`; chỉ nhận yêu cầu từ tên miền trong `allowOrigins` |
+| `pdfsign.mjs` | `@signpdf/placeholder-plain` chèn ô chữ ký, `@signpdf/signpdf` tính ByteRange và nhúng chữ ký |
+| `winsign.ps1` | .NET `SignedCms` + `CmsSigner` ký qua CSP/KSP của SafeNet (chính nó bật hộp PIN) |
+| `src/lib/signAgent.js` | Phía web: dò trợ lý (`/health`), gửi PDF đi ký |
+
+**Kiểm chứng đã chạy thật trên máy Windows (19/08/2026):**
+`npm test` trong `tools/ky-so-agent` — 11/11 đạt (dựng PDF → chèn ô chữ ký → ký PKCS#7 → nhúng lại →
+.NET `CheckSignature` xác nhận chữ ký hợp lệ, detached, SHA-256, đúng chứng thư). Đường HTTP `/sign`
+cũng đã thử: trả về PDF có `/adbe.pkcs7.detached` và từ chối (403) yêu cầu từ tên miền lạ.
+
+**Giới hạn hiện tại:** chữ ký là loại **không hiển thị** (invisible) — trình đọc PDF báo ở bảng
+*Signatures*, còn phần nhìn thấy trên giấy là ảnh chữ ký + mã xác thực đã in sẵn trong phiếu. Muốn ô
+chữ ký số hiện thành hình trên trang thì phải dựng thêm "appearance stream", làm sau nếu cần.
 
 ## 4. Mức 3 — ký số từ xa qua nhà cung cấp dịch vụ
 

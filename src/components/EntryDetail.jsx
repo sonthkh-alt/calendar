@@ -6,7 +6,8 @@ import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../l
 import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk, canAdmin, canApproveVehicle, canDispatchPrivateVehicle, canPrintVehicleSlip } from '../lib/permissions';
 import { reviewEntries, updateEntries, uploadSignedSlip, getSignedSlipUrl } from '../lib/api';
 import { printVehicleSlip, makeSignCode } from '../lib/vehicleSlip';
-import { downloadVehicleSlipPdf } from '../lib/vehicleSlipPdf';
+import { downloadVehicleSlipPdf, getVehicleSlipPdfBlob, vehicleSlipFileName } from '../lib/vehicleSlipPdf';
+import { probeAgent, signPdfViaAgent } from '../lib/signAgent';
 
 /**
  * Modal chi tiết 1 mục lịch — hiển thị ĐẦY ĐỦ, không cắt chữ.
@@ -19,6 +20,8 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [signBusy, setSignBusy] = useState(false); // đang tạo PDF / tải tệp ký số
+  const [signStep, setSignStep] = useState('');    // dòng trạng thái khi ký số tự động
+  const [agentOn, setAgentOn] = useState(null);    // null = chưa dò, true/false = có/không có trợ lý
   const [note, setNote] = useState('');
   // Từ chối theo TỪNG thành viên: id các mục được chọn áp dụng
   const [selIds, setSelIds] = useState([]);
@@ -252,11 +255,74 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
     setBusy(false);
     if (error) { alert('Không lưu được phê duyệt: ' + error.message); return; }
     onChanged?.();
-    try {
-      await downloadVehicleSlipPdf(slipPayload({ signCode: code, approvedAt: at, approvedById: profile.id, approveNote }));
-    } catch (e) {
-      alert('Đã phê duyệt nhưng chưa tải được tệp PDF: ' + (e?.message || e) + '\nBấm “Tải phiếu PDF để ký số” để tải lại.');
+
+    // Phê duyệt xong -> KÝ SỐ LUÔN nếu trợ lý đang chạy trên máy này
+    const extra = { signCode: code, approvedAt: at, approvedById: profile.id, approveNote };
+    setSignBusy(true);
+    const agent = await probeAgent();
+    setAgentOn(!!agent);
+    if (agent) {
+      try {
+        await signViaAgent(extra);
+        setSignBusy(false);
+        alert('Đã phê duyệt và KÝ SỐ xong. Chuyên viên có thể tải phiếu về ngay.');
+        return;
+      } catch (e) {
+        setSignStep('');
+        alert('Đã phê duyệt nhưng chưa ký số được: ' + (e?.message || e)
+          + '\n\nTệp PDF sẽ được tải về để ký bằng phần mềm trên máy, sau đó tải bản đã ký lên.');
+      }
     }
+    // Không có trợ lý (hoặc ký lỗi) -> tải PDF về để ký thủ công như trước
+    try {
+      await downloadVehicleSlipPdf(slipPayload(extra));
+    } catch (e) {
+      alert('Chưa tải được tệp PDF: ' + (e?.message || e) + '\nBấm “Xuất PDF phiếu” để tải lại.');
+    }
+    setSignBusy(false);
+  };
+
+  // KÝ SỐ TỰ ĐỘNG: dựng PDF -> gửi sang trợ lý trên máy có token (người ký nhập PIN)
+  // -> nhận PDF đã ký -> tải lên kho -> ghi vào mục lịch. Trả về true nếu xong xuôi.
+  const signViaAgent = async (extra = {}) => {
+    const payload = slipPayload(extra);
+    setSignStep('Đang dựng phiếu PDF...');
+    const pdf = await getVehicleSlipPdfBlob(payload);
+    setSignStep('Đang chờ ký số — vui lòng nhập mã PIN của USB token...');
+    const signed = await signPdfViaAgent(pdf, {
+      reason: `Phê duyệt phiếu điều xe ${payload.signCode || ''}`.trim(),
+      name: payload.vpSigner,
+      location: 'Thanh Hoá',
+    });
+    setSignStep('Đang lưu tệp đã ký lên hệ thống...');
+    const fileName = vehicleSlipFileName(payload).replace(/\.pdf$/i, '-da-ky-so.pdf');
+    const file = new File([signed], fileName, { type: 'application/pdf' });
+    const { data, error } = await uploadSignedSlip(entry.id, file);
+    if (error) throw new Error(error.message);
+    const { error: e2 } = await updateEntries(mergedIds, {
+      vehicle_signed_path: data.path, vehicle_signed_name: data.name,
+      vehicle_signed_at: new Date().toISOString(), vehicle_signed_by: profile.id,
+    });
+    if (e2) throw new Error(e2.message);
+    setSignStep('');
+    onChanged?.();
+    return true;
+  };
+
+  // Nút "Ký số bằng USB token" trong khối hướng dẫn (dùng khi phê duyệt xong mà chưa ký,
+  // hoặc lần trước ký lỗi)
+  const doSignNow = async () => {
+    setSignBusy(true);
+    try {
+      await signViaAgent();
+      alert('Đã ký số và lưu phiếu. Chuyên viên có thể tải về ngay.');
+    } catch (e) {
+      setSignStep('');
+      alert('Chưa ký số được: ' + (e?.message || e)
+        + '\n\nKiểm tra: đã cắm USB token chưa, trợ lý ký số đã chạy chưa (cửa sổ "TRỢ LÝ KÝ SỐ").'
+        + '\nVẫn có thể ký thủ công: bấm "Xuất PDF phiếu" rồi tải bản đã ký lên.');
+    }
+    setSignBusy(false);
   };
 
   // Tải lại tệp PDF phiếu (chưa ký) — để đưa vào phần mềm ký số
@@ -540,17 +606,30 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
                   <p className="text-[12px] font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4" /> Ký số phiếu bằng USB token
                   </p>
-                  <ol className="text-[12.5px] text-slate-700 list-decimal list-inside space-y-1">
-                    <li>Tệp PDF của phiếu đã được tải về máy (nếu chưa có, bấm <b>“Xuất PDF phiếu”</b> ở trên).</li>
-                    <li>Mở phần mềm ký số của Ban Cơ yếu → chọn tệp PDF → chọn chứng thư trên token →
-                      đặt chữ ký vào ô <b>“KT. CHÁNH VĂN PHÒNG”</b> → nhập PIN → lưu.</li>
-                    <li>Tải tệp đã ký lên đây để chuyên viên tải về dùng.</li>
-                  </ol>
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-emerald-700 hover:bg-emerald-800">
-                    {signBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Tải phiếu ĐÃ KÝ SỐ lên
-                    <input type="file" accept="application/pdf,.pdf" className="hidden" disabled={signBusy} onChange={(e) => { doUploadSigned(e.target.files?.[0]); e.target.value = ''; }} />
-                  </label>
-                  <p className="text-[11.5px] text-slate-500 italic">Chi tiết cài đặt token và kiểm tra chữ ký: xem docs/KY-SO.md.</p>
+                  {signStep && (
+                    <p className="text-[12.5px] text-emerald-800 font-semibold flex items-center gap-1.5">
+                      <Loader2 className="w-4 h-4 animate-spin" /> {signStep}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button onClick={doSignNow} disabled={signBusy} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60">
+                      {signBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} Ký số bằng USB token
+                    </button>
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-slate-700 border border-slate-300 hover:bg-slate-50">
+                      <Upload className="w-3.5 h-3.5" /> Hoặc tải lên tệp đã ký sẵn
+                      <input type="file" accept="application/pdf,.pdf" className="hidden" disabled={signBusy} onChange={(e) => { doUploadSigned(e.target.files?.[0]); e.target.value = ''; }} />
+                    </label>
+                  </div>
+                  {agentOn === false && (
+                    <p className="text-[12px] text-amber-800">
+                      Chưa thấy <b>Trợ lý ký số</b> chạy trên máy này. Mở thư mục <code>tools/ky-so-agent</code> →
+                      chạy <code>npm start</code> (hoặc lối tắt đã tạo), cắm USB token rồi bấm lại.
+                    </p>
+                  )}
+                  <p className="text-[11.5px] text-slate-500 italic">
+                    Cách khác (không cần trợ lý): bấm “Xuất PDF phiếu” → ký bằng phần mềm trên máy →
+                    “Hoặc tải lên tệp đã ký sẵn”. Chi tiết: docs/KY-SO.md.
+                  </p>
                 </div>
               )}
             </div>

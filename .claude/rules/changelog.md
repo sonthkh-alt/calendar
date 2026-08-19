@@ -1,5 +1,24 @@
 # Nhật ký dự án
 
+## 2026-08-19 — TRỢ LÝ KÝ SỐ: bấm Phê duyệt là ký bằng USB token, ra PDF đã ký
+- Token của Văn phòng: SafeNet eToken 5110, chứng thư "Hà Ngọc Sơn" do *CA phục vụ các cơ quan Nhà
+  nước G2* cấp, Key Usage có **DigitalSignature + NonRepudiation** -> ký văn bản hợp lệ (đã kiểm tra).
+- **tools/ky-so-agent/** (mới) — chương trình chạy trên máy có token, KHÔNG deploy lên web:
+  `agent.mjs` mở HTTP `127.0.0.1:7878` (/health, /certs, /sign) với CORS + `Access-Control-Allow-
+  Private-Network` (trang HTTPS gọi được 127.0.0.1); `pdfsign.mjs` dùng @signpdf chèn ô chữ ký + nhúng
+  PKCS#7; `winsign.ps1` ký detached SHA-256 bằng .NET SignedCms qua CSP/KSP SafeNet (SafeNet hiện hộp
+  PIN). KHÔNG dùng thư viện native -> cài nhẹ (chỉ cần Node.js).
+- **src/lib/signAgent.js** — phía web dò trợ lý + gửi PDF đi ký (chờ tối đa 4 phút cho khâu nhập PIN).
+- EntryDetail: "Phê duyệt & ký số" -> ghi phê duyệt -> nếu trợ lý đang chạy thì KÝ LUÔN, tải bản đã ký
+  lên Storage, chuyên viên tải về ngay; trợ lý không chạy/ký lỗi -> TỰ quay về cách thủ công (tải PDF
+  về ký bằng phần mềm máy trạm rồi tải lên). Thêm nút "Ký số bằng USB token" + dòng trạng thái từng bước.
+- KIỂM CHỨNG THẬT trên Windows: `npm test` trong tools/ky-so-agent — 11/11 đạt (dùng chứng thư TỰ KÝ
+  tạm, tự xóa sau khi test): PDF hợp lệ, /adbe.pkcs7.detached, ByteRange tính đúng, .NET CheckSignature
+  xác nhận chữ ký hợp lệ + detached + SHA-256 + đúng chứng thư. Thử luôn HTTP /sign: 200 + PDF có chữ
+  ký; nguồn lạ bị chặn 403.
+- LƯU Ý: chữ ký là loại KHÔNG hiển thị (bảng Signatures của trình đọc PDF); phần nhìn thấy trên giấy
+  vẫn là ảnh chữ ký + mã xác thực in sẵn trong phiếu.
+
 ## 2026-08-19 — Điều xe: siết TRÌNH TỰ + người đề nghị là lãnh đạo chủ trì + mở cho lãnh đạo VP
 - **Trình tự:** nút "Phê duyệt & ký số" CHỈ hiện khi phiếu ở `da_phan_xe` (Phòng HC-TC-QT đã xem xét,
   phân bổ xe). Ở bước `de_xuat`, Lãnh đạo Văn phòng thấy dòng nhắc "Chờ lãnh đạo Phòng HC-TC-QT xem
