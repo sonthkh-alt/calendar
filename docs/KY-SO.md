@@ -68,20 +68,51 @@ Kiểm tra chữ ký: mở tệp bằng Adobe Acrobat Reader → bảng *Signatu
 > `phieu-dieu-xe`. `schema.sql` tự tạo bucket khi cập nhật CSDL; nếu tài khoản migration không đủ quyền
 > trên schema `storage`, tạo tay: **Supabase → Storage → New bucket → tên `phieu-dieu-xe`, để Private**.
 
-### 3.3. Có thể tự động hóa thêm không?
+### 3.3. Thiết bị ký số hiện có của Văn phòng (đã kiểm tra 19/08/2026)
 
-Bước 2 (ký bằng phần mềm máy trạm) là bước duy nhất còn làm tay. Muốn ký thẳng trong trình duyệt thì
-dùng bản chạy nền (dịch vụ cục bộ) của phần mềm ký số: trang web gửi tệp sang `localhost`, người ký nhập
-PIN, dịch vụ trả lại tệp đã ký. Cần chuẩn bị trước khi lập trình:
+| Mục | Giá trị |
+|---|---|
+| Thiết bị | **SafeNet eToken 5110** (Java Card, eToken Java Applet 1.7.7, FIPS 140-2 L3) |
+| Tên token / Serial | Hà Ngọc Sơn / `02AA324C` |
+| Phần mềm đang cài | VGCA Token Manager v1.0 + SafeNet Authentication Client |
+| Giao diện lập trình | **PKCS#11** (thư viện SafeNet, thường là `C:\Windows\System32\eTPKCS11.dll`) và Windows CryptoAPI/CNG qua *eToken Base Cryptographic Provider* / *SafeNet Smart Card Key Storage Provider* |
+| Chứng thư số | Cấp cho **Hà Ngọc Sơn**, CA cấp: **CA phục vụ các cơ quan Nhà nước G2**, hiệu lực **07/02/2025 – 07/01/2028** |
+| Mã PIN | dài 6–16 ký tự, còn 15 lần thử sai |
+| Hỗ trợ | Cục Chứng thực số và BMTT — `ca@bcy.gov.vn` — https://ca.gov.vn |
 
-- [ ] **Tên + phiên bản** phần mềm ký số đang cài và **tài liệu API** kèm theo (địa chỉ/cổng dịch vụ,
-      tên hàm, tham số). Thông số khác nhau theo phiên bản — phải đọc đúng tài liệu bản đang dùng.
-- [ ] Thử rào cản **mixed content**: hệ thống chạy HTTPS (Vercel) mà dịch vụ ký chạy HTTP trên
-      `localhost` thì trình duyệt chặn. Xử lý: dùng cổng HTTPS nếu phần mềm hỗ trợ, hoặc giữ cách ở 3.2.
-- [ ] Xác định máy được phép ký (máy có cắm token của Lãnh đạo Văn phòng).
+**Cần kiểm tra trước khi ký PDF:** mở chứng thư → tab *Details* → dòng **Key Usage**. Phải có
+`Digital Signature` (và tốt nhất là `Non-Repudiation`) thì Adobe Reader mới chấp nhận là chữ ký tài liệu.
+Ở tab *General*, chứng thư này liệt kê mục đích: xác thực máy chủ từ xa, bảo vệ thư điện tử,
+`2.16.704.1.1.1.1.1`, Smart Card Logon — **chưa thấy ghi rõ "ký tài liệu"**. Nếu Key Usage không có
+`Digital Signature`, phải xin Cục CTSBMTT cấp/bổ sung chứng thư dùng cho **ký số văn bản**.
 
-Khi có đủ tài liệu, chỗ cần sửa: `src/lib/vehicleSlipPdf.js` đã có sẵn `getVehicleSlipPdfBlob()` trả về
-tệp PDF dạng Blob — chỉ việc gửi Blob đó sang dịch vụ ký rồi nhận kết quả, phần tải lên kho giữ nguyên.
+### 3.4. Ghép "bấm Phê duyệt là ký luôn" — hai đường đi
+
+Trình duyệt **không** truy cập trực tiếp được USB token (bảo mật của trình duyệt). Bắt buộc phải có một
+**chương trình chạy trên máy có cắm token**, web gọi sang chương trình đó qua `http://127.0.0.1:<cổng>`.
+Điểm kỹ thuật quan trọng: Chrome/Edge coi `127.0.0.1` là nguồn tin cậy nên trang HTTPS **gọi được**, nhưng
+chương trình cục bộ phải trả đúng các header CORS, gồm `Access-Control-Allow-Private-Network: true`
+(yêu cầu Private Network Access của Chrome đời mới).
+
+**Đường A — dùng dịch vụ ký số sẵn có của Ban Cơ yếu (khuyến nghị).**
+Liên hệ `ca@bcy.gov.vn` (hoặc hotline trong VGCA Token Manager) xin:
+1. Bộ cài **phần mềm ký số dành cho ứng dụng web** (dịch vụ ký chạy nền, thường gọi là *vgca-sign-service*
+   / *plugin ký số* — không phải Token Manager, cũng không phải bản ký tay trên desktop);
+2. **Tài liệu tích hợp/API**: cổng dịch vụ, đường dẫn (endpoint), định dạng dữ liệu gửi/nhận, cách chỉ định
+   vị trí ô chữ ký trên trang PDF.
+Có 2 thứ đó là ghép vào nút "Phê duyệt & ký số" được ngay — phía ứng dụng đã chuẩn bị sẵn
+`getVehicleSlipPdfBlob()` trong `src/lib/vehicleSlipPdf.js` để lấy đúng tệp PDF cần ký.
+
+**Đường B — tự viết "trợ lý ký số" chạy trên máy Lãnh đạo Văn phòng.**
+Một chương trình nhỏ (Node.js) chạy nền trên máy đã cắm token:
+- mở cổng `http://127.0.0.1:7878`, chỉ nhận yêu cầu từ đúng tên miền của hệ thống;
+- nhận tệp PDF → gọi **PKCS#11** của SafeNet (`eTPKCS11.dll`) → người ký nhập PIN → trả lại PDF đã ký;
+- chạy cùng Windows để lúc nào cũng sẵn sàng.
+Ưu điểm: không phụ thuộc lịch cấp phát phần mềm của cấp trên. Nhược: phải cài Node.js trên máy đó và
+**bắt buộc thử nghiệm trực tiếp trên máy có token** (không mô phỏng được ở nơi khác).
+
+Trong cả hai đường, luồng người dùng cuối giống nhau và không đổi:
+**bấm "Phê duyệt & ký số" → nhập PIN → hệ thống tự lưu PDF đã ký → chuyên viên vào tải về.**
 
 ## 4. Mức 3 — ký số từ xa qua nhà cung cấp dịch vụ
 
