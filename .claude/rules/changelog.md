@@ -1,5 +1,22 @@
 # Nhật ký dự án
 
+## 2026-08-19 — Phân xe & phê duyệt HÀNG LOẠT cho nhiều ngày (tab Điều xe)
+- **Khoảng ngày:** panel "Đề nghị bố trí xe" thêm ô *Từ ngày … đến ngày …* (mặc định = tuần đang
+  xem, đổi tuần thì tự bám theo cho tới khi người dùng tự chỉnh; có nút "Về tuần đang xem").
+  Lưới xe×ngày phía trên vẫn theo tuần.
+- **Chọn nhiều chuyến:** ô tick trên từng chuyến + chọn nhanh "Tất cả chờ phân xe (N)" /
+  "Tất cả chờ duyệt (M)" / "Chọn tất cả" / "Bỏ chọn".
+- **Phân xe hàng loạt:** chọn 1 xe -> gán cho mọi chuyến đã chọn (mỗi chuyến áp cho CẢ NHÓM đơn vị),
+  cảnh báo gộp số chuyến bị trùng giờ trước khi chạy; có thanh tiến trình "Đang phân xe i/N".
+- **Phê duyệt + ký số hàng loạt (Quản trị):** nhập ý kiến MỘT lần -> ghi phê duyệt (mỗi phiếu một mã
+  xác thực riêng) -> hỏi ký số ngay: nếu Trợ lý ký số đang chạy thì ký lần lượt từng phiếu
+  (SafeNet có thể hỏi PIN mỗi phiếu), tải bản đã ký lên Storage. Phiếu nào ký lỗi vẫn GIỮ trạng thái
+  đã phê duyệt + báo danh sách để ký lại từng cái.
+- **Tách lib dùng chung `src/lib/vehicleSlipData.js`** (hàm thuần): `sameEventEntries`,
+  `chairLeaderOf`, `slipVehiclesOf`, `buildSlipPayload`, `digitalSignInfo`. EntryDetail bỏ bản sao
+  nội bộ, dùng chung với VehicleBoard -> phiếu ký lẻ và ký hàng loạt luôn giống hệt nhau.
+  Test mới: `npm run test:slip-data` — 19/19 đạt.
+
 ## 2026-08-19 — Ô lịch hiện THÔNG TIN XE PHỤC VỤ với lịch có đề nghị bố trí xe
 - Yêu cầu: xem lịch là thấy luôn chuyến đó đi xe nào.
 - EntryCard: thêm prop `vehicles` (mảng) thay cho `vehicle` lẻ; dòng "Xe:" hiện

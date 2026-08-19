@@ -57,6 +57,8 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
   `quan_tri` mới chọn được khi điều xe (permissions.canDispatchPrivateVehicle).
 - Phê duyệt ghi `vehicle_approved_by/_at` + `vehicle_sign_code` (mã xác thực in trên phiếu) và in kèm
   ảnh chữ ký `profiles.signature_data` nếu có.
+- Tab Điều xe làm được HÀNG LOẠT theo khoảng ngày: phân 1 xe cho nhiều chuyến; duyệt + ký số nhiều
+  phiếu một lượt (mỗi phiếu vẫn có mã xác thực và tệp PDF ký số riêng).
 - Nhắc việc: `permissions.vehicleTodoCounts` -> huy hiệu tab "Điều xe" + băng vàng đầu trang cho
   van_phong_xe / quan_tri; EntryCard có chip trạng thái phiếu xe.
 - **Ký số USB token**: bấm "Phê duyệt & ký số" -> tự tải PDF phiếu -> Lãnh đạo VP ký bằng phần mềm

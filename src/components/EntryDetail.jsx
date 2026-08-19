@@ -6,6 +6,7 @@ import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../l
 import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk, canAdmin, canApproveVehicle, canDispatchPrivateVehicle, canPrintVehicleSlip } from '../lib/permissions';
 import { reviewEntries, updateEntries, uploadSignedSlip, getSignedSlipUrl } from '../lib/api';
 import { printVehicleSlip, makeSignCode } from '../lib/vehicleSlip';
+import { buildSlipPayload, digitalSignInfo, chairLeaderOf, slipVehiclesOf } from '../lib/vehicleSlipData';
 import { downloadVehicleSlipPdf, getVehicleSlipPdfBlob, vehicleSlipFileName } from '../lib/vehicleSlipPdf';
 import { probeAgent, signPdfViaAgent, signingCertInfo } from '../lib/signAgent';
 
@@ -175,7 +176,6 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   // ===== PHIẾU ĐỀ NGHỊ SỬ DỤNG XE Ô TÔ CÔNG VỤ =====
   // Luồng: chuyên viên tick đề nghị -> Phòng HC-TC-QT phân xe -> Lãnh đạo Văn phòng
   // (Quản trị) phê duyệt -> in phiếu theo mẫu (docs/Đề nghị sử dụng xe oto.docx).
-  const profileById = useMemo(() => Object.fromEntries((profiles || []).map((x) => [x.id, x])), [profiles]);
   const vStatus = entry.vehicle_status || 'none';
   const vSt = VEHICLE_STATUS[vStatus] || VEHICLE_STATUS.none;
   const hasRequest = vStatus !== 'none';
@@ -185,63 +185,16 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   // Từ chối (không bố trí được xe) thì làm được ở cả 2 bước
   const canRefuseVeh = canApproveVehicle(profile) && ['de_xuat', 'da_phan_xe'].includes(vStatus);
   const canPrintSlip = canPrintVehicleSlip(profile, entry);
-  // Lãnh đạo CHỦ TRÌ của sự kiện = người có STT (sort_order) nhỏ nhất trong các mục đã gộp
-  const chairLeader = merged
-    .map((e) => leaderById[e.leader_id]).filter(Boolean)
-    .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))[0] || null;
+  // Lãnh đạo CHỦ TRÌ + xe của phiếu — dùng chung logic với bảng Điều xe
+  const chairLeader = chairLeaderOf(merged, leaderById);
+  const slipVehicles = slipVehiclesOf(merged, vehicleById);
 
-  // Xe ghi trên PHIẾU: lấy đủ mọi xe đã gán (kể cả xe riêng do Quản trị điều)
-  const slipVehicles = [...new Map(
-    merged.flatMap((e) => ((e.vehicle_ids && e.vehicle_ids.length) ? e.vehicle_ids : (e.vehicle_id ? [e.vehicle_id] : [])))
-      .map((id) => vehicleById[id]).filter(Boolean).map((v) => [v.id, v])
-  ).values()];
-
-  // Dữ liệu điền vào phiếu (dùng chung cho bản in nhanh và bản PDF để ký số).
+  // Dữ liệu điền phiếu — dùng CHUNG với bảng Điều xe (src/lib/vehicleSlipData.js).
   // `extra` cho phép ghi đè khi vừa phê duyệt xong (entry trong props chưa kịp làm mới).
-  const slipPayload = (extra = {}) => {
-    // "Tên tôi là / Chức vụ / NGƯỜI BÁO XE" ghi theo LÃNH ĐẠO CHỦ TRÌ CAO NHẤT của lịch
-    // (STT nhỏ nhất trong các lãnh đạo của sự kiện), không phải chuyên viên nhập lịch.
-    const requester = chairLeader
-      || profileById[entry.vehicle_requested_by] || profileById[entry.created_by] || {};
-    const dispatcher = profileById[entry.vehicle_assigned_by];
-    const approver = profileById[extra.approvedById || entry.vehicle_approved_by] || {};
-    const reqD = parseISO((entry.vehicle_requested_at || entry.created_at || new Date().toISOString()).slice(0, 10));
-    const appAt = extra.approvedAt || entry.vehicle_approved_at;
-    const appD = appAt ? new Date(appAt) : null;
-    return {
-      dateISO: entry.date,
-      fileTitle: `Phieu dieu xe ${entry.date}`,
-      unitName: 'VĂN PHÒNG ĐOÀN ĐBQH\nVÀ HĐND TỈNH THANH HÓA',
-      unitName1: 'VĂN PHÒNG ĐOÀN ĐBQH',
-      unitName2: 'VÀ HĐND TỈNH THANH HÓA',
-      recipient: VEHICLE_SLIP.recipient,
-      placeDateText: `${VEHICLE_SLIP.place}, ngày ${reqD.getDate()} tháng ${reqD.getMonth() + 1} năm ${reqD.getFullYear()}`,
-      requesterName: requester.full_name || requester.email || '',
-      requesterPosition: requester.position || '',
-      purpose: entry.content || '',
-      purposeMore: entry.location ? `Địa điểm: ${entry.location}` : '',
-      timeText: `${timeLabel}, ngày ${fmtDMY(d)}`,
-      riderText: entry.rider_count ? String(entry.rider_count) : '',
-      departure: entry.departure_place || DEFAULT_DEPARTURE,
-      plateText: slipVehicles.map((v) => v.plate).join('; '),
-      driverText: slipVehicles.map((v) => [v.driver_name, v.driver_phone].filter(Boolean).join(' - ')).join('; '),
-      hctcqtBlock: VEHICLE_SLIP.hctcqt.block,
-      hctcqtSignTitle: VEHICLE_SLIP.hctcqt.signTitle,
-      hctcqtSigner: dispatcher?.full_name || VEHICLE_SLIP.hctcqt.signer,
-      hctcqtSign: dispatcher?.signature_data || '',
-      vpBlock: VEHICLE_SLIP.vp.block,
-      vpNote: extra.approveNote || entry.vehicle_approve_note || '',
-      vpSignTitle: VEHICLE_SLIP.vp.signTitle,
-      vpSigner: approver.full_name || VEHICLE_SLIP.vp.signer,
-      vpSign: approver.signature_data || '',
-      approvedAtText: appD ? `${appD.getHours()}:${String(appD.getMinutes()).padStart(2, '0')} ngày ${fmtDMY(appD)}` : '',
-      signCode: extra.signCode || entry.vehicle_sign_code || '',
-      digitalSign: extra.digitalSign || null,
-    };
-  };
+  const slipPayload = (extra = {}) => buildSlipPayload({ entry, entries, leaders, vehicles, profiles, extra });
 
-  // PHÊ DUYỆT = bắt đầu luôn thủ tục KÝ SỐ: ghi phê duyệt -> tải ngay tệp PDF phiếu về
-  // máy để đưa vào phần mềm ký số USB token, rồi tải bản đã ký lên (xem docs/KY-SO.md).
+  // PHÊ DUYỆT = bắt đầu luôn thủ tục KÝ SỐ: ghi phê duyệt -> ký bằng USB token (hoặc tải
+  // PDF về ký tay nếu chưa bật trợ lý) -> lưu bản đã ký (xem docs/KY-SO.md).
   const doApproveVehicle = async () => {
     const note = window.prompt('Ý kiến của Lãnh đạo Văn phòng (in trên phiếu):', 'Đồng ý bố trí xe theo đề nghị.');
     if (note === null) return;
@@ -288,18 +241,9 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   const signViaAgent = async (extra = {}) => {
     setSignStep('Đang đọc chứng thư trên USB token...');
     const cert = await signingCertInfo();
-    const now = new Date();
     // Vẽ sẵn ô "ĐÃ KÝ SỐ" (ký bởi / cơ quan / ngày ký) rồi mới ký -> chữ ký mật mã phủ
     // luôn phần hiển thị này, và người đọc nhìn thấy ngay trên trang giấy.
-    const payload = slipPayload({
-      ...extra,
-      digitalSign: cert ? {
-        signer: cert.subjectName || cert.subject || '',
-        org: UNIT_NAME,
-        issuer: cert.issuerName || '',
-        timeText: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ngày ${fmtDMY(now)}`,
-      } : null,
-    });
+    const payload = slipPayload({ ...extra, digitalSign: digitalSignInfo(cert) });
     setSignStep('Đang dựng phiếu PDF...');
     const pdf = await getVehicleSlipPdfBlob(payload);
     setSignStep('Đang chờ ký số — vui lòng nhập mã PIN của USB token...');

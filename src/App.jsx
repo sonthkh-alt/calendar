@@ -472,7 +472,7 @@ export default function App() {
           <ApprovalQueue profile={profile} anchor={anchor} entries={entries} leaders={leaders} bans={bans} dupMap={dupMap} onChanged={refresh} />
         )}
         {tab === 'vehicles' && canAssignVehicle(profile) && (
-          <VehicleBoard profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} onChanged={refresh} />
+          <VehicleBoard profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} profiles={pProfiles} onChanged={refresh} />
         )}
         {tab === 'admin' && canAdmin(profile) && (
           <div>

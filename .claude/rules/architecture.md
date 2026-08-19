@@ -19,6 +19,9 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   công vụ" theo mẫu docs/Đề nghị sử dụng xe oto.docx: A4 dọc, Times New Roman, lề 1.5/2/1/3cm)
   + `printVehicleSlip` (mở cửa sổ in riêng) + `makeSignCode`. Test: scripts/test-vehicle-slip.mjs
   (npm run test:slip)
+- `vehicleSlipData.js` — HÀM THUẦN dựng dữ liệu điền phiếu, dùng CHUNG cho hộp chi tiết lịch và
+  bảng Điều xe: `sameEventEntries` / `chairLeaderOf` (người đề nghị = lãnh đạo chủ trì) /
+  `slipVehiclesOf` / `buildSlipPayload` / `digitalSignInfo`. Test: npm run test:slip-data
 - `vehicleSlipPdf.js` — CÙNG phiếu nhưng dựng PDF THẬT bằng pdfmake (nạp động pdfmake + pdfFonts):
   `buildVehicleSlipDocDefinition` (hàm thuần), `downloadVehicleSlipPdf`, `getVehicleSlipPdfBlob`
   (dành cho tích hợp ký số trực tiếp sau này). Test: scripts/test-slip-pdf.mjs (npm run test:slip-pdf)
@@ -47,7 +50,9 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 - `ApprovalQueue.jsx` — hàng chờ PCT: Duyệt / Điều chỉnh (form inline + ghi chú bắt buộc) / Từ chối; "Duyệt cả tuần"
 - `VehicleBoard.jsx` — bảng xe×tuần + panel "Đề nghị bố trí xe" (CHỈ chuyến chuyên viên đã tick
   đề nghị); phân xe -> `da_phan_xe`, Quản trị phê duyệt -> `da_duyet`; xe RIÊNG chỉ Quản trị thấy
-  trong danh sách chọn; cảnh báo trùng xe (confirm) qua `findConflicts`
+  trong danh sách chọn; cảnh báo trùng xe (confirm) qua `findConflicts`.
+  HÀNG LOẠT: chọn khoảng ngày (từ/đến, mặc định tuần đang xem) + tick nhiều chuyến ->
+  `bulkAssign` (1 xe cho N chuyến) và `bulkApprove` (duyệt N phiếu + ký số lần lượt qua trợ lý)
 - `AdminUsers/AdminLeaders/AdminVehicles.jsx` — tab Quản trị. AdminUsers: TẠO tài khoản (form
   + tick vai trò/Ban) gọi `api/admin-create-user.js` (Vercel Serverless, service_role) +
   phân quyền tài khoản đã có. Cần env `SUPABASE_SERVICE_ROLE_KEY` trên Vercel.
