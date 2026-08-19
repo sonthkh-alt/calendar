@@ -1,5 +1,21 @@
 # Nhật ký dự án
 
+## 2026-08-19 — Ô "ĐÃ KÝ SỐ" hiện trên phiếu + nhắc việc điều xe cho HC-TC-QT / Lãnh đạo VP
+- **Ô ký số nhìn thấy được:** chữ ký mật mã vốn "vô hình" (nhiều trình xem PDF không mở bảng
+  Signatures nên người dùng tưởng không có chứng thư — đã kiểm chứng: CMS luôn KÈM chứng thư,
+  `CheckSignature` hợp lệ). Nay TRƯỚC khi ký, hệ thống hỏi trợ lý lấy thông tin chứng thư
+  (`signAgent.signingCertInfo`) rồi VẼ vào ô Lãnh đạo Văn phòng khung xanh **ĐÃ KÝ SỐ / Ký bởi /
+  Cơ quan / Chứng thư do … cấp / Ký ngày / Mã xác thực** -> chữ ký phủ luôn phần hiển thị này.
+- Bố cục phiếu chỉnh cho LUÔN gọn 1 trang A4: ảnh chữ ký dùng `fit [rộng, CAO]` (trước chỉ chặn
+  chiều rộng nên ảnh cao làm tràn sang trang 2 — lỗi có sẵn), bỏ khoảng trống ký tay khi đã có ô
+  ký số, gộp mã xác thực vào ô ký số. test:slip-pdf 20/20 (có 4 ca kiểm tra SỐ TRANG).
+- **Nhắc việc điều xe:** `permissions.vehicleTodoCounts(entries, profile)` đếm theo SỰ KIỆN:
+  `de_xuat` = chờ Phòng HC-TC-QT phân xe, `da_phan_xe` = chờ Lãnh đạo Văn phòng ký duyệt.
+  - Huy hiệu số trên tab "Điều xe" (đếm việc ĐẾN LƯỢT MÌNH).
+  - Băng vàng trên đầu nội dung (mọi tab trừ tab Điều xe): nêu rõ số chuyến chờ phân xe / số phiếu
+    chờ ký duyệt + ghi "đến lượt bạn xử lý" + nút "Mở tab Điều xe".
+  - EntryCard: chip trạng thái phiếu xe (Chờ phân xe / Chờ duyệt xe / Đã duyệt xe / Không bố trí xe).
+
 ## 2026-08-19 — Đã CÀI trợ lý ký số lên máy Lãnh đạo Văn phòng
 - Cài tại `C:\ky-so-agent` (ngoài OneDrive), Node.js v24.15.0 có sẵn; chép mã nguồn + node_modules.
 - `config.json`: cổng 7878, allowOrigins = calendar-beta-lac.vercel.app + localhost:5173,

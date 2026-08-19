@@ -74,5 +74,45 @@ ok('dòng xác thực phê duyệt điện tử', txt.includes('A1B2-C3D4'));
 ok('không lẫn ký tự lỗi phông', !txt.includes('�'));
 ok('tên tệp không dấu, có mã xác thực', vehicleSlipFileName(data) === 'Phieu-dieu-xe-20260820-A1B2-C3D4.pdf');
 
+// ---- Ô CHỮ KÝ SỐ nhìn thấy được (vẽ trước khi ký bằng USB token) ----
+const doc2 = printer.createPdfKitDocument(buildVehicleSlipDocDefinition({
+  ...data,
+  digitalSign: {
+    signer: 'Hà Ngọc Sơn',
+    org: 'Văn phòng Đoàn ĐBQH và HĐND tỉnh Thanh Hóa',
+    issuer: 'CA phục vụ các cơ quan Nhà nước G2',
+    timeText: '14:35 ngày 19/08/2026',
+  },
+}));
+const chunks2 = [];
+doc2.on('data', (c) => chunks2.push(c));
+const done2 = new Promise((res) => doc2.on('end', res));
+doc2.end();
+await done2;
+const parsed2 = await new PDFParse({ data: new Uint8Array(Buffer.concat(chunks2)) }).getText();
+const txt2 = (parsed2.text || '').normalize('NFC').replace(/\s+/g, ' ');
+ok('có ô "ĐÃ KÝ SỐ" hiển thị trên phiếu', txt2.includes('ĐÃ KÝ SỐ'));
+ok('ô ký số ghi người ký + ngày ký', txt2.includes('Ký bởi: Hà Ngọc Sơn') && txt2.includes('Ký ngày: 14:35 ngày 19/08/2026'));
+ok('ô ký số ghi nơi cấp chứng thư', txt2.includes('CA phục vụ các cơ quan Nhà nước G2'));
+ok('phiếu CHƯA ký số thì không có ô đó', !txt.includes('ĐÃ KÝ SỐ'));
+
+// ---- Phiếu phải LUÔN gọn trong 1 trang A4 (kể cả khi có ảnh chữ ký + ô ký số) ----
+const PNG1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+const renderPages = async (extraData) => {
+  const doc3 = printer.createPdfKitDocument(buildVehicleSlipDocDefinition({ ...data, ...extraData }));
+  const acc = [];
+  doc3.on('data', (c) => acc.push(c));
+  const fin = new Promise((res) => doc3.on('end', res));
+  doc3.end();
+  await fin;
+  const r = await new PDFParse({ data: new Uint8Array(Buffer.concat(acc)) }).getText();
+  return r.total;
+};
+const DS = { digitalSign: { signer: 'Hà Ngọc Sơn', org: 'Văn phòng Đoàn ĐBQH và HĐND tỉnh Thanh Hóa', issuer: 'CA phục vụ các cơ quan Nhà nước G2', timeText: '14:35 ngày 19/08/2026' } };
+ok('1 trang: phiếu thường', (await renderPages({})) === 1);
+ok('1 trang: có ảnh chữ ký', (await renderPages({ vpSign: PNG1, hctcqtSign: PNG1 })) === 1);
+ok('1 trang: đã ký số', (await renderPages(DS)) === 1);
+ok('1 trang: ký số + ảnh chữ ký', (await renderPages({ ...DS, vpSign: PNG1, hctcqtSign: PNG1 })) === 1);
+
 console.log(`\n${pass}/${pass + fail} đạt`);
 process.exit(fail ? 1 : 0);

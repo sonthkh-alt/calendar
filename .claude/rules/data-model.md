@@ -57,6 +57,8 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
   `quan_tri` mới chọn được khi điều xe (permissions.canDispatchPrivateVehicle).
 - Phê duyệt ghi `vehicle_approved_by/_at` + `vehicle_sign_code` (mã xác thực in trên phiếu) và in kèm
   ảnh chữ ký `profiles.signature_data` nếu có.
+- Nhắc việc: `permissions.vehicleTodoCounts` -> huy hiệu tab "Điều xe" + băng vàng đầu trang cho
+  van_phong_xe / quan_tri; EntryCard có chip trạng thái phiếu xe.
 - **Ký số USB token**: bấm "Phê duyệt & ký số" -> tự tải PDF phiếu -> Lãnh đạo VP ký bằng phần mềm
   Ban Cơ yếu -> tải tệp đã ký lên (Supabase Storage bucket `phieu-dieu-xe`) -> lưu
   `vehicle_signed_path/_name/_at/_by`. Chuyên viên chỉ bấm "Tải phiếu đã ký số (PDF)". Xem `docs/KY-SO.md`.

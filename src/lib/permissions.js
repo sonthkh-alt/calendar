@@ -93,6 +93,33 @@ export function entryNeedsVehicleOk(entry, leader) {
   return entry.status === 'da_duyet' || entry.status === 'da_dieu_chinh';
 }
 
+// Việc ĐIỀU XE đang chờ đến lượt người này (để hiện huy hiệu + băng nhắc việc):
+//  - Phòng HC-TC-QT (van_phong_xe): chuyến 'de_xuat' chờ PHÂN XE
+//  - Lãnh đạo Văn phòng (quan_tri): phiếu 'da_phan_xe' chờ KÝ DUYỆT (và cả chờ phân xe
+//    để nắm tình hình, nhưng chỉ việc ký duyệt mới tính vào huy hiệu nhắc việc)
+export function vehicleTodoCounts(entries, profile) {
+  const zero = { needAssign: 0, needApprove: 0, mine: 0 };
+  if (!profile) return zero;
+  const canAssign = canAssignVehicle(profile);
+  const canApprove = canApproveVehicle(profile);
+  if (!canAssign && !canApprove) return zero;
+  const seen = new Set();
+  let needAssign = 0;
+  let needApprove = 0;
+  for (const e of entries || []) {
+    if (e.status === 'tu_choi') continue;
+    const key = e.group_id || e.id; // mỗi SỰ KIỆN tính 1 lần
+    if (seen.has(key)) continue;
+    if (e.vehicle_status === 'de_xuat') { seen.add(key); needAssign += 1; }
+    else if (e.vehicle_status === 'da_phan_xe') { seen.add(key); needApprove += 1; }
+  }
+  return {
+    needAssign,
+    needApprove,
+    mine: (canApprove ? needApprove : 0) + (canAssign && !canApprove ? needAssign : 0),
+  };
+}
+
 // Quản trị hệ thống
 export function canAdmin(profile) {
   return profile?.role === 'quan_tri';

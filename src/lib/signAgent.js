@@ -51,6 +51,18 @@ export async function listAgentCerts() {
   return json.certs || [];
 }
 
+// Chứng thư sẽ dùng để ký (để in thông tin "Ký bởi ..." lên phiếu trước khi ký).
+// Trả về null nếu không hỏi được — khi đó phiếu vẫn ký được, chỉ thiếu ô hiển thị.
+export async function signingCertInfo() {
+  try {
+    const certs = await listAgentCerts();
+    const usable = certs.filter((c) => c.canSignDocument);
+    return usable[0] || certs[0] || null;
+  } catch {
+    return null;
+  }
+}
+
 const blobToBase64 = (blob) => new Promise((resolve, reject) => {
   const fr = new FileReader();
   fr.onerror = () => reject(new Error('Không đọc được tệp PDF.'));

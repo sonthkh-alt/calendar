@@ -1,6 +1,6 @@
 import { MapPin, Users, Clock, Car, Pencil, Trash2, MessageSquareText, UserRound, Copy, AlertTriangle, Building2 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import { STATUS, SESSIONS } from '../lib/constants';
+import { STATUS, SESSIONS, VEHICLE_STATUS } from '../lib/constants';
 import { fmtTime, fmtDM, parseISO } from '../lib/dates';
 
 /**
@@ -104,7 +104,22 @@ export default function EntryCard({ entry, leader, vehicle, canEdit, canDuplicat
         )}
       </div>
 
-      <div className="mt-1"><StatusBadge status={entry.status} small /></div>
+      {/* Trạng thái PHIẾU XE — để chuyên viên/Văn phòng nhìn ô lịch là biết đang chờ ai */}
+      <div className="mt-1 flex flex-wrap items-center gap-1">
+        <StatusBadge status={entry.status} small />
+        {entry.vehicle_status && entry.vehicle_status !== 'none' && (
+          <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-[1px] text-[10px] font-semibold no-underline
+            ${(VEHICLE_STATUS[entry.vehicle_status] || VEHICLE_STATUS.de_xuat).bg}
+            ${(VEHICLE_STATUS[entry.vehicle_status] || VEHICLE_STATUS.de_xuat).text}
+            ${(VEHICLE_STATUS[entry.vehicle_status] || VEHICLE_STATUS.de_xuat).border}`}>
+            <Car className="w-2.5 h-2.5" />
+            {entry.vehicle_status === 'de_xuat' && 'Chờ phân xe'}
+            {entry.vehicle_status === 'da_phan_xe' && 'Chờ duyệt xe'}
+            {entry.vehicle_status === 'da_duyet' && 'Đã duyệt xe'}
+            {entry.vehicle_status === 'tu_choi' && 'Không bố trí xe'}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

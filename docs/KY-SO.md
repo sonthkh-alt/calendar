@@ -118,9 +118,14 @@ máy, rồi "Hoặc tải lên tệp đã ký sẵn") — không tắc việc.
 .NET `CheckSignature` xác nhận chữ ký hợp lệ, detached, SHA-256, đúng chứng thư). Đường HTTP `/sign`
 cũng đã thử: trả về PDF có `/adbe.pkcs7.detached` và từ chối (403) yêu cầu từ tên miền lạ.
 
-**Giới hạn hiện tại:** chữ ký là loại **không hiển thị** (invisible) — trình đọc PDF báo ở bảng
-*Signatures*, còn phần nhìn thấy trên giấy là ảnh chữ ký + mã xác thực đã in sẵn trong phiếu. Muốn ô
-chữ ký số hiện thành hình trên trang thì phải dựng thêm "appearance stream", làm sau nếu cần.
+**Hiển thị trên trang:** chữ ký mật mã của PDF vốn là loại "không hiển thị" — nhiều trình xem
+(Chrome, Edge, trình xem mặc định) KHÔNG mở bảng *Signatures* nên người đọc tưởng tệp không có chứng
+thư. Vì vậy, ngay trước khi ký, hệ thống lấy thông tin chứng thư trên token rồi **vẽ khung xanh
+"ĐÃ KÝ SỐ"** vào ô Lãnh đạo Văn phòng: *Ký bởi / Cơ quan / Chứng thư do … cấp / Ký ngày / Mã xác thực*.
+Khung này nằm trong phần dữ liệu được ký nên không sửa được mà chữ ký vẫn hợp lệ.
+
+Muốn kiểm tra chứng thư thật sự bên trong tệp: mở bằng **Adobe Acrobat Reader** → bảng *Signatures*
+→ *Signature Details* → *Show Signer's Certificate*.
 
 ### 3.5. Đã cài sẵn trên máy Lãnh đạo Văn phòng (19/08/2026)
 

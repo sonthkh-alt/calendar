@@ -26,10 +26,45 @@ const line = (label, value, bold = false) => ({
  */
 export function buildVehicleSlipDocDefinition(d = {}) {
   const signTitle = (s) => (s || '').split('\n').map((t) => ({ text: t, bold: true, alignment: 'center', fontSize: 12 }));
-  const img = (data) => (/^data:image\//.test(data || '') ? [{ image: data, width: 110, alignment: 'center', margin: [0, 4, 0, 0] }] : [{ text: ' ', margin: [0, 0, 0, 34] }]);
+  // Ảnh chữ ký; nếu không có ảnh thì chừa khoảng trống để ký tay (spacer pt).
+  // fit [rộng, CAO]: chặn cả CHIỀU CAO ảnh chữ ký -> phiếu luôn gọn trong 1 trang A4
+  // (ảnh chữ ký người dùng tải lên có thể rất cao, trước đây làm tràn sang trang 2).
+  const img = (data, spacer = 34, width = 100, height = 40) => (/^data:image\//.test(data || '')
+    ? [{ image: data, fit: [width, height], alignment: 'center', margin: [0, 3, 0, 0] }]
+    : (spacer ? [{ text: ' ', margin: [0, 0, 0, spacer] }] : []));
+
+  // Ô CHỮ KÝ SỐ nhìn thấy được (kiểu văn bản điện tử của cơ quan nhà nước).
+  // Chữ ký mật mã bản thân nó là "vô hình" — nhiều trình xem PDF không hiện bảng
+  // Signatures, nên phải VẼ khối thông tin này lên trang thì người đọc mới thấy.
+  const dsBox = [];
+  if (d.digitalSign?.signer) {
+    const ds = d.digitalSign;
+    dsBox.push({
+      margin: [0, 6, 0, 0],
+      table: {
+        widths: ['*'],
+        body: [[{
+          border: [true, true, true, true],
+          stack: [
+            { text: 'ĐÃ KÝ SỐ', bold: true, fontSize: 8, color: '#166534' },
+            { text: `Ký bởi: ${ds.signer}`, fontSize: 8.5, color: '#14532d' },
+            ...(ds.org ? [{ text: `Cơ quan: ${ds.org}`, fontSize: 8, color: '#14532d' }] : []),
+            ...(ds.issuer ? [{ text: `Chứng thư do ${ds.issuer} cấp`, fontSize: 7.5, color: '#14532d' }] : []),
+            ...(ds.timeText ? [{ text: `Ký ngày: ${ds.timeText}`, fontSize: 8, color: '#14532d' }] : []),
+            ...(d.signCode ? [{ text: `Mã xác thực: ${d.signCode}`, fontSize: 7.5, color: '#14532d' }] : []),
+          ],
+        }]],
+      },
+      layout: {
+        hLineColor: () => '#16a34a', vLineColor: () => '#16a34a',
+        hLineWidth: () => 0.8, vLineWidth: () => 0.8,
+        paddingLeft: () => 4, paddingRight: () => 4, paddingTop: () => 3, paddingBottom: () => 3,
+      },
+    });
+  }
 
   const eSign = [];
-  if (d.approvedAtText || d.signCode) {
+  if (!d.digitalSign?.signer && (d.approvedAtText || d.signCode)) {
     eSign.push({
       text: `Phê duyệt điện tử trên Hệ thống lịch công tác${d.approvedAtText ? ` lúc ${d.approvedAtText}` : ''}`
         + `${d.signCode ? `\nMã xác thực: ${d.signCode}` : ''}`,
@@ -66,7 +101,7 @@ export function buildVehicleSlipDocDefinition(d = {}) {
         ],
       },
 
-      { text: 'ĐỀ NGHỊ SỬ DỤNG XE Ô TÔ CÔNG VỤ', bold: true, alignment: 'center', fontSize: 15, margin: [0, 24, 0, 14] },
+      { text: 'ĐỀ NGHỊ SỬ DỤNG XE Ô TÔ CÔNG VỤ', bold: true, alignment: 'center', fontSize: 15, margin: [0, 20, 0, 12] },
       { text: `Kính gửi: ${d.recipient || ''}`, bold: true, alignment: 'center', margin: [0, 0, 0, 14] },
 
       line('Tên tôi là:', d.requesterName, true),
@@ -89,7 +124,7 @@ export function buildVehicleSlipDocDefinition(d = {}) {
             width: '*',
             stack: [
               { text: 'NGƯỜI BÁO XE', bold: true, alignment: 'center', fontSize: 12 },
-              { text: ' ', margin: [0, 0, 0, 34] },
+              { text: ' ', margin: [0, 0, 0, 28] },
               { text: d.requesterName || '', bold: true, alignment: 'center' },
             ],
           },
@@ -116,7 +151,7 @@ export function buildVehicleSlipDocDefinition(d = {}) {
             ],
           },
         ],
-        margin: [0, 22, 0, 0],
+        margin: [0, 16, 0, 0],
       },
 
       {
@@ -132,8 +167,9 @@ export function buildVehicleSlipDocDefinition(d = {}) {
             width: '*',
             stack: [
               ...signTitle(d.vpSignTitle),
-              ...img(d.vpSign),
+              ...img(d.vpSign, d.digitalSign?.signer ? 0 : 34, d.digitalSign?.signer ? 68 : 100, d.digitalSign?.signer ? 26 : 40),
               { text: d.vpSigner || '', bold: true, alignment: 'center', margin: [0, 4, 0, 0] },
+              ...dsBox,
               ...eSign,
             ],
           },

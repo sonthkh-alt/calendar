@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { X, Clock, MapPin, Users, Car, MessageSquareText, Pencil, Trash2, Building2, Copy, Check, XCircle, Zap, SlidersHorizontal, UserCheck, ShieldCheck, Printer, FileDown, Upload, FileCheck2, Loader2 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import { SESSIONS, UNIT_GROUP_LABELS, isHqLocation, hidesDriver, VEHICLE_STATUS, VEHICLE_SLIP, DEFAULT_DEPARTURE, isPrivateVehicle } from '../lib/constants';
+import { SESSIONS, UNIT_NAME, UNIT_GROUP_LABELS, isHqLocation, hidesDriver, VEHICLE_STATUS, VEHICLE_SLIP, DEFAULT_DEPARTURE, isPrivateVehicle } from '../lib/constants';
 import { fmtTime, fmtDMY, dayName, parseISO, sessionsOverlap, fmtDM } from '../lib/dates';
 import { canReviewEntry, canAssignVehicle, entryNeedsVehicleOk, canAdmin, canApproveVehicle, canDispatchPrivateVehicle, canPrintVehicleSlip } from '../lib/permissions';
 import { reviewEntries, updateEntries, uploadSignedSlip, getSignedSlipUrl } from '../lib/api';
 import { printVehicleSlip, makeSignCode } from '../lib/vehicleSlip';
 import { downloadVehicleSlipPdf, getVehicleSlipPdfBlob, vehicleSlipFileName } from '../lib/vehicleSlipPdf';
-import { probeAgent, signPdfViaAgent } from '../lib/signAgent';
+import { probeAgent, signPdfViaAgent, signingCertInfo } from '../lib/signAgent';
 
 /**
  * Modal chi tiết 1 mục lịch — hiển thị ĐẦY ĐỦ, không cắt chữ.
@@ -236,6 +236,7 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
       vpSign: approver.signature_data || '',
       approvedAtText: appD ? `${appD.getHours()}:${String(appD.getMinutes()).padStart(2, '0')} ngày ${fmtDMY(appD)}` : '',
       signCode: extra.signCode || entry.vehicle_sign_code || '',
+      digitalSign: extra.digitalSign || null,
     };
   };
 
@@ -285,7 +286,20 @@ export default function EntryDetail({ entry, entries, leaders, vehicles, profile
   // KÝ SỐ TỰ ĐỘNG: dựng PDF -> gửi sang trợ lý trên máy có token (người ký nhập PIN)
   // -> nhận PDF đã ký -> tải lên kho -> ghi vào mục lịch. Trả về true nếu xong xuôi.
   const signViaAgent = async (extra = {}) => {
-    const payload = slipPayload(extra);
+    setSignStep('Đang đọc chứng thư trên USB token...');
+    const cert = await signingCertInfo();
+    const now = new Date();
+    // Vẽ sẵn ô "ĐÃ KÝ SỐ" (ký bởi / cơ quan / ngày ký) rồi mới ký -> chữ ký mật mã phủ
+    // luôn phần hiển thị này, và người đọc nhìn thấy ngay trên trang giấy.
+    const payload = slipPayload({
+      ...extra,
+      digitalSign: cert ? {
+        signer: cert.subjectName || cert.subject || '',
+        org: UNIT_NAME,
+        issuer: cert.issuerName || '',
+        timeText: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ngày ${fmtDMY(now)}`,
+      } : null,
+    });
     setSignStep('Đang dựng phiếu PDF...');
     const pdf = await getVehicleSlipPdfBlob(payload);
     setSignStep('Đang chờ ký số — vui lòng nhập mã PIN của USB token...');

@@ -10,7 +10,7 @@ import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail, signInWi
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, fetchActivityLog, recordLogin, fetchLoginCount, deleteEntry, deleteEntries } from './lib/api';
 import { weekStart, parseISO, toISODate } from './lib/dates';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO, truongBanLeaderIds } from './lib/constants';
-import { canReview, canReviewEntry, canAssignVehicle, canAdmin, canEditEntry, canCreateFor } from './lib/permissions';
+import { canReview, canReviewEntry, canAssignVehicle, canApproveVehicle, canAdmin, canEditEntry, canCreateFor, vehicleTodoCounts } from './lib/permissions';
 import FilterBar from './components/FilterBar';
 import WeekView from './components/WeekView';
 import MonthView from './components/MonthView';
@@ -245,6 +245,9 @@ export default function App() {
     return entries.filter((e) => e.status === 'cho_duyet' && canReviewEntry(profile, e, lbi[e.leader_id])).length;
   }, [entries, leaders, profile]);
 
+  // Việc ĐIỀU XE đang chờ đến lượt mình (Phòng HC-TC-QT phân xe / Lãnh đạo VP ký duyệt)
+  const vehicleTodo = useMemo(() => vehicleTodoCounts(entries, profile), [entries, profile]);
+
   // Thông báo liên quan tới người phê duyệt: bỏ thao tác do CHÍNH MÌNH thực hiện;
   // Phó Trưởng Đoàn chỉ nhận thông báo lịch Đoàn ĐBQH (tra leader_type qua entry/group).
   const relevantActivity = useMemo(() => {
@@ -356,7 +359,7 @@ export default function App() {
     { key: 'month', label: 'Lịch tháng', icon: CalendarDays },
     { key: 'day', label: 'Lịch ngày', icon: CalendarClock },
     ...(canReview(profile) ? [{ key: 'approve', label: 'Chờ duyệt', icon: ClipboardCheck, badge: pendingCount }] : []),
-    ...(canAssignVehicle(profile) ? [{ key: 'vehicles', label: 'Điều xe', icon: Car }] : []),
+    ...(canAssignVehicle(profile) ? [{ key: 'vehicles', label: 'Điều xe', icon: Car, badge: vehicleTodo.mine }] : []),
     ...(canAdmin(profile) ? [{ key: 'admin', label: 'Quản trị', icon: Settings }] : []),
   ];
 
@@ -422,6 +425,36 @@ export default function App() {
         )}
         {['approve', 'vehicles'].includes(tab) && (
           <FilterBar view="week" anchor={anchor} onAnchor={setAnchor} onToday={goToday} bans={bans} leaders={leaders} truongBanIds={truongBanIds} filters={filters} onFilters={setFilters} onView={setViewing} />
+        )}
+
+        {/* BĂNG NHẮC VIỆC ĐIỀU XE — hiện rõ để Phòng HC-TC-QT / Lãnh đạo Văn phòng biết
+            là đang có phiếu chờ đến lượt mình xử lý */}
+        {tab !== 'vehicles' && canAssignVehicle(profile) && (vehicleTodo.needAssign > 0 || vehicleTodo.needApprove > 0) && (
+          <div className="no-print mb-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <Car className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-[13px] text-amber-900">
+                <p className="font-bold">Có phiếu xe đang chờ xử lý</p>
+                <ul className="mt-0.5 space-y-0.5">
+                  {vehicleTodo.needAssign > 0 && (
+                    <li>
+                      <b>{vehicleTodo.needAssign}</b> chuyến <b>chờ Phòng HC-TC-QT phân xe</b>
+                      {!canApproveVehicle(profile) && ' — đến lượt bạn xử lý'}
+                    </li>
+                  )}
+                  {vehicleTodo.needApprove > 0 && (
+                    <li>
+                      <b>{vehicleTodo.needApprove}</b> phiếu đã phân xe, <b>chờ Lãnh đạo Văn phòng ký duyệt</b>
+                      {canApproveVehicle(profile) && ' — đến lượt bạn xử lý'}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+            <button onClick={() => setTab('vehicles')} className="shrink-0 px-3.5 py-2 rounded-lg text-[13px] font-bold text-white bg-amber-600 hover:bg-amber-700">
+              Mở tab Điều xe
+            </button>
+          </div>
         )}
 
         {loading && <p className="no-print text-[12px] text-slate-400 mb-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải dữ liệu...</p>}
