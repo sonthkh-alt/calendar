@@ -33,37 +33,51 @@ cho tài khoản Quản trị và không dùng chung tài khoản.
 
 ---
 
-## 3. Mức 2 — USB token chuyên dùng (khuyến nghị nếu Văn phòng đã có token)
+## 3. Mức 2 — USB token chuyên dùng (Văn phòng ĐÃ CÓ token — làm được ngay)
 
-Cách phổ biến của các hệ thống dùng chứng thư số chuyên dùng: cài **phần mềm ký số của Ban Cơ yếu
-Chính phủ** (bộ công cụ ký số / *sign service*) lên máy người ký. Phần mềm này chạy một dịch vụ cục bộ
-trên máy; trang web gọi tới dịch vụ đó (địa chỉ `localhost`) để đẩy file cần ký sang, người ký nhập mã
-PIN của token, dịch vụ trả lại file đã ký.
+### 3.1. Chuẩn bị máy tính của người ký (làm 1 lần)
 
-Luồng ghép vào ứng dụng này:
+1. **Cài driver USB token** (đĩa/bộ cài kèm token, hoặc tải ở trang của Ban Cơ yếu Chính phủ – `ca.gov.vn`).
+   Cắm token, mở `certmgr.msc` → *Personal → Certificates*: phải thấy chứng thư mang tên người ký.
+2. **Cài phần mềm ký số** của Ban Cơ yếu (bộ công cụ ký số văn bản điện tử / phần mềm ký PDF).
+   Tải đúng bản dành cho chứng thư số **chuyên dùng Chính phủ**; hỏi văn thư cơ quan hoặc Cục Chứng
+   thực số và Bảo mật thông tin nếu chưa có bộ cài.
+3. **Đổi mã PIN mặc định** của token và ghi nhớ. Nhập sai PIN nhiều lần liên tiếp sẽ **khóa token**,
+   phải mang đi mở khóa — đây là lỗi hay gặp nhất.
+4. **Cài chứng thư gốc (Root CA) của Ban Cơ yếu** để máy tính/Adobe Reader hiểu chữ ký là hợp lệ.
+   Thiếu bước này, file ký xong vẫn mở được nhưng Adobe báo *"Signature validity is unknown"*.
 
-1. Người duyệt bấm **Ký số phiếu điều xe** trong hộp chi tiết lịch.
-2. Ứng dụng kết xuất phiếu ra **PDF** (dùng lại pdfmake đã có trong dự án — xem `src/lib/exporters.js`)
-   thay vì mở cửa sổ in.
-3. Gửi PDF sang dịch vụ ký cục bộ → người ký nhập PIN → nhận lại PDF đã ký.
-4. Tải PDF đã ký lên **Supabase Storage**, lưu đường dẫn vào cột mới (vd `vehicle_signed_pdf_url`).
-5. Nút "In phiếu" chuyển thành "Tải phiếu đã ký số".
+### 3.2. Ký Phiếu điều xe — quy trình dùng được NGAY (không cần sửa phần mềm)
 
-Việc phải làm trước khi lập trình:
+1. Trên hệ thống: mở **chi tiết lịch** → phê duyệt điều xe → bấm **In Phiếu điều xe**.
+2. Trong hộp in của trình duyệt, chọn máy in **"Microsoft Print to PDF"** (hoặc *Save as PDF*) →
+   lưu thành file, ví dụ `Phieu-dieu-xe-20-08-2026.pdf`.
+3. Mở **phần mềm ký số** → chọn file PDF vừa lưu → chọn chứng thư trên token → **đặt vị trí chữ ký
+   vào ô "KT. CHÁNH VĂN PHÒNG"** (góc dưới bên phải phiếu) → nhập PIN → lưu file đã ký.
+4. **Kiểm tra**: mở file đã ký bằng Adobe Acrobat Reader, xem bảng *Signatures* — phải hiện
+   *"Signed and all signatures are valid"*. Nếu báo *unknown* → quay lại bước 3.1.4 (cài Root CA).
+5. Lưu/gửi file PDF đã ký. Đây là bản có giá trị pháp lý; bản in giấy chỉ là bản sao để đối chiếu.
 
-- [ ] Xác nhận Văn phòng **đã được cấp chứng thư số chuyên dùng** cho người sẽ ký (Lãnh đạo Văn phòng).
-- [ ] Lấy **bộ cài + tài liệu API** của phần mềm ký số (cổng dịch vụ, tên hàm, định dạng tham số) — các
-      thông số này **khác nhau theo phiên bản**, phải đọc đúng tài liệu kèm bản cài đang dùng, không suy đoán.
-- [ ] Kiểm tra rào cản kỹ thuật: trang web chạy **HTTPS** gọi dịch vụ **HTTP localhost** có thể bị trình
-      duyệt chặn (mixed content). Cách xử lý thường gặp: dùng cổng HTTPS do phần mềm ký cung cấp, hoặc
-      chấp nhận ký trên ứng dụng máy trạm rồi tải file đã ký lên hệ thống.
-- [ ] Quy định vị trí đặt hình ảnh chữ ký số trên trang phiếu (thường góc dưới bên phải, ô "Lãnh đạo Văn phòng").
+> Mẹo: hệ thống đã in sẵn mã xác thực + ảnh chữ ký ở ô Lãnh đạo Văn phòng. Chữ ký số nên đặt **cạnh
+> hoặc chồng lên** ô đó để người nhận thấy rõ đây là văn bản đã ký số.
 
-**Phương án dự phòng, không cần lập trình gì thêm:** in/kết xuất phiếu ra PDF từ hệ thống → ký bằng phần
-mềm ký số trên máy → tải file đã ký lên (có thể dùng tính năng đính kèm nếu bổ sung sau). Đây là cách
-nhiều đơn vị đang làm và có thể áp dụng ngay hôm nay.
+### 3.3. Nâng cấp tiếp theo (tùy chọn, cần lập trình)
 
----
+**Phương án A — lưu file đã ký vào hệ thống (đơn giản, khuyến nghị làm trước):**
+thêm nút *"Tải lên phiếu đã ký số"* trong hộp chi tiết lịch → file vào Supabase Storage → mọi người
+tải về từ chính mục lịch đó. Cần: tạo bucket + policy trên Supabase, thêm cột `vehicle_signed_pdf_url`.
+
+**Phương án B — ký thẳng từ trang web:** phần mềm ký số của Ban Cơ yếu có bản chạy nền như một
+*dịch vụ cục bộ* trên máy người ký; trang web gửi file sang dịch vụ đó (địa chỉ `localhost`), người ký
+nhập PIN, dịch vụ trả lại file đã ký. Trước khi làm cần chuẩn bị:
+
+- [ ] **Tên + phiên bản** phần mềm ký số đang cài và **tài liệu API** kèm theo (địa chỉ/cổng dịch vụ,
+      tên hàm, tham số). Các thông số này khác nhau theo phiên bản — phải đọc đúng tài liệu của bản
+      đang dùng, không suy đoán.
+- [ ] Thử nghiệm rào cản **mixed content**: hệ thống chạy HTTPS (Vercel) mà dịch vụ ký chạy HTTP trên
+      `localhost` thì trình duyệt sẽ chặn. Cách xử lý: dùng cổng HTTPS nếu phần mềm có hỗ trợ, hoặc
+      giữ cách ký bằng ứng dụng máy trạm ở mục 3.2.
+- [ ] Xác định máy nào được ký (chỉ máy của Lãnh đạo Văn phòng có token).
 
 ## 4. Mức 3 — ký số từ xa qua nhà cung cấp dịch vụ
 
@@ -80,8 +94,7 @@ Phù hợp khi người duyệt hay đi công tác (ký bằng điện thoại, 
 ## 5. Khuyến nghị
 
 1. **Giai đoạn hiện tại:** dùng mức 1 (đang chạy) — đủ cho phiếu điều xe nội bộ, không phát sinh chi phí.
-2. **Khi cần giá trị pháp lý:** hỏi bộ phận văn thư xem Văn phòng đã có chứng thư số chuyên dùng chưa.
-   - Có rồi → làm mức 2, bắt đầu bằng phương án dự phòng (kết xuất PDF, ký bằng phần mềm máy trạm),
-     rồi mới tính tích hợp trực tiếp.
-   - Chưa có / muốn ký bằng điện thoại → làm mức 3.
+2. **Khi cần giá trị pháp lý:** Văn phòng ĐÃ CÓ token chuyên dùng → dùng quy trình mục 3.2
+   (in ra PDF → ký bằng phần mềm máy trạm → lưu file đã ký). Chạy ổn định rồi mới tính phương án A
+   (lưu file đã ký vào hệ thống) và phương án B (ký thẳng từ web) ở mục 3.3.
 3. Dù ở mức nào cũng giữ nguyên **mã xác thực + nhật ký thao tác** để tra soát nội bộ.
