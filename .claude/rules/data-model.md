@@ -58,6 +58,8 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
   `quan_tri` mới chọn được khi điều xe (permissions.canDispatchPrivateVehicle).
 - Phê duyệt ghi `vehicle_approved_by/_at` + `vehicle_sign_code` (mã xác thực in trên phiếu) và in kèm
   ảnh chữ ký `profiles.signature_data` nếu có.
+- Chuyến CÓ đề nghị xe vào bảng điều xe NGAY cả khi lịch còn `cho_duyet` (nhãn "Lịch chờ duyệt");
+  chỉ lịch `tu_choi` bị loại. Quy tắc ở `permissions.entryNeedsVehicleOk` (test: npm run test:rules).
 - Tab Điều xe làm được HÀNG LOẠT theo khoảng ngày: phân 1 xe cho nhiều chuyến; duyệt + ký số nhiều
   phiếu một lượt (mỗi phiếu vẫn có mã xác thực và tệp PDF ký số riêng).
 - Nhắc việc: `permissions.vehicleTodoCounts` -> huy hiệu tab "Điều xe" + băng vàng đầu trang cho

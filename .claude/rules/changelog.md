@@ -1,5 +1,16 @@
 # Nhật ký dự án
 
+## 2026-08-20 — SỬA LỖI: Phòng HC-TC-QT không thấy chuyến có đề nghị xe khi lịch còn chờ duyệt
+- Triệu chứng: tài khoản điều xe thấy huy hiệu tab "Điều xe = 3" nhưng danh sách chỉ có 1 chuyến;
+  lịch "Tham dự Đoàn công tác..." (Ban, trạng thái Chờ duyệt, đã tick đề nghị xe) KHÔNG hiện ra.
+- Nguyên nhân: `permissions.entryNeedsVehicleOk` yêu cầu lịch phải `da_duyet`/`da_dieu_chinh` mới
+  vào bảng điều xe (quy tắc có từ trước khi có quy trình phiếu xe), trong khi huy hiệu
+  `vehicleTodoCounts` lại đếm theo `vehicle_status` -> hai chỗ lệch nhau.
+- Sửa: đã có ĐỀ NGHỊ BỐ TRÍ XE (`vehicle_status != 'none'`) thì vào bảng điều xe NGAY, kể cả lịch
+  còn chờ duyệt (lịch bị TỪ CHỐI vẫn bị loại như cũ). Chuyến như vậy có thêm nhãn vàng
+  **"Lịch chờ duyệt"** để Phòng HC-TC-QT biết mà cân nhắc. Huy hiệu và danh sách nay khớp nhau.
+- Test mới `npm run test:rules` (13/13) khoá quy tắc này + cách đếm việc theo SỰ KIỆN của từng vai trò.
+
 ## 2026-08-19 — Phiếu điều xe ghi tên CHUYÊN VIÊN ĐỀ NGHỊ (đầy đủ họ tên)
 - Khối "Đề nghị bố trí xe" trong ScheduleForm (hiện cả khi THÊM và khi SỬA lịch — chỉ ẩn khi tick
   "Làm việc tại cơ quan") thêm ô **Chuyên viên đề nghị (họ và tên)**, bắt buộc khi có đề nghị xe.
