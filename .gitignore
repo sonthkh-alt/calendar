@@ -25,3 +25,5 @@ tools/ky-so-agent/mau-phieu-da-ky.pdf
 scripts/.exporters.cjs
 scripts/.vehicleSlipPdf.cjs
 scripts/.vehicleSlipData.cjs
+scripts/.stats.cjs
+scripts/.stats-core.cjs

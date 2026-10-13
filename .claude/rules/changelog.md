@@ -1,5 +1,28 @@
 # Nhật ký dự án
 
+## 2026-10-13 — Tab THỐNG KÊ: số liệu + xuất báo cáo Excel / PDF / Word
+- Tab mới **"Thống kê"** (trước Quản trị) cho mọi tài khoản làm việc (không cho khách/người xem).
+- **Kỳ báo cáo** theo thông lệ cơ quan: Tuần / Tháng / Quý / 6 tháng / 9 tháng / Năm / Tùy chọn (≤5
+  năm), nút kỳ trước/sau/kỳ hiện tại; **so sánh** kỳ liền trước hoặc cùng kỳ năm trước (9 tháng luôn
+  so cùng kỳ). Phạm vi: chọn nhiều đơn vị (như bộ lọc lịch, gồm "Trưởng các Ban"), một lãnh đạo,
+  lịch được tính (đã duyệt + chờ duyệt | chỉ đã duyệt | cả từ chối). Tab TỰ NẠP dữ liệu theo kỳ.
+- **Bảng số liệu:** tổng hợp 19 chỉ tiêu (có tăng/giảm), theo đơn vị, theo lãnh đạo (sự kiện/buổi/
+  ngày/sáng-chiều/ngoài-tại cơ quan/cuối tuần/giám sát/khảo sát/TXCT/tiếp dân), theo loại hoạt
+  động (14 loại, phân loại tự động theo từ khóa có ưu tiên; "phối hợp" không bị nhầm "họp", "lễ tân"
+  không nhầm "lễ"), diễn biến theo ngày/tuần/tháng (tự chọn theo độ dài kỳ) + thứ/buổi, địa bàn
+  xã/phường (dùng chung `constants.communeKey` với cảnh báo trùng địa điểm — tách khỏi App.jsx),
+  địa điểm; duyệt lịch (trạng thái, người duyệt + thời gian xử lý, người nhập + tỉ lệ ĐÚNG HẠN);
+  điều xe (trạng thái phiếu, tần suất từng xe, nhu cầu theo đơn vị); **cảnh báo** (chờ duyệt quá
+  hạn, thiếu địa điểm, lãnh đạo trùng giờ, phiếu xe quá hạn/sắp đi chưa phân xe/chưa ký số);
+  danh sách chi tiết (lọc, bấm mở chi tiết lịch).
+- **Xuất:** Excel (mỗi bảng 1 sheet + sheet thông tin & phương pháp; số, %, ngày là kiểu thật; có
+  bộ lọc), PDF (quốc hiệu, địa danh-ngày theo NĐ30, lề 3/2/1,5/2 cm, đánh số mục La Mã, Trang x/y,
+  khối chữ ký Người lập biểu / Lãnh đạo Văn phòng, ghi chú phương pháp), Word (cùng bố cục, Times New
+  Roman; chỉ email trong DOCX_EXPORT_EMAILS). Chọn bảng đưa vào bản in (mặc định bỏ Danh sách chi
+  tiết + Địa điểm). Bản in tự lược cột cho vừa A4 dọc; Excel luôn đủ cột.
+- Kiểm chứng: `npm run test:stats` 91/91 (kỳ báo cáo, phân loại, cách đếm, phạm vi, quyền, cảnh báo,
+  xuất thật PDF->pdf-parse, xlsx đọc lại, docx->document.xml). Đã xem ảnh trang PDF + giao diện.
+
 ## 2026-08-20 — SỬA LỖI: Phòng HC-TC-QT không thấy chuyến có đề nghị xe khi lịch còn chờ duyệt
 - Triệu chứng: tài khoản điều xe thấy huy hiệu tab "Điều xe = 3" nhưng danh sách chỉ có 1 chuyến;
   lịch "Tham dự Đoàn công tác..." (Ban, trạng thái Chờ duyệt, đã tick đề nghị xe) KHÔNG hiện ra.

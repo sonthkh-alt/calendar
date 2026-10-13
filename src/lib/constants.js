@@ -137,6 +137,18 @@ export const hidesDriver = (leaderType) => leaderType === 'pct' || leaderType ==
 export const isHqLocation = (loc) =>
   (loc || '').trim().toLowerCase().replace(/\s+/g, ' ') === 'trụ sở đoàn đbqh và hđnd tỉnh';
 
+// Trích "đơn vị + TÊN xã/phường/thị trấn" từ địa điểm (bỏ phần mô tả xung quanh) để các
+// cách ghi KHÁC NHAU của CÙNG một xã vẫn gom chung. Vd "Mỏ vật liệu xây dựng tại xã Biện
+// Thượng" và "Xã Biện Thượng" -> "xã biện thượng". null nếu địa điểm không nêu xã/phường.
+// Dùng chung: cảnh báo trùng địa điểm (App) + thống kê địa bàn (lib/stats).
+export const communeKey = (loc) => {
+  const s = (loc || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const m = s.match(/(?:^|[\s,.])(xã|phường|thị trấn)\s+([a-zà-ỹ]+(?:\s+[a-zà-ỹ]+){0,2})/u);
+  if (!m) return null;
+  const name = m[2].replace(/\s+(huyện|tỉnh|thành phố|thị xã)[\s\S]*$/u, '').trim();
+  return `${m[1]} ${name}`;
+};
+
 // Địa điểm gợi ý khi nhập lịch (vẫn gõ tự do được)
 export const COMMON_LOCATIONS = [
   'Trụ sở Tỉnh ủy',

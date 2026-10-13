@@ -32,6 +32,15 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   hóa NFC). WeekView: "Xuất PDF" cho MỌI tài khoản; "Xuất Word" chỉ với email trong
   constants.DOCX_EXPORT_EMAILS (canExportDocx). Test: scripts/test-pdf.mjs (npm run test:pdf).
 
+- `stats.js` — THỐNG KÊ (HÀM THUẦN): kỳ báo cáo `periodRange`/`shiftAnchor`/`comparisonRange`
+  (tuần/tháng/quý/6 tháng/9 tháng/năm/tùy chọn ≤5 năm; so kỳ liền trước | cùng kỳ năm trước),
+  `classifyActivity` (loại hoạt động theo từ khóa, có THỨ TỰ ưu tiên — `ACTIVITY_CATEGORIES`),
+  `buildStatsReport` -> MÔ HÌNH BÁO CÁO `{ meta, kpis, sections[] }` (mỗi section: columns/rows/
+  total/notes/printColumns). Gom SỰ KIỆN bằng union-find (chung group_id HOẶC ngày+buổi+nội dung+
+  địa điểm). Thêm bảng = thêm 1 section ở đây, màn hình + Excel/PDF/Word tự có. Test: npm run test:stats
+- `statsExport.js` — xuất mô hình báo cáo: `buildStatsWorkbook` (xlsx, mỗi bảng 1 sheet, số/ngày/%
+  là kiểu thật), `buildStatsPdfDocDefinition` (pdfmake, quốc hiệu + lề Nghị định 30, Trang x/y,
+  khối chữ ký), `buildStatsDocx` (docx, Times New Roman). Thư viện NẠP ĐỘNG khi bấm xuất.
 - `signAgent.js` — gọi TRỢ LÝ KÝ SỐ chạy trên máy có USB token (`http://127.0.0.1:7878`):
   `probeAgent` (dò nhanh 2,5s), `listAgentCerts`, `signPdfViaAgent` (chờ tối đa 4 phút vì phải nhập PIN).
   Đổi địa chỉ không cần build lại: `localStorage.kySoAgentUrl`.
@@ -56,6 +65,10 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 - `AdminUsers/AdminLeaders/AdminVehicles.jsx` — tab Quản trị. AdminUsers: TẠO tài khoản (form
   + tick vai trò/Ban) gọi `api/admin-create-user.js` (Vercel Serverless, service_role) +
   phân quyền tài khoản đã có. Cần env `SUPABASE_SERVICE_ROLE_KEY` trên Vercel.
+- `StatsView.jsx` — tab **Thống kê**: chọn kỳ + so sánh + phạm vi (đơn vị/lãnh đạo/trạng thái), TỰ
+  NẠP dữ liệu theo kỳ (fetchEntries, độc lập với năm đang xem), thẻ chỉ tiêu, thẻ con theo nhóm
+  bảng (STAT_GROUPS), biểu đồ đơn sắc, danh sách chi tiết bấm mở EntryDetail; nút Excel / PDF /
+  Word (Word theo canExportDocx) + chọn bảng đưa vào bản in.
 - `FilterBar.jsx` — điều hướng tuần/tháng/ngày + lọc Ban/lãnh đạo/trạng thái
 - `EntryCard.jsx` / `StatusBadge.jsx` — ô lịch + huy hiệu trạng thái dùng chung. EntryCard nhận
   `vehicles` (mảng xe của chuyến, đã lọc bỏ xe riêng) -> dòng "Xe:"; chế độ Gọn chỉ hiện dòng này

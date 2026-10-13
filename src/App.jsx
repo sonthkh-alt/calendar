@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarRange, CalendarDays, CalendarClock, ClipboardCheck, Car, Settings,
-  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin, Eye,
+  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin, Eye, BarChart3,
 } from 'lucide-react';
 import Login from './Login';
 import SetPassword from './SetPassword';
@@ -9,8 +9,8 @@ import { supabase } from './lib/supabase';
 import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail, signInWithPassword, GUEST } from './lib/auth';
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, fetchActivityLog, recordLogin, fetchLoginCount, deleteEntry, deleteEntries } from './lib/api';
 import { weekStart, parseISO, toISODate } from './lib/dates';
-import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO, truongBanLeaderIds } from './lib/constants';
-import { canReview, canReviewEntry, canAssignVehicle, canApproveVehicle, canAdmin, canEditEntry, canCreateFor, vehicleTodoCounts } from './lib/permissions';
+import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO, truongBanLeaderIds, communeKey } from './lib/constants';
+import { canReview, canReviewEntry, canAssignVehicle, canApproveVehicle, canAdmin, canEditEntry, canCreateFor, vehicleTodoCounts, canViewStats } from './lib/permissions';
 import FilterBar from './components/FilterBar';
 import WeekView from './components/WeekView';
 import MonthView from './components/MonthView';
@@ -29,6 +29,7 @@ import ScheduleForm from './components/ScheduleForm';
 import EntryDetail from './components/EntryDetail';
 import DeviceSelect from './components/DeviceSelect';
 import NotificationBell from './components/NotificationBell';
+import StatsView from './components/StatsView';
 
 export default function App() {
   // ===== Phiên đăng nhập =====
@@ -91,7 +92,7 @@ export default function App() {
   }, [session]);
 
   // ===== Dữ liệu =====
-  const [tab, setTab] = useState('week'); // week | month | day | approve | vehicles | admin
+  const [tab, setTab] = useState('week'); // week | month | day | approve | vehicles | stats | admin
   const [adminTab, setAdminTab] = useState('users');
   const [anchor, setAnchor] = useState(new Date());
   const [filters, setFilters] = useState({ banIds: [], leaderId: null, status: null });
@@ -272,16 +273,7 @@ export default function App() {
   //   - severity 'week' (ĐỎ): có nhóm khác cùng địa điểm trong CÙNG TUẦN.
   //   - severity 'year' (VÀNG): chỉ trùng ở tuần khác trong năm.
   const dupMap = useMemo(() => {
-    const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    // Trích "đơn vị + TÊN xã/phường/thị trấn" từ địa điểm (bỏ phần mô tả xung quanh)
-    // để các cách ghi KHÁC NHAU của CÙNG một xã vẫn gom chung. Ví dụ:
-    // "Mỏ vật liệu xây dựng tại xã Biện Thượng" và "Xã Biện Thượng" -> "xã biện thượng".
-    const communeKey = (loc) => {
-      const m = norm(loc).match(/(?:^|[\s,.])(xã|phường|thị trấn)\s+([a-zà-ỹ]+(?:\s+[a-zà-ỹ]+){0,2})/u);
-      if (!m) return null;
-      const name = m[2].replace(/\s+(huyện|tỉnh|thành phố|thị xã)[\s\S]*$/u, '').trim();
-      return `${m[1]} ${name}`;
-    };
+    // communeKey (constants): gom các cách ghi khác nhau của CÙNG một xã/phường
     const excludedCommunes = new Set(locationNames.map((n) => communeKey(n)).filter(Boolean));
     const leaderById = Object.fromEntries(leaders.map((l) => [l.id, l]));
     const eventKey = (e) => e.group_id || `${e.content}|${e.date}|${e.session}|${e.start_time || ''}`;
@@ -360,6 +352,7 @@ export default function App() {
     { key: 'day', label: 'Lịch ngày', icon: CalendarClock },
     ...(canReview(profile) ? [{ key: 'approve', label: 'Chờ duyệt', icon: ClipboardCheck, badge: pendingCount }] : []),
     ...(canAssignVehicle(profile) ? [{ key: 'vehicles', label: 'Điều xe', icon: Car, badge: vehicleTodo.mine }] : []),
+    ...(canViewStats(profile) ? [{ key: 'stats', label: 'Thống kê', icon: BarChart3 }] : []),
     ...(canAdmin(profile) ? [{ key: 'admin', label: 'Quản trị', icon: Settings }] : []),
   ];
 
@@ -473,6 +466,9 @@ export default function App() {
         )}
         {tab === 'vehicles' && canAssignVehicle(profile) && (
           <VehicleBoard profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} profiles={pProfiles} onChanged={refresh} />
+        )}
+        {tab === 'stats' && canViewStats(profile) && (
+          <StatsView profile={profile} leaders={leaders} bans={bans} vehicles={vehicles} profiles={pProfiles} truongBanIds={truongBanIds} onView={setViewing} />
         )}
         {tab === 'admin' && canAdmin(profile) && (
           <div>

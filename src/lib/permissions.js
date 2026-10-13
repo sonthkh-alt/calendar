@@ -123,6 +123,22 @@ export function vehicleTodoCounts(entries, profile) {
   };
 }
 
+// ===== THỐNG KÊ / BÁO CÁO =====
+// Tab Thống kê: mọi TÀI KHOẢN LÀM VIỆC (không gồm khách / người chỉ xem).
+export function canViewStats(profile) {
+  return !!profile?.role && profile.role !== 'nguoi_xem';
+}
+// Báo cáo QUY TRÌNH (tình hình duyệt lịch, người duyệt, người nhập lịch & đúng hạn):
+// người duyệt + cán bộ tổng hợp (theo dõi, đôn đốc việc nhập lịch).
+export function canViewProcessStats(profile) {
+  return canReview(profile) || profile?.role === 'cb_tonghop';
+}
+// Báo cáo ĐIỀU XE: Phòng HC-TC-QT, Lãnh đạo Văn phòng (Quản trị) và Thường trực HĐND.
+// Xe RIÊNG chỉ hiện trong số liệu với người được điều xe riêng (canDispatchPrivateVehicle).
+export function canViewVehicleStats(profile) {
+  return canAssignVehicle(profile) || profile?.role === 'pct';
+}
+
 // Quản trị hệ thống
 export function canAdmin(profile) {
   return profile?.role === 'quan_tri';

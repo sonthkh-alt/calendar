@@ -68,6 +68,15 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
   Ban Cơ yếu -> tải tệp đã ký lên (Supabase Storage bucket `phieu-dieu-xe`) -> lưu
   `vehicle_signed_path/_name/_at/_by`. Chuyên viên chỉ bấm "Tải phiếu đã ký số (PDF)". Xem `docs/KY-SO.md`.
 
+## Thống kê (lib/stats.js, tab Thống kê)
+- Quyền (permissions.js): `canViewStats` = mọi vai trò trừ `nguoi_xem`/khách; `canViewProcessStats`
+  (bảng duyệt lịch, người duyệt, người nhập & đúng hạn) = người duyệt + `cb_tonghop`;
+  `canViewVehicleStats` (bảng điều xe) = `van_phong_xe`/`quan_tri`/`pct`; xe RIÊNG chỉ hiện với
+  `canDispatchPrivateVehicle`. Không có quyền -> section + chỉ tiêu tương ứng KHÔNG được dựng.
+- Đơn vị đếm: SỰ KIỆN (1 hoạt động/1 ngày, nhiều lãnh đạo tính 1), LƯỢT (mỗi lãnh đạo/sự kiện),
+  BUỔI (nửa ngày có lịch của 1 lãnh đạo; cả ngày = 2; trùng buổi tính 1). Đúng hạn nhập lịch =
+  created_at trước 0h Thứ Hai của tuần công tác. Mặc định không tính lịch `tu_choi`.
+
 ## Trùng giờ (dates.js → sessionsOverlap)
 - ca_ngay giao mọi buổi; gio×gio so khoảng; gio×buổi: trước 12:00 = sáng
 - Trùng xe: cùng vehicle_id + cùng date + overlap, BỎ QUA cùng group_id

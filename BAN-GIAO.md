@@ -163,7 +163,8 @@ Toàn bộ nhật ký chi tiết: **`.claude/rules/changelog.md`**. Tóm tắt c
   GỠ NHANH toàn bộ siết RLS: **xóa file migration đó** → deploy lại → schema.sql khôi phục policy mở.
 
 ## 5b. Việc CÒN LẠI / có thể làm tiếp
-- [ ] **Xuất Word/Excel (G6)** — chưa làm (dự kiến lazy-import `docx` + `xlsx`, mẫu `HDNDKPI/src/lib/exporters.js`).
+- [x] **Xuất Word/Excel (G6)** — ĐÃ LÀM: lịch tuần ra PDF/Word; **tab Thống kê** xuất báo cáo
+  Excel / PDF / Word (2026-10-13, xem changelog). Sau deploy: mở tab Thống kê, thử xuất 3 loại tệp.
 - [ ] Cấu hình **Site URL + Redirect URLs** trong Supabase Auth nếu email xác thực còn trỏ về `localhost`.
 - [ ] (Tùy chọn) ApprovalQueue: duyệt 1 dòng = duyệt cả nhóm cho đồng bộ với lịch tuần.
 - [ ] (Ghi thêm yêu cầu mới phát sinh vào đây.)
