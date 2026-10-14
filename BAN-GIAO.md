@@ -165,8 +165,10 @@ Toàn bộ nhật ký chi tiết: **`.claude/rules/changelog.md`**. Tóm tắt c
 ## 5b. Việc CÒN LẠI / có thể làm tiếp
 - [x] **Xuất Word/Excel (G6)** — ĐÃ LÀM: lịch tuần ra PDF/Word; **tab Thống kê** xuất báo cáo
   Excel / PDF / Word (2026-10-13, xem changelog). Sau deploy: mở tab Thống kê, thử xuất 3 loại tệp.
-- [ ] **Nhật trình xe (14/10):** sau deploy, đăng nhập thử `chan` / `123`; Actions phải xanh (tạo bucket
-  `nhat-trinh-xe` — nếu log báo không tạo được thì tạo tay: Supabase → Storage → New bucket, Private).
+- [ ] **Nhật trình xe (14/10):** sau deploy, đăng nhập thử `chan` / `123` -> phải vào thẳng tab Nhật trình
+  xe; thử gửi 1 lần (số + ảnh). Actions phải xanh (tạo bảng `vehicle_odo_readings` + bucket
+  `nhat-trinh-xe` — nếu log báo không tạo được bucket thì tạo tay: Supabase → Storage → New bucket,
+  Private, rồi chạy lại workflow để gắn policy).
   Nhắc 7 lái xe ĐỔI MẬT KHẨU (123 quá yếu; mật khẩu mới tối thiểu 6 ký tự).
 - [ ] Cấu hình **Site URL + Redirect URLs** trong Supabase Auth nếu email xác thực còn trỏ về `localhost`.
 - [ ] (Tùy chọn) ApprovalQueue: duyệt 1 dòng = duyệt cả nhóm cho đồng bộ với lịch tuần.

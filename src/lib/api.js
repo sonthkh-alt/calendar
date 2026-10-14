@@ -262,53 +262,41 @@ export async function deleteSignedSlip(path) {
   return supabase.storage.from(SLIP_BUCKET).remove([path]);
 }
 
-// ===== NHẬT TRÌNH XE (vehicle_logs) + ảnh đồng hồ ODO (bucket riêng tư) =====
+// ===== NHẬT TRÌNH XE: mỗi lần ghi ODO là 1 dòng vehicle_odo_readings (chỉ ghi thêm) =====
+// Bắt buộc số ODO + ảnh đồng hồ; lưu ngay, không chờ duyệt; lái xe không sửa/xóa (RLS chặn).
 const ODO_BUCKET = 'nhat-trinh-xe';
 
-// Nhật trình trong khoảng ngày; vehicleId (tùy chọn) để chỉ lấy một xe. Nạp theo trang.
-export async function fetchVehicleLogs(fromISO, toISO, vehicleId = null) {
+// Các lần ghi trong khoảng ngày; vehicleId (tùy chọn) để chỉ lấy một xe. Nạp theo trang.
+export async function fetchOdoReadings(fromISO, toISO, vehicleId = null) {
   if (!supabase) return NO_DB;
   const all = [];
   for (let from = 0; ; ) {
-    let q = supabase.from('vehicle_logs').select('*')
-      .gte('log_date', fromISO).lte('log_date', toISO)
-      .order('log_date').order('id').range(from, from + 999);
+    let q = supabase.from('vehicle_odo_readings').select('*')
+      .gte('reading_date', fromISO).lte('reading_date', toISO)
+      .order('reading_date').order('read_at').order('id').range(from, from + 999);
     if (vehicleId) q = q.eq('vehicle_id', vehicleId);
     const { data, error } = await q;
     if (error) return { data: all.length ? all : null, error };
     if (!data?.length) break;
     all.push(...data);
     from += data.length;
-    if (all.length >= 20000) break;
+    if (all.length >= 50000) break;
   }
   return { data: all, error: null };
 }
 
-// Lần ghi GẦN NHẤT trước ngày dateISO của một xe (để biết ODO lần trước)
-export async function fetchLastVehicleLog(vehicleId, beforeISO) {
+// Ghi thêm 1 lần đọc ODO. Lái xe: KHÔNG gửi reading_date/read_at -> máy chủ tự lấy ngày/giờ hiện tại.
+export async function addOdoReading(row) {
   if (!supabase) return NO_DB;
-  const { data, error } = await supabase.from('vehicle_logs').select('*')
-    .eq('vehicle_id', vehicleId).lt('log_date', beforeISO)
-    .order('log_date', { ascending: false }).limit(1);
-  return { data: data?.[0] || null, error };
+  return supabase.from('vehicle_odo_readings').insert(row).select().single();
 }
 
-// Ghi nhật trình — mỗi xe một dòng/ngày (khóa vehicle_id + log_date)
-export async function saveVehicleLog(row) {
+// Người quản lý đánh dấu một lần ghi "KHÔNG TÍNH" (ghi nhầm) — vẫn lưu và hiển thị, có lý do.
+export async function voidOdoReading(id, reason, byId) {
   if (!supabase) return NO_DB;
-  return supabase.from('vehicle_logs')
-    .upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: 'vehicle_id,log_date' })
-    .select().single();
-}
-
-export async function updateVehicleLogs(ids, patch) {
-  if (!supabase) return NO_DB;
-  return supabase.from('vehicle_logs').update({ ...patch, updated_at: new Date().toISOString() }).in('id', ids);
-}
-
-export async function deleteVehicleLog(id) {
-  if (!supabase) return NO_DB;
-  return supabase.from('vehicle_logs').delete().eq('id', id);
+  return supabase.from('vehicle_odo_readings')
+    .update({ voided: true, void_reason: reason, voided_by: byId, voided_at: new Date().toISOString() })
+    .eq('id', id);
 }
 
 // Tải ảnh đồng hồ ODO (đã nén ở trình duyệt). kind: 'start' | 'end'
@@ -323,11 +311,6 @@ export async function uploadOdoPhoto(vehicleId, dateISO, kind, blob) {
 export async function getOdoPhotoUrl(path) {
   if (!supabase) return NO_DB;
   return supabase.storage.from(ODO_BUCKET).createSignedUrl(path, 3600);
-}
-
-export async function deleteOdoPhoto(path) {
-  if (!supabase) return NO_DB;
-  return supabase.storage.from(ODO_BUCKET).remove([path]);
 }
 
 export async function upsertLeader(row) {

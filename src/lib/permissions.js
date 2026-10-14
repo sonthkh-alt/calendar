@@ -144,21 +144,14 @@ export function canViewVehicleStats(profile) {
 export function canUseVehicleLog(profile) {
   return ['lai_xe', 'van_phong_xe', 'quan_tri'].includes(profile?.role);
 }
-// Người QUẢN LÝ nhật trình: xem mọi xe, đọc số từ ảnh, sửa, xác nhận, xuất sổ.
+// Người QUẢN LÝ nhật trình: xem mọi xe, ghi hộ, đánh dấu lần ghi nhầm, xuất sổ.
 export function canManageVehicleLog(profile) {
   return profile?.role === 'van_phong_xe' || profile?.role === 'quan_tri';
 }
-// Lái xe sửa được nhật trình CHƯA xác nhận trong vòng DRIVER_EDIT_DAYS ngày gần nhất;
-// cũ hơn hoặc đã xác nhận -> nhờ Phòng HC-TC-QT sửa.
-export const DRIVER_EDIT_DAYS = 7;
-export function canEditVehicleLog(profile, log, todayISO, dateISO) {
-  if (canManageVehicleLog(profile)) return true;
-  if (profile?.role !== 'lai_xe') return false;
-  if (log && log.status === 'da_xac_nhan') return false;
-  const d = dateISO || log?.log_date;
-  if (!d || !todayISO || d > todayISO) return false;
-  const diff = (Date.parse(todayISO) - Date.parse(d)) / 86400000;
-  return diff <= DRIVER_EDIT_DAYS;
+// Mỗi lần ghi ODO được LƯU NGAY, không chờ duyệt; lái xe chỉ ghi thêm, KHÔNG sửa/xóa được.
+// Người quản lý chỉ đánh dấu "không tính" một lần ghi nhầm (vẫn giữ và hiển thị) — xem RLS.
+export function canVoidOdoReading(profile) {
+  return canManageVehicleLog(profile);
 }
 
 // Quản trị hệ thống

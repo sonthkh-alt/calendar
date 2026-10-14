@@ -93,13 +93,12 @@ export default function App() {
   }, [session]);
 
   // ===== Dữ liệu =====
-  const [tab, setTab] = useState('week'); // week | month | day | approve | vehicles | logbook | stats | admin
-  // Lái xe: vào thẳng tab Nhật trình xe (việc chính hằng ngày)
+  // Tab đang chọn; null = TAB MẶC ĐỊNH theo vai trò: lái xe vào THẲNG "Nhật trình xe",
+  // các vai trò khác vào "Lịch tuần". Đổi tài khoản (đăng nhập/đăng xuất) -> về tab mặc định.
+  const [tabSel, setTab] = useState(null); // week | month | day | approve | vehicles | logbook | stats | admin
   const role = profile?.role;
-  useEffect(() => {
-    if (role === 'lai_xe') setTab('logbook');
-    else if (!['van_phong_xe', 'quan_tri'].includes(role)) setTab((t) => (t === 'logbook' ? 'week' : t)); // đăng xuất lái xe -> về Lịch tuần
-  }, [role]);
+  const tab = tabSel ?? (role === 'lai_xe' ? 'logbook' : 'week');
+  useEffect(() => { setTab(null); }, [session?.user?.id, role]);
   const [adminTab, setAdminTab] = useState('users');
   const [anchor, setAnchor] = useState(new Date());
   const [filters, setFilters] = useState({ banIds: [], leaderId: null, status: null });
@@ -354,12 +353,14 @@ export default function App() {
 
   // ===== Tabs theo vai trò =====
   const tabs = [
+    // Lái xe: tab Nhật trình xe đứng ĐẦU (và là tab mặc định khi vào)
+    ...(profile.role === 'lai_xe' ? [{ key: 'logbook', label: 'Nhật trình xe', icon: Gauge }] : []),
     { key: 'week', label: 'Lịch tuần', icon: CalendarRange },
     { key: 'month', label: 'Lịch tháng', icon: CalendarDays },
     { key: 'day', label: 'Lịch ngày', icon: CalendarClock },
     ...(canReview(profile) ? [{ key: 'approve', label: 'Chờ duyệt', icon: ClipboardCheck, badge: pendingCount }] : []),
     ...(canAssignVehicle(profile) ? [{ key: 'vehicles', label: 'Điều xe', icon: Car, badge: vehicleTodo.mine }] : []),
-    ...(canUseVehicleLog(profile) ? [{ key: 'logbook', label: 'Nhật trình xe', icon: Gauge }] : []),
+    ...(canUseVehicleLog(profile) && profile.role !== 'lai_xe' ? [{ key: 'logbook', label: 'Nhật trình xe', icon: Gauge }] : []),
     ...(canViewStats(profile) ? [{ key: 'stats', label: 'Thống kê', icon: BarChart3 }] : []),
     ...(canAdmin(profile) ? [{ key: 'admin', label: 'Quản trị', icon: Settings }] : []),
   ];

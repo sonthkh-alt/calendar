@@ -1,5 +1,22 @@
 # Nhật ký dự án
 
+## 2026-10-14 (chiều) — Nhật trình xe: BẮT BUỘC số ODO + ảnh, ghi nhận mọi lần, không chờ duyệt
+- Yêu cầu: lái xe vào thẳng module; mỗi lần cập nhật phải VỪA nhập ODO VỪA chụp ảnh; mọi dữ liệu
+  trong ngày được ghi lại và hiển thị ngay không chờ phê duyệt; lái xe không xóa được cái đã ghi.
+- **Mô hình mới:** bảng `vehicle_odo_readings` — mỗi lần ghi 1 dòng (Xuất phát / Về / Ghi thêm), check
+  constraint bắt buộc `odo` + `photo_path`; RLS cho lái xe CHỈ INSERT (đúng ngày hôm nay giờ VN, giờ ghi
+  ±15 phút, đứng tên mình); không UPDATE/DELETE; kho ảnh: lái xe không xóa/sửa ảnh được. Bỏ trạng thái
+  chờ xác nhận. Người quản lý không xóa, chỉ đánh dấu "Không tính" lần ghi nhầm (giữ + hiển thị gạch
+  ngang, có lý do) và "Ghi hộ lái xe" (chọn ngày, giờ, lái xe; vẫn bắt buộc số + ảnh).
+- Dữ liệu `vehicle_logs` (mô hình sáng nay) được chuyển sang bảng mới trong schema.sql (idempotent);
+  bảng cũ giữ lại, không còn dùng.
+- **App:** tab mặc định theo vai trò (`tabSel ?? (lai_xe ? 'logbook' : 'week')`) -> lái xe vào thẳng
+  Nhật trình xe, không chớp qua Lịch tuần; với lái xe tab này đứng đầu. Quản lý tự cập nhật (realtime).
+- Excel thêm sheet "Chi tiết các lần ghi" (kể cả lần không tính + lý do).
+- Kiểm chứng: test:logbook 44/44; chạy THẬT schema + migration trên PGlite: thiếu ảnh / thiếu số bị
+  chặn, lái xe ghi lùi ngày / tự đặt giờ bị chặn, lái xe sửa / xóa / tự hủy = 0 dòng, quản lý đánh dấu
+  không tính + ghi hộ được, dữ liệu cũ chuyển đúng 1 lần qua 2 lượt chạy. Đã xem ảnh giao diện.
+
 ## 2026-10-14 — 7 TÀI KHOẢN LÁI XE + module NHẬT TRÌNH XE (cập nhật ODO hằng ngày)
 - **Tài khoản:** migration `2026-10-14-tai-khoan-lai-xe.sql` tạo chau / quyet / dung / quang / chan / tu /
   tien (@thanhhoa.gov.vn, mật khẩu `123`, vai trò mới `lai_xe`), gắn xe theo `vehicles.driver_name`

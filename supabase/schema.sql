@@ -221,8 +221,10 @@ end $$;
 alter table profiles add column if not exists signature_data text;
 
 -- ---------------------------------------------------------------------
--- 5b) NHẬT TRÌNH XE: lái xe cập nhật số ODO hằng ngày (gõ số HOẶC gửi ảnh đồng hồ),
---     Phòng HC-TC-QT / Quản trị theo dõi, đọc số từ ảnh, xác nhận. Mỗi xe 1 dòng/ngày.
+-- 5b) NHẬT TRÌNH XE: lái xe cập nhật số ODO hằng ngày. Từ 14/10/2026 dữ liệu ghi vào
+--     bảng vehicle_odo_readings (MỖI LẦN GHI 1 DÒNG, bắt buộc số ODO + ảnh, lưu ngay không
+--     chờ duyệt, lái xe không sửa/xóa được). Bảng vehicle_logs (1 dòng/ngày, có xác nhận) là
+--     mô hình CŨ — giữ lại để không mất dữ liệu, đã chuyển sang bảng mới ở cuối mục này.
 --     CHỈ lai_xe, van_phong_xe, quan_tri đọc/ghi (RLS bên dưới + kiểm tra trong app).
 -- ---------------------------------------------------------------------
 -- Tài khoản lái xe gắn với xe mình phụ trách (mặc định khi cập nhật ODO)
@@ -280,7 +282,68 @@ create policy "vlog_upd" on vehicle_logs for update
 create policy "vlog_del" on vehicle_logs for delete using (is_vehicle_log_manager());
 grant select, insert, update, delete on vehicle_logs to authenticated;
 
+-- Mỗi LẦN GHI ODO là MỘT dòng (chỉ ghi thêm): xuất phát / về / ghi thêm dọc đường.
+-- Bắt buộc CÓ CẢ số ODO lẫn ảnh đồng hồ (trừ dòng chuyển từ vehicle_logs cũ).
+create table if not exists vehicle_odo_readings (
+  id uuid primary key default gen_random_uuid(),
+  vehicle_id uuid not null references vehicles(id) on delete cascade,
+  reading_date date not null default ((now() at time zone 'Asia/Ho_Chi_Minh')::date),
+  read_at timestamptz not null default now(),          -- thời điểm ghi (máy chủ)
+  kind text not null default 'khac' check (kind in ('xuat_phat','ve','khac')),
+  odo integer check (odo is null or odo >= 0),
+  photo_path text,                                     -- ảnh đồng hồ (bucket 'nhat-trinh-xe')
+  driver_id uuid references profiles(id) on delete set null,
+  route text,
+  fuel_liters numeric(7,2) check (fuel_liters is null or fuel_liters >= 0),
+  note text,
+  voided boolean not null default false,               -- Phòng HC-TC-QT đánh dấu "không tính" (vẫn hiển thị)
+  void_reason text,
+  voided_by uuid references profiles(id) on delete set null,
+  voided_at timestamptz,
+  legacy_log_id uuid,                                  -- chuyển từ vehicle_logs (mô hình cũ)
+  created_by uuid references profiles(id) on delete set null default auth.uid(),
+  created_at timestamptz not null default now(),
+  constraint odo_reading_required check ((odo is not null and photo_path is not null) or legacy_log_id is not null)
+);
+create index if not exists odo_readings_vehicle_idx on vehicle_odo_readings (vehicle_id, reading_date, read_at);
+create index if not exists odo_readings_date_idx on vehicle_odo_readings (reading_date);
+
+alter table vehicle_odo_readings enable row level security;
+drop policy if exists "odo_sel" on vehicle_odo_readings;
+drop policy if exists "odo_ins" on vehicle_odo_readings;
+drop policy if exists "odo_upd" on vehicle_odo_readings;
+drop policy if exists "odo_del" on vehicle_odo_readings;
+create policy "odo_sel" on vehicle_odo_readings for select using (can_use_vehicle_log());
+-- Lái xe: chỉ GHI THÊM, đúng NGÀY HÔM NAY (giờ Việt Nam) và đúng thời điểm thực (±15 phút),
+-- đứng tên chính mình, không tự đánh dấu hủy. Người quản lý ghi hộ được (kể cả ngày trước).
+create policy "odo_ins" on vehicle_odo_readings for insert with check (
+  is_vehicle_log_manager() or (
+    can_use_vehicle_log() and created_by = auth.uid() and voided = false and legacy_log_id is null
+    and reading_date = (now() at time zone 'Asia/Ho_Chi_Minh')::date
+    and read_at between now() - interval '15 minutes' and now() + interval '15 minutes'));
+-- KHÔNG ai ngoài người quản lý được sửa / xóa (lái xe không xóa được cái mình đã ghi)
+create policy "odo_upd" on vehicle_odo_readings for update using (is_vehicle_log_manager()) with check (is_vehicle_log_manager());
+create policy "odo_del" on vehicle_odo_readings for delete using (is_vehicle_log_manager());
+grant select, insert, update, delete on vehicle_odo_readings to authenticated;
+
+-- Chuyển dữ liệu mô hình cũ (vehicle_logs) sang từng lần ghi. Idempotent (theo legacy_log_id + loại).
+insert into vehicle_odo_readings (vehicle_id, reading_date, read_at, kind, odo, photo_path, driver_id,
+  fuel_liters, note, legacy_log_id, created_by, created_at)
+select l.vehicle_id, l.log_date, coalesce(l.created_at, now()), 'xuat_phat', l.odo_start, l.photo_start_path,
+  l.driver_id, null, null, l.id, l.created_by, coalesce(l.created_at, now())
+from vehicle_logs l
+where (l.odo_start is not null or l.photo_start_path is not null)
+  and not exists (select 1 from vehicle_odo_readings r where r.legacy_log_id = l.id and r.kind = 'xuat_phat');
+insert into vehicle_odo_readings (vehicle_id, reading_date, read_at, kind, odo, photo_path, driver_id,
+  route, fuel_liters, note, legacy_log_id, created_by, created_at)
+select l.vehicle_id, l.log_date, coalesce(l.updated_at, l.created_at, now()) + interval '1 second', 've', l.odo_end,
+  l.photo_end_path, l.driver_id, l.route, l.fuel_liters, l.note, l.id, l.created_by, coalesce(l.updated_at, l.created_at, now())
+from vehicle_logs l
+where (l.odo_end is not null or l.photo_end_path is not null or l.route is not null or l.fuel_liters is not null or l.note is not null)
+  and not exists (select 1 from vehicle_odo_readings r where r.legacy_log_id = l.id and r.kind = 've');
+
 -- Kho ẢNH ĐỒNG HỒ ODO (riêng tư). Bọc EXCEPTION như bucket phiếu điều xe.
+-- Xem + tải lên: người dùng module; sửa / xóa ảnh: CHỈ người quản lý (lái xe không xóa được ảnh đã gửi).
 do $$
 begin
   if to_regclass('storage.buckets') is not null then
@@ -289,9 +352,18 @@ begin
       values ('nhat-trinh-xe', 'nhat-trinh-xe', false)
       on conflict (id) do nothing;
       execute 'drop policy if exists "nhat_trinh_xe_rw" on storage.objects';
-      execute 'create policy "nhat_trinh_xe_rw" on storage.objects for all to authenticated'
-        || ' using (bucket_id = ''nhat-trinh-xe'' and public.can_use_vehicle_log())'
+      execute 'drop policy if exists "nhat_trinh_xe_sel" on storage.objects';
+      execute 'drop policy if exists "nhat_trinh_xe_ins" on storage.objects';
+      execute 'drop policy if exists "nhat_trinh_xe_upd" on storage.objects';
+      execute 'drop policy if exists "nhat_trinh_xe_del" on storage.objects';
+      execute 'create policy "nhat_trinh_xe_sel" on storage.objects for select to authenticated'
+        || ' using (bucket_id = ''nhat-trinh-xe'' and public.can_use_vehicle_log())';
+      execute 'create policy "nhat_trinh_xe_ins" on storage.objects for insert to authenticated'
         || ' with check (bucket_id = ''nhat-trinh-xe'' and public.can_use_vehicle_log())';
+      execute 'create policy "nhat_trinh_xe_upd" on storage.objects for update to authenticated'
+        || ' using (bucket_id = ''nhat-trinh-xe'' and public.is_vehicle_log_manager())';
+      execute 'create policy "nhat_trinh_xe_del" on storage.objects for delete to authenticated'
+        || ' using (bucket_id = ''nhat-trinh-xe'' and public.is_vehicle_log_manager())';
     exception when others then
       raise notice 'Khong tu tao duoc bucket nhat-trinh-xe (%): hay tao thu cong trong Supabase Dashboard -> Storage (Private).', sqlerrm;
     end;
@@ -320,7 +392,7 @@ begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
     create publication supabase_realtime;
   end if;
-  foreach t in array array['schedule_entries','leaders','vehicles','participant_groups','bans','locations','vehicle_logs'] loop
+  foreach t in array array['schedule_entries','leaders','vehicles','participant_groups','bans','locations','vehicle_logs','vehicle_odo_readings'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
