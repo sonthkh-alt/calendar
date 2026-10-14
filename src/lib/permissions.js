@@ -126,7 +126,7 @@ export function vehicleTodoCounts(entries, profile) {
 // ===== THỐNG KÊ / BÁO CÁO =====
 // Tab Thống kê: mọi TÀI KHOẢN LÀM VIỆC (không gồm khách / người chỉ xem).
 export function canViewStats(profile) {
-  return !!profile?.role && profile.role !== 'nguoi_xem';
+  return !!profile?.role && !['nguoi_xem', 'lai_xe'].includes(profile.role);
 }
 // Báo cáo QUY TRÌNH (tình hình duyệt lịch, người duyệt, người nhập lịch & đúng hạn):
 // người duyệt + cán bộ tổng hợp (theo dõi, đôn đốc việc nhập lịch).
@@ -137,6 +137,28 @@ export function canViewProcessStats(profile) {
 // Xe RIÊNG chỉ hiện trong số liệu với người được điều xe riêng (canDispatchPrivateVehicle).
 export function canViewVehicleStats(profile) {
   return canAssignVehicle(profile) || profile?.role === 'pct';
+}
+
+// ===== NHẬT TRÌNH XE (cập nhật ODO hằng ngày) =====
+// CHỈ lái xe, Phòng HC-TC-QT và Quản trị thấy module (RLS bảng vehicle_logs cũng chặn tương tự).
+export function canUseVehicleLog(profile) {
+  return ['lai_xe', 'van_phong_xe', 'quan_tri'].includes(profile?.role);
+}
+// Người QUẢN LÝ nhật trình: xem mọi xe, đọc số từ ảnh, sửa, xác nhận, xuất sổ.
+export function canManageVehicleLog(profile) {
+  return profile?.role === 'van_phong_xe' || profile?.role === 'quan_tri';
+}
+// Lái xe sửa được nhật trình CHƯA xác nhận trong vòng DRIVER_EDIT_DAYS ngày gần nhất;
+// cũ hơn hoặc đã xác nhận -> nhờ Phòng HC-TC-QT sửa.
+export const DRIVER_EDIT_DAYS = 7;
+export function canEditVehicleLog(profile, log, todayISO, dateISO) {
+  if (canManageVehicleLog(profile)) return true;
+  if (profile?.role !== 'lai_xe') return false;
+  if (log && log.status === 'da_xac_nhan') return false;
+  const d = dateISO || log?.log_date;
+  if (!d || !todayISO || d > todayISO) return false;
+  const diff = (Date.parse(todayISO) - Date.parse(d)) / 86400000;
+  return diff <= DRIVER_EDIT_DAYS;
 }
 
 // Quản trị hệ thống

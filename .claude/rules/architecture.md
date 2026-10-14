@@ -41,6 +41,11 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 - `statsExport.js` — xuất mô hình báo cáo: `buildStatsWorkbook` (xlsx, mỗi bảng 1 sheet, số/ngày/%
   là kiểu thật), `buildStatsPdfDocDefinition` (pdfmake, quốc hiệu + lề Nghị định 30, Trang x/y,
   khối chữ ký), `buildStatsDocx` (docx, Times New Roman). Thư viện NẠP ĐỘNG khi bấm xuất.
+- `vehicleLog.js` — NHẬT TRÌNH XE (HÀM THUẦN): `buildLogbook` nối chuỗi ODO giữa các ngày (thiếu số
+  xuất phát -> lấy ODO cuối lần trước), tính km, đối chiếu chuyến công tác trên lịch (`tripsByDate`),
+  cảnh báo (lùi số, chênh km giữa 2 lần ghi, >800 km/ngày, ảnh chưa đọc số, có chuyến mà chưa ghi),
+  tổng hợp kỳ; `buildLogbookWorkbook` (Excel: Tổng hợp + mỗi xe 1 sheet). Test: npm run test:logbook
+- `images.js` — `compressImage` (nén ảnh chụp đồng hồ ≤1600px JPEG trước khi tải lên)
 - `signAgent.js` — gọi TRỢ LÝ KÝ SỐ chạy trên máy có USB token (`http://127.0.0.1:7878`):
   `probeAgent` (dò nhanh 2,5s), `listAgentCerts`, `signPdfViaAgent` (chờ tối đa 4 phút vì phải nhập PIN).
   Đổi địa chỉ không cần build lại: `localStorage.kySoAgentUrl`.
@@ -69,6 +74,13 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   NẠP dữ liệu theo kỳ (fetchEntries, độc lập với năm đang xem), thẻ chỉ tiêu, thẻ con theo nhóm
   bảng (STAT_GROUPS), biểu đồ đơn sắc, danh sách chi tiết bấm mở EntryDetail; nút Excel / PDF /
   Word (Word theo canExportDocx) + chọn bảng đưa vào bản in.
+- `VehicleLogView.jsx` — tab **Nhật trình xe** (chỉ lai_xe / van_phong_xe / quan_tri). Lái xe: chọn
+  xe (mặc định profiles.vehicle_id) + ngày (≤7 ngày trước) -> OdoForm + lịch sử 30 ngày. HC-TC-QT /
+  Quản trị: ô "Hôm nay x/7 xe đã cập nhật", tổng hợp các xe theo kỳ, sổ từng xe (đọc số từ ảnh, sửa,
+  xác nhận lẻ/hàng loạt), xuất sổ Excel.
+- `OdoForm.jsx` — form 1 xe/1 ngày: ODO lúc xuất phát + lúc về, mỗi mốc GÕ SỐ hoặc CHỤP/CHỌN ẢNH
+  (bucket riêng tư `nhat-trinh-xe`), hành trình (gợi ý từ lịch), nhiên liệu, ghi chú; người quản lý
+  thêm chọn lái xe + ô xác nhận + Xóa. `OdoPhoto` = ảnh thu nhỏ qua link có hạn.
 - `FilterBar.jsx` — điều hướng tuần/tháng/ngày + lọc Ban/lãnh đạo/trạng thái
 - `EntryCard.jsx` / `StatusBadge.jsx` — ô lịch + huy hiệu trạng thái dùng chung. EntryCard nhận
   `vehicles` (mảng xe của chuyến, đã lọc bỏ xe riêng) -> dòng "Xe:"; chế độ Gọn chỉ hiện dòng này

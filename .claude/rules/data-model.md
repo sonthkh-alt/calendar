@@ -24,7 +24,8 @@
 | cb_ban | CRUD lịch lãnh đạo thuộc ban_ids; chỉ sửa khi cho_duyet/tu_choi |
 | cb_tonghop | CRUD lịch MỌI đối tượng (PCT/Đoàn/các Ban/Văn phòng) + SỬA mọi lịch mọi lúc (vd thttdn@thanhhoa.gov.vn). Lịch PCT/Đoàn → da_duyet ngay; lịch Ban/VP → cho_duyet (PCT duyệt) |
 | cb_ctqh | Cán bộ Công tác Quốc hội: CRUD lịch Đoàn ĐBQH → khởi tạo cho_duyet (Phó Trưởng Đoàn duyệt) |
-| van_phong_xe | Phòng HC-TC-QT: PHÂN xe cho các chuyến có đề nghị (không tự phê duyệt; không điều được xe riêng) |
+| van_phong_xe | Phòng HC-TC-QT: PHÂN xe cho các chuyến có đề nghị (không tự phê duyệt; không điều được xe riêng); QUẢN LÝ nhật trình xe |
+| lai_xe | Lái xe: CHỈ cập nhật nhật trình (ODO) — gắn xe qua `profiles.vehicle_id`; xem lịch, KHÔNG ghi lịch (is_app_writer loại trừ), không thấy Thống kê. 7 tài khoản chau/quyet/dung/quang/chan/tu/tien @thanhhoa.gov.vn, mật khẩu mặc định 123 |
 | nguoi_xem | xem tất cả lịch (kể cả chờ duyệt/từ chối — phân biệt bằng màu), không sửa |
 
 permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_doan) để hiện tab Chờ duyệt;
@@ -76,6 +77,18 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
 - Đơn vị đếm: SỰ KIỆN (1 hoạt động/1 ngày, nhiều lãnh đạo tính 1), LƯỢT (mỗi lãnh đạo/sự kiện),
   BUỔI (nửa ngày có lịch của 1 lãnh đạo; cả ngày = 2; trùng buổi tính 1). Đúng hạn nhập lịch =
   created_at trước 0h Thứ Hai của tuần công tác. Mặc định không tính lịch `tu_choi`.
+
+## Nhật trình xe (bảng `vehicle_logs`, tab Nhật trình xe)
+- Mỗi xe 1 dòng/ngày (unique vehicle_id + log_date): `odo_start` / `odo_end` (km), `photo_start_path` /
+  `photo_end_path` (Storage bucket riêng tư `nhat-trinh-xe`), `route`, `fuel_liters`, `note`,
+  `driver_id`, `status` `cho_xac_nhan` | `da_xac_nhan` (+ confirmed_by/_at).
+- Mỗi mốc nhập bằng GÕ SỐ hoặc GỬI ẢNH; chỉ có ảnh -> "cần đọc số", Phòng HC-TC-QT đọc và nhập số.
+- Km ngày = odo_end − (odo_start ?? ODO cuối lần ghi trước). Đối chiếu chuyến công tác: lịch có
+  `vehicle_ids` chứa xe (bỏ lịch/phiếu từ chối). Xe riêng không đối chiếu chuyến.
+- RLS (schema.sql): đọc/ghi chỉ `can_use_vehicle_log()` (lai_xe/van_phong_xe/quan_tri); lái xe chỉ
+  tạo/sửa dòng `cho_xac_nhan` (không tự xác nhận); xóa + xác nhận = `is_vehicle_log_manager()`.
+  Trong app lái xe tự sửa trong 7 ngày gần nhất (permissions.DRIVER_EDIT_DAYS).
+- Đăng nhập bằng TÊN NGẮN: không có "@" -> thêm `@thanhhoa.gov.vn` (constants.toLoginEmail, auth.js).
 
 ## Trùng giờ (dates.js → sessionsOverlap)
 - ca_ngay giao mọi buổi; gio×gio so khoảng; gio×buổi: trước 12:00 = sáng

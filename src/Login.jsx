@@ -45,7 +45,7 @@ export default function Login({ onClose }) {
     if (error) {
       setStatus('error');
       setMsg(/invalid login/i.test(error.message || '')
-        ? 'Email hoặc mật khẩu không đúng. Nếu là lần đầu, hãy nhận liên kết kích hoạt qua email.'
+        ? 'Tên đăng nhập/email hoặc mật khẩu không đúng. Nếu là lần đầu, hãy nhận liên kết kích hoạt qua email.'
         : (error.message || 'Đăng nhập không thành công.'));
     }
     // Thành công: onAuthChange ở App sẽ tự chuyển trang.
@@ -115,10 +115,10 @@ export default function Login({ onClose }) {
           ) : (
             <form onSubmit={submitPassword} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1 block">Email cơ quan</label>
+                <label className="text-xs font-semibold text-slate-500 mb-1 block">Email hoặc tên đăng nhập</label>
                 <div className={inputWrap}>
                   <Mail className="w-4 h-4 text-slate-400 shrink-0" />
-                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ten@coquan.gov.vn" className="flex-1 py-2.5 text-sm outline-none bg-transparent" />
+                  <input type="text" required autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ten@coquan.gov.vn hoặc tên (vd: chan)" className="flex-1 py-2.5 text-sm outline-none bg-transparent" />
                 </div>
               </div>
               <div>

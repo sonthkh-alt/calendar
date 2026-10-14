@@ -9,7 +9,7 @@ import { ROLES } from '../lib/constants';
  *    email/mật khẩu/họ tên + TICK vai trò + TICK các Ban (cho cb_ban). Xác nhận email luôn.
  *  - Phân quyền tài khoản đã có: đổi vai trò, Ban theo dõi (cb_ban), lãnh đạo gắn (pct).
  */
-export default function AdminUsers({ bans, leaders, profile }) {
+export default function AdminUsers({ bans, leaders, vehicles, profile }) {
   const [profiles, setProfiles] = useState([]);
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState('');
@@ -262,7 +262,13 @@ export default function AdminUsers({ bans, leaders, profile }) {
                       {pctLeaders.map((l) => <option key={l.id} value={l.id}>{l.full_name}</option>)}
                     </select>
                   )}
-                  {!['cb_ban', 'pct'].includes(p.role) && <span className="text-[12px] text-slate-400 italic">—</span>}
+                  {p.role === 'lai_xe' && (
+                    <select value={p.vehicle_id || ''} disabled={busy === p.id} onChange={(e) => save(p, { vehicle_id: e.target.value || null })} className={sel} title="Xe phụ trách (mặc định khi cập nhật nhật trình)">
+                      <option value="">— Gắn xe phụ trách —</option>
+                      {(vehicles || []).filter((v) => v.active !== false).map((v) => <option key={v.id} value={v.id}>{v.plate}{v.driver_name ? ` (${v.driver_name})` : ''}</option>)}
+                    </select>
+                  )}
+                  {!['cb_ban', 'pct', 'lai_xe'].includes(p.role) && <span className="text-[12px] text-slate-400 italic">—</span>}
                 </td>
               </tr>
             ))}

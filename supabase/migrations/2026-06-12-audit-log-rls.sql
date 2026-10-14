@@ -75,7 +75,8 @@ $$;
 
 create or replace function is_app_writer() returns boolean
 language sql security definer stable set search_path = public as $$
-  select coalesce((select role <> 'nguoi_xem' from profiles where id = auth.uid()), false)
+  -- Lái xe (lai_xe) chỉ dùng module Nhật trình xe, KHÔNG ghi lịch công tác
+  select coalesce((select role not in ('nguoi_xem','lai_xe') from profiles where id = auth.uid()), false)
       or coalesce(auth.jwt() ->> 'email', '') = 'sonthkh@gmail.com';
 $$;
 

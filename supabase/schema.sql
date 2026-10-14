@@ -46,15 +46,15 @@ create table if not exists profiles (
   full_name text,
   position text,
   role text not null default 'nguoi_xem'
-    check (role in ('quan_tri','pct','pho_truong_doan','cb_ban','cb_tonghop','cb_ctqh','van_phong_xe','nguoi_xem')),
+    check (role in ('quan_tri','pct','pho_truong_doan','cb_ban','cb_tonghop','cb_ctqh','van_phong_xe','lai_xe','nguoi_xem')),
   ban_ids uuid[] default '{}',          -- cb_ban: các Ban được phân công theo dõi
   leader_id uuid references leaders(id),-- pct/Phó Trưởng Đoàn: trỏ tới dòng leaders của chính mình
   created_at timestamptz default now()
 );
--- Nâng cấp DB cũ: mở rộng vai trò (pho_truong_doan, cb_ctqh). An toàn chạy lại.
+-- Nâng cấp DB cũ: mở rộng vai trò (pho_truong_doan, cb_ctqh, lai_xe). An toàn chạy lại.
 alter table profiles drop constraint if exists profiles_role_check;
 alter table profiles add constraint profiles_role_check
-  check (role in ('quan_tri','pct','pho_truong_doan','cb_ban','cb_tonghop','cb_ctqh','van_phong_xe','nguoi_xem'));
+  check (role in ('quan_tri','pct','pho_truong_doan','cb_ban','cb_tonghop','cb_ctqh','van_phong_xe','lai_xe','nguoi_xem'));
 
 create or replace function handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -220,6 +220,84 @@ end $$;
 -- điều xe; in kèm trên phiếu cùng mã xác thực. Xem docs/KY-SO.md.
 alter table profiles add column if not exists signature_data text;
 
+-- ---------------------------------------------------------------------
+-- 5b) NHẬT TRÌNH XE: lái xe cập nhật số ODO hằng ngày (gõ số HOẶC gửi ảnh đồng hồ),
+--     Phòng HC-TC-QT / Quản trị theo dõi, đọc số từ ảnh, xác nhận. Mỗi xe 1 dòng/ngày.
+--     CHỈ lai_xe, van_phong_xe, quan_tri đọc/ghi (RLS bên dưới + kiểm tra trong app).
+-- ---------------------------------------------------------------------
+-- Tài khoản lái xe gắn với xe mình phụ trách (mặc định khi cập nhật ODO)
+alter table profiles add column if not exists vehicle_id uuid references vehicles(id) on delete set null;
+
+create table if not exists vehicle_logs (
+  id uuid primary key default gen_random_uuid(),
+  vehicle_id uuid not null references vehicles(id) on delete cascade,
+  log_date date not null,
+  driver_id uuid references profiles(id) on delete set null,  -- lái xe chạy xe ngày đó
+  odo_start integer check (odo_start is null or odo_start >= 0),  -- ODO lúc xuất phát (km)
+  odo_end integer check (odo_end is null or odo_end >= 0),        -- ODO lúc về (km)
+  photo_start_path text,            -- ảnh đồng hồ lúc xuất phát (Storage 'nhat-trinh-xe')
+  photo_end_path text,              -- ảnh đồng hồ lúc về
+  route text,                       -- hành trình: Trụ sở -> ... -> Trụ sở
+  fuel_liters numeric(7,2) check (fuel_liters is null or fuel_liters >= 0),  -- nhiên liệu đổ thêm
+  note text,
+  status text not null default 'cho_xac_nhan' check (status in ('cho_xac_nhan','da_xac_nhan')),
+  confirmed_by uuid references profiles(id) on delete set null,
+  confirmed_at timestamptz,
+  created_by uuid references profiles(id) on delete set null default auth.uid(),
+  created_at timestamptz default now(),
+  updated_by uuid references profiles(id) on delete set null,
+  updated_at timestamptz default now(),
+  unique (vehicle_id, log_date)
+);
+create index if not exists vehicle_logs_date_idx on vehicle_logs (log_date);
+
+-- Ai được dùng module nhật trình (lái xe / Phòng HC-TC-QT / Quản trị + quản trị gốc)
+create or replace function can_use_vehicle_log() returns boolean
+language sql security definer stable set search_path = public as $$
+  select coalesce((select role in ('lai_xe','van_phong_xe','quan_tri') from profiles where id = auth.uid()), false)
+      or coalesce(auth.jwt() ->> 'email', '') = 'sonthkh@gmail.com';
+$$;
+-- Người QUẢN LÝ nhật trình (sửa mọi dòng, đọc số từ ảnh, xác nhận)
+create or replace function is_vehicle_log_manager() returns boolean
+language sql security definer stable set search_path = public as $$
+  select coalesce((select role in ('van_phong_xe','quan_tri') from profiles where id = auth.uid()), false)
+      or coalesce(auth.jwt() ->> 'email', '') = 'sonthkh@gmail.com';
+$$;
+
+alter table vehicle_logs enable row level security;
+drop policy if exists "vlog_sel" on vehicle_logs;
+drop policy if exists "vlog_ins" on vehicle_logs;
+drop policy if exists "vlog_upd" on vehicle_logs;
+drop policy if exists "vlog_del" on vehicle_logs;
+create policy "vlog_sel" on vehicle_logs for select using (can_use_vehicle_log());
+-- Lái xe chỉ tạo dòng "chờ xác nhận"; xác nhận là việc của người quản lý
+create policy "vlog_ins" on vehicle_logs for insert
+  with check (is_vehicle_log_manager() or (can_use_vehicle_log() and status = 'cho_xac_nhan'));
+-- Lái xe sửa được dòng CHƯA xác nhận; người quản lý sửa mọi dòng
+create policy "vlog_upd" on vehicle_logs for update
+  using (is_vehicle_log_manager() or (can_use_vehicle_log() and status = 'cho_xac_nhan'))
+  with check (is_vehicle_log_manager() or (can_use_vehicle_log() and status = 'cho_xac_nhan'));
+create policy "vlog_del" on vehicle_logs for delete using (is_vehicle_log_manager());
+grant select, insert, update, delete on vehicle_logs to authenticated;
+
+-- Kho ẢNH ĐỒNG HỒ ODO (riêng tư). Bọc EXCEPTION như bucket phiếu điều xe.
+do $$
+begin
+  if to_regclass('storage.buckets') is not null then
+    begin
+      insert into storage.buckets (id, name, public)
+      values ('nhat-trinh-xe', 'nhat-trinh-xe', false)
+      on conflict (id) do nothing;
+      execute 'drop policy if exists "nhat_trinh_xe_rw" on storage.objects';
+      execute 'create policy "nhat_trinh_xe_rw" on storage.objects for all to authenticated'
+        || ' using (bucket_id = ''nhat-trinh-xe'' and public.can_use_vehicle_log())'
+        || ' with check (bucket_id = ''nhat-trinh-xe'' and public.can_use_vehicle_log())';
+    exception when others then
+      raise notice 'Khong tu tao duoc bucket nhat-trinh-xe (%): hay tao thu cong trong Supabase Dashboard -> Storage (Private).', sqlerrm;
+    end;
+  end if;
+end $$;
+
 -- 6) RLS: chỉ người ĐÃ ĐĂNG NHẬP mới đọc/ghi; phân quyền chi tiết do app xử lý.
 do $$ declare t text;
 begin
@@ -242,7 +320,7 @@ begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
     create publication supabase_realtime;
   end if;
-  foreach t in array array['schedule_entries','leaders','vehicles','participant_groups','bans','locations'] loop
+  foreach t in array array['schedule_entries','leaders','vehicles','participant_groups','bans','locations','vehicle_logs'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t

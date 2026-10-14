@@ -25,7 +25,16 @@ export const ROLES = {
   cb_tonghop: 'Cán bộ TH-TT-Dân nguyện',
   cb_ctqh: 'Cán bộ Công tác Quốc hội (nhập lịch Đoàn)',
   van_phong_xe: 'Văn phòng (điều xe)',
+  lai_xe: 'Lái xe (cập nhật nhật trình xe)',
   nguoi_xem: 'Người xem',
+};
+
+// Đăng nhập bằng TÊN NGẮN: gõ "chan" (không có @) -> chan@thanhhoa.gov.vn.
+// Áp dụng cho mọi tài khoản cùng tên miền (vd "hainq" -> hainq@thanhhoa.gov.vn).
+export const LOGIN_EMAIL_DOMAIN = 'thanhhoa.gov.vn';
+export const toLoginEmail = (id) => {
+  const s = (id || '').trim().toLowerCase();
+  return !s || s.includes('@') ? s : `${s}@${LOGIN_EMAIL_DOMAIN}`;
 };
 
 // Trạng thái mục lịch

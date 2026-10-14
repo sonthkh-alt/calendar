@@ -1,5 +1,24 @@
 # Nhật ký dự án
 
+## 2026-10-14 — 7 TÀI KHOẢN LÁI XE + module NHẬT TRÌNH XE (cập nhật ODO hằng ngày)
+- **Tài khoản:** migration `2026-10-14-tai-khoan-lai-xe.sql` tạo chau / quyet / dung / quang / chan / tu /
+  tien (@thanhhoa.gov.vn, mật khẩu `123`, vai trò mới `lai_xe`), gắn xe theo `vehicles.driver_name`
+  (dự phòng theo biển số; danh sách lấy từ bản sao lưu 29/09/2026). Chỉ ghi lúc tạo mới.
+- **Đăng nhập bằng tên ngắn:** gõ "chan" -> chan@thanhhoa.gov.vn (áp dụng mọi tài khoản cùng tên miền);
+  ô đăng nhập đổi thành "Email hoặc tên đăng nhập".
+- **schema.sql:** vai trò `lai_xe`; `profiles.vehicle_id`; bảng `vehicle_logs` + RLS theo vai trò
+  (`can_use_vehicle_log`, `is_vehicle_log_manager`); bucket riêng tư `nhat-trinh-xe`; realtime.
+  `is_app_writer()` (migration audit-log-rls) loại `lai_xe` -> lái xe không ghi được lịch công tác.
+- **Tab "Nhật trình xe"** (chỉ lái xe / HC-TC-QT / Quản trị; lái xe đăng nhập vào thẳng tab này):
+  lái xe nhập ODO lúc xuất phát + lúc về bằng GÕ SỐ hoặc CHỤP/CHỌN ẢNH (tự nén ≤1600px), hành trình
+  gợi ý từ chuyến được phân trên lịch, nhiên liệu; tự sửa trong 7 ngày khi chưa xác nhận.
+  HC-TC-QT/Quản trị: "Hôm nay x/7 xe đã cập nhật", tổng hợp các xe theo kỳ (km, ngày chạy, chuyến,
+  nhiên liệu, lít/100 km), sổ từng xe với cảnh báo, đọc số từ ảnh, xác nhận lẻ/hàng loạt, xuất Excel.
+- Quản trị → Tài khoản: vai trò Lái xe có ô chọn xe phụ trách. Lái xe không thấy tab Thống kê.
+- Kiểm chứng: `npm run test:logbook` 36/36; chạy THẬT schema.sql + toàn bộ migration 2 lượt trên
+  PGlite (Postgres giả lập auth/storage): 7 tài khoản đúng xe, mật khẩu 123 khớp, RLS chặn lái xe tự
+  xác nhận / sửa dòng đã xác nhận, PCT không đọc được nhật trình. Đã xem ảnh giao diện (điện thoại 375px).
+
 ## 2026-10-13 — Tab THỐNG KÊ: số liệu + xuất báo cáo Excel / PDF / Word
 - Tab mới **"Thống kê"** (trước Quản trị) cho mọi tài khoản làm việc (không cho khách/người xem).
 - **Kỳ báo cáo** theo thông lệ cơ quan: Tuần / Tháng / Quý / 6 tháng / 9 tháng / Năm / Tùy chọn (≤5

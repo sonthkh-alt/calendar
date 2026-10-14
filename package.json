@@ -13,7 +13,8 @@
     "test:slip-pdf": "node scripts/test-slip-pdf.mjs",
     "test:slip-data": "node scripts/test-slip-data.mjs",
     "test:rules": "node scripts/test-vehicle-rules.mjs",
-    "test:stats": "node scripts/test-stats.mjs"
+    "test:stats": "node scripts/test-stats.mjs",
+    "test:logbook": "node scripts/test-logbook.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",

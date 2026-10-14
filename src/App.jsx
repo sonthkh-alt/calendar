@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarRange, CalendarDays, CalendarClock, ClipboardCheck, Car, Settings,
-  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin, Eye, BarChart3,
+  LogOut, LogIn, KeyRound, Loader2, Users, UserSquare2, ListChecks, DatabaseBackup, History, MapPin, Eye, BarChart3, Gauge,
 } from 'lucide-react';
 import Login from './Login';
 import SetPassword from './SetPassword';
@@ -10,7 +10,7 @@ import { getSession, onAuthChange, signOut, getMyProfile, isGuestEmail, signInWi
 import { fetchBans, fetchLeaders, fetchVehicles, fetchEntries, fetchParticipantGroups, fetchLocations, fetchProfiles, fetchActivityLog, recordLogin, fetchLoginCount, deleteEntry, deleteEntries } from './lib/api';
 import { weekStart, parseISO, toISODate } from './lib/dates';
 import { BOOTSTRAP_ADMIN_EMAILS, UNIT_NAME, APP_NAME, ROLES, COMMON_LOCATIONS, DEMO_NOTICE, CONTACT_INFO, truongBanLeaderIds, communeKey } from './lib/constants';
-import { canReview, canReviewEntry, canAssignVehicle, canApproveVehicle, canAdmin, canEditEntry, canCreateFor, vehicleTodoCounts, canViewStats } from './lib/permissions';
+import { canReview, canReviewEntry, canAssignVehicle, canApproveVehicle, canAdmin, canEditEntry, canCreateFor, vehicleTodoCounts, canViewStats, canUseVehicleLog } from './lib/permissions';
 import FilterBar from './components/FilterBar';
 import WeekView from './components/WeekView';
 import MonthView from './components/MonthView';
@@ -30,6 +30,7 @@ import EntryDetail from './components/EntryDetail';
 import DeviceSelect from './components/DeviceSelect';
 import NotificationBell from './components/NotificationBell';
 import StatsView from './components/StatsView';
+import VehicleLogView from './components/VehicleLogView';
 
 export default function App() {
   // ===== Phiên đăng nhập =====
@@ -92,7 +93,13 @@ export default function App() {
   }, [session]);
 
   // ===== Dữ liệu =====
-  const [tab, setTab] = useState('week'); // week | month | day | approve | vehicles | stats | admin
+  const [tab, setTab] = useState('week'); // week | month | day | approve | vehicles | logbook | stats | admin
+  // Lái xe: vào thẳng tab Nhật trình xe (việc chính hằng ngày)
+  const role = profile?.role;
+  useEffect(() => {
+    if (role === 'lai_xe') setTab('logbook');
+    else if (!['van_phong_xe', 'quan_tri'].includes(role)) setTab((t) => (t === 'logbook' ? 'week' : t)); // đăng xuất lái xe -> về Lịch tuần
+  }, [role]);
   const [adminTab, setAdminTab] = useState('users');
   const [anchor, setAnchor] = useState(new Date());
   const [filters, setFilters] = useState({ banIds: [], leaderId: null, status: null });
@@ -352,6 +359,7 @@ export default function App() {
     { key: 'day', label: 'Lịch ngày', icon: CalendarClock },
     ...(canReview(profile) ? [{ key: 'approve', label: 'Chờ duyệt', icon: ClipboardCheck, badge: pendingCount }] : []),
     ...(canAssignVehicle(profile) ? [{ key: 'vehicles', label: 'Điều xe', icon: Car, badge: vehicleTodo.mine }] : []),
+    ...(canUseVehicleLog(profile) ? [{ key: 'logbook', label: 'Nhật trình xe', icon: Gauge }] : []),
     ...(canViewStats(profile) ? [{ key: 'stats', label: 'Thống kê', icon: BarChart3 }] : []),
     ...(canAdmin(profile) ? [{ key: 'admin', label: 'Quản trị', icon: Settings }] : []),
   ];
@@ -467,6 +475,9 @@ export default function App() {
         {tab === 'vehicles' && canAssignVehicle(profile) && (
           <VehicleBoard profile={profile} anchor={anchor} entries={entries} leaders={leaders} vehicles={vehicles} profiles={pProfiles} onChanged={refresh} />
         )}
+        {tab === 'logbook' && canUseVehicleLog(profile) && (
+          <VehicleLogView profile={profile} vehicles={vehicles} profiles={pProfiles} />
+        )}
         {tab === 'stats' && canViewStats(profile) && (
           <StatsView profile={profile} leaders={leaders} bans={bans} vehicles={vehicles} profiles={pProfiles} truongBanIds={truongBanIds} onView={setViewing} />
         )}
@@ -488,7 +499,7 @@ export default function App() {
                 </button>
               ))}
             </div>
-            {adminTab === 'users' && <AdminUsers bans={bans} leaders={leaders} profile={profile} />}
+            {adminTab === 'users' && <AdminUsers bans={bans} leaders={leaders} vehicles={vehicles} profile={profile} />}
             {adminTab === 'leaders' && <AdminLeaders leaders={leaders} bans={bans} onChanged={loadCatalogs} />}
             {adminTab === 'vehicles' && <AdminVehicles vehicles={vehicles} leaders={leaders} onChanged={loadCatalogs} />}
             {adminTab === 'groups' && <AdminGroups groups={pGroups} leaders={leaders} onChanged={loadCatalogs} />}

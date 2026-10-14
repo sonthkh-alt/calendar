@@ -27,3 +27,4 @@ scripts/.vehicleSlipPdf.cjs
 scripts/.vehicleSlipData.cjs
 scripts/.stats.cjs
 scripts/.stats-core.cjs
+scripts/.logbook.cjs

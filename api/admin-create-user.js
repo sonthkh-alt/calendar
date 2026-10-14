@@ -9,7 +9,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const BOOTSTRAP_ADMIN_EMAILS = ['sonthkh@gmail.com'];
-const VALID_ROLES = ['quan_tri', 'pct', 'pho_truong_doan', 'cb_ban', 'cb_tonghop', 'cb_ctqh', 'van_phong_xe', 'nguoi_xem'];
+const VALID_ROLES = ['quan_tri', 'pct', 'pho_truong_doan', 'cb_ban', 'cb_tonghop', 'cb_ctqh', 'van_phong_xe', 'lai_xe', 'nguoi_xem'];
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Phương thức không hợp lệ.' });

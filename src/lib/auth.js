@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { toLoginEmail } from './constants';
 
 // Tài khoản KHÁCH (chỉ xem) — tài khoản Supabase thật với vai trò 'nguoi_xem'.
 // Tạo 1 lần trong Supabase Dashboard -> Authentication -> Add user (Auto Confirm).
@@ -31,7 +32,8 @@ export async function signInWithOtp(email) {
 // Đăng nhập bằng email + mật khẩu (các lần sau khi đã tạo mật khẩu)
 export async function signInWithPassword(email, password) {
   if (!supabase) return { error: { message: 'Hệ thống chưa cấu hình máy chủ.' } };
-  return supabase.auth.signInWithPassword({ email, password });
+  // Cho phép gõ tên đăng nhập ngắn (vd "chan") -> tự thêm tên miền cơ quan
+  return supabase.auth.signInWithPassword({ email: toLoginEmail(email), password });
 }
 
 // Đặt / đổi mật khẩu cho người đang đăng nhập; đánh dấu pw_set=true trong user_metadata.
