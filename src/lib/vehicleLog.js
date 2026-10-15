@@ -14,8 +14,8 @@ export const READING_KINDS = {
   khac: { label: 'Ghi thêm (khi về, dọc đường…)', short: 'Ghi thêm', cls: 'bg-sky-50 text-sky-800 border-sky-200' },
   ve: { label: 'Lúc về (dữ liệu cũ)', short: 'Về', cls: 'bg-red-50 text-red-800 border-red-200' }, // chỉ còn ở dữ liệu cũ
 };
-// Loại lần ghi lái xe chọn khi nhập: CHỈ 2 loại — Xuất phát (kèm hành trình, nhiên liệu, ghi chú)
-// và Ghi thêm (chỉ ảnh đồng hồ; dùng khi về, dọc đường...).
+// Loại lần ghi lái xe chọn khi nhập: CHỈ 2 loại — Xuất phát và Ghi thêm (khi về, dọc đường...);
+// cả hai đều có ảnh đồng hồ + hành trình, nhiên liệu, ghi chú.
 export const FORM_KINDS = ['xuat_phat', 'khac'];
 
 // Nguồn của số ODO (lái xe chỉ chụp ảnh, hệ thống tự đọc số)

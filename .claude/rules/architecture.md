@@ -96,7 +96,7 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   ảnh, "Ghi hộ lái xe", "Không tính" lần ghi nhầm (có lý do), xuất Excel. Realtime: tự nạp lại khi có
   lần ghi mới.
 - `OdoForm.jsx` — `OdoReadingForm`: MỘT lần ghi = loại (CHỈ 2: Xuất phát — kèm hành trình, nhiên liệu,
-  ghi chú / Ghi thêm — chỉ ảnh) + CHỤP ẢNH đồng hồ (bắt buộc) -> TỰ ĐỌC SỐ (odoOcr); không đọc được hoặc
+  ghi chú / Ghi thêm — cũng có hành trình, nhiên liệu, ghi chú) + CHỤP ẢNH đồng hồ (bắt buộc) -> TỰ ĐỌC SỐ (odoOcr); không đọc được hoặc
   lái xe báo sai -> gõ tay (lưu `odo_source` nhap_tay/sua_so + `odo_ocr`); số máy đọc bất thường phải tick
   "Đúng số này". `borrowed`/`ownerName` -> ghi chú mượn xe tự sinh. Lưu ngay, không sửa/xóa. Người quản
   lý ghi hộ: chọn ngày, giờ, lái xe. `OdoPhoto` = ảnh thu nhỏ qua link có hạn.

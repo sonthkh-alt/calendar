@@ -104,7 +104,7 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
     if (odd && !confirmOdd) { setMsg({ ok: false, text: 'Số đọc được chênh bất thường so với lần ghi trước — xác nhận "Đúng số này" hoặc gõ lại số.' }); return; }
     if (manualMode && delta != null && delta < 0 && !window.confirm(`Số ${fmtKm(value)} NHỎ HƠN lần ghi trước (${fmtKm(lastValue)} km). Lần ghi lưu vĩnh viễn, không sửa được. Vẫn gửi?`)) return;
     if (manualMode && delta != null && delta > MAX_DAILY_KM && !window.confirm(`Tăng ${fmtKm(delta)} km so với lần ghi trước là bất thường. Vẫn gửi?`)) return;
-    const fuelNum = kind === 'xuat_phat' && fuel.trim() ? Number(fuel.replace(',', '.')) : null;
+    const fuelNum = fuel.trim() ? Number(fuel.replace(',', '.')) : null;
     if (fuelNum != null && (Number.isNaN(fuelNum) || fuelNum < 0)) { setMsg({ ok: false, text: 'Số lít nhiên liệu không hợp lệ.' }); return; }
 
     setBusy(true);
@@ -115,7 +115,7 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
       const driverName = manager ? (drivers.find((d) => d.id === driverId)?.full_name || '') : (profile.full_name || '');
       const notes = [
         borrowed ? borrowNote(driverName, vehicle.plate, ownerName) : '',
-        kind === 'xuat_phat' ? note.trim() : '',
+        note.trim(),
         manager ? 'Phòng HC-TC-QT ghi hộ' : '',
       ].filter(Boolean);
       const row = {
@@ -124,7 +124,7 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
         borrowed: !!borrowed,
         oil_change: oilChange,
         driver_id: manager ? (driverId || null) : profile.id,
-        route: kind === 'xuat_phat' ? (route.trim() || null) : null,
+        route: route.trim() || null,
         fuel_liters: fuelNum,
         note: notes.join('; ') || null,
       };
@@ -199,7 +199,7 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
         ))}
       </div>
       <p className="text-[11.5px] text-slate-500 -mt-1.5">
-        {kind === 'xuat_phat' ? 'Khi bắt đầu chuyến: chụp đồng hồ + ghi hành trình, nhiên liệu, ghi chú.' : 'Khi về / dọc đường: chỉ cần chụp ảnh đồng hồ.'}
+        {kind === 'xuat_phat' ? 'Khi bắt đầu chuyến: chụp đồng hồ + ghi hành trình, nhiên liệu, ghi chú (nếu có).' : 'Khi về / dọc đường: chụp đồng hồ + ghi hành trình, nhiên liệu, ghi chú (nếu có).'}
       </p>
 
       {/* ẢNH ĐỒNG HỒ — bắt buộc; hệ thống tự đọc số */}
@@ -260,8 +260,7 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
       <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { takePhoto(e.target.files?.[0]); e.target.value = ''; }} />
       <input ref={pickRef} type="file" accept="image/*" className="hidden" onChange={(e) => { takePhoto(e.target.files?.[0]); e.target.value = ''; }} />
 
-      {kind === 'xuat_phat' && (
-        <>
+      {/* Hành trình / nhiên liệu / ghi chú: CẢ Xuất phát lẫn Ghi thêm */}
           <div>
             <label className="text-[12px] font-semibold text-slate-600 flex items-center gap-1 mb-1"><Route className="w-3.5 h-3.5" /> Nội dung hành trình</label>
             <textarea rows={2} value={route} onChange={(e) => setRoute(e.target.value)} placeholder="Vd: Trụ sở → xã Biện Thượng → Trụ sở" className={field} />
@@ -279,8 +278,6 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
               <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nếu có" className={field} />
             </div>
           </div>
-        </>
-      )}
 
       {/* Thay dầu: một dòng nhỏ; nổi màu khi xe sắp / đến hạn thay dầu */}
       <label className={`flex items-center gap-2 cursor-pointer rounded-lg px-2.5 py-1.5 text-[12.5px] ${oilChange ? 'bg-violet-50 border border-violet-300 text-violet-900 font-semibold' : ['soon', 'due'].includes(oil?.level) ? 'bg-amber-50 border border-amber-200 text-amber-900' : 'text-slate-500'}`}>

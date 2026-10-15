@@ -1,5 +1,10 @@
 # Nhật ký dự án
 
+## 2026-10-15 (tối) — "Ghi thêm" cũng có Hành trình, Nhiên liệu, Ghi chú
+- OdoForm: ba ô Hành trình / Nhiên liệu đổ / Ghi chú hiện cho CẢ "Xuất phát" lẫn "Ghi thêm" (trước chỉ
+  Xuất phát); lưu route / fuel_liters / note cho mọi loại lần ghi. Sổ nhật trình vốn đã cộng nhiên liệu và
+  gom hành trình của mọi lần ghi trong ngày nên không đổi gì thêm.
+
 ## 2026-10-15 (chiều) — Nhắc THAY DẦU mỗi 5.000 km (tính năng phụ, không làm rối màn hình)
 - Mốc thay dầu: lái xe tick **"Lần ghi này là lúc thay dầu"** ngay trong form ghi ODO (cột mới
   `vehicle_odo_readings.oil_change`); mốc ban đầu do Quản trị nhập ở Quản trị → Xe công vụ (cột mới
