@@ -92,6 +92,13 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
   Đối chiếu chuyến công tác: lịch có `vehicle_ids` chứa xe (bỏ lịch/phiếu từ chối); xe riêng bỏ qua.
 - Bảng `vehicle_logs` (mô hình cũ 1 dòng/ngày, có xác nhận) KHÔNG còn dùng; dữ liệu đã được chuyển
   sang `vehicle_odo_readings` trong schema.sql (idempotent theo legacy_log_id + kind).
+- Loại lần ghi lái xe chọn: CHỈ `xuat_phat` (kèm hành trình, nhiên liệu, ghi chú) và `khac` ("Ghi thêm" —
+  khi về/dọc đường, chỉ ảnh). `ve` chỉ còn ở dữ liệu cũ. Ngày đã qua mà lần ghi cuối là `xuat_phat` ->
+  cảnh báo "chưa ghi thêm số ODO khi kết thúc chuyến".
+- SỐ ODO do hệ thống ĐỌC TỪ ẢNH: `odo_source` `may_doc` | `nhap_tay` (máy không đọc được) | `sua_so`
+  (lái xe sửa số máy đọc; `odo_ocr` giữ số máy đọc) -> sổ nhật trình cảnh báo để đối chiếu ảnh.
+- MƯỢN XE: lái xe chọn xe khác xe phụ trách -> lần ghi tính cho XE ĐI, `borrowed = true`, note tự sinh
+  "Lái xe X mượn xe <biển số> (xe của lái xe Y)" (vehicleLog.borrowNote).
 - Đăng nhập bằng TÊN NGẮN: không có "@" -> thêm `@thanhhoa.gov.vn` (constants.toLoginEmail, auth.js).
 
 ## Trùng giờ (dates.js → sessionsOverlap)

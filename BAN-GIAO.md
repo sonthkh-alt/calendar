@@ -170,6 +170,9 @@ Toàn bộ nhật ký chi tiết: **`.claude/rules/changelog.md`**. Tóm tắt c
   `nhat-trinh-xe` — nếu log báo không tạo được bucket thì tạo tay: Supabase → Storage → New bucket,
   Private, rồi chạy lại workflow để gắn policy).
   Nhắc 7 lái xe ĐỔI MẬT KHẨU (123 quá yếu; mật khẩu mới tối thiểu 6 ký tự).
+- [ ] **Đọc số ODO bằng AI (15/10):** Vercel → Settings → Environment Variables thêm `ANTHROPIC_API_KEY`
+  (tạo ở console.anthropic.com) rồi Redeploy. Chưa có khóa thì app vẫn chạy nhưng đọc số bằng Tesseract
+  (kém chính xác hơn, lái xe phải gõ tay nhiều hơn). Thử chụp đồng hồ thật của cả 7 xe để kiểm tra.
 - [ ] Cấu hình **Site URL + Redirect URLs** trong Supabase Auth nếu email xác thực còn trỏ về `localhost`.
 - [ ] (Tùy chọn) ApprovalQueue: duyệt 1 dòng = duyệt cả nhóm cho đồng bộ với lịch tuần.
 - [ ] (Ghi thêm yêu cầu mới phát sinh vào đây.)

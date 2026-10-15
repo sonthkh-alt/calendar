@@ -48,6 +48,17 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   về, có chuyến mà chưa ghi); `suggestKind`; `buildLogbookWorkbook` (Excel: Tổng hợp + mỗi xe 1 sheet
   + "Chi tiết các lần ghi"). Test: npm run test:logbook
 - `images.js` — `compressImage` (nén ảnh chụp đồng hồ ≤1600px JPEG trước khi tải lên)
+- `odoOcr.js` — ĐỌC SỐ ODO TỪ ẢNH: `recognizeOdo(blob, {lastOdo})` gọi `/api/ocr-odo` (Claude) -> máy chủ
+  chưa cấu hình/lỗi thì dự phòng Tesseract.js trong trình duyệt (nạp động) -> không ra số thì value=null
+  (giao diện bắt gõ tay). Hàm thuần `pickOdoCandidate` (chọn số hợp lý từ văn bản, bỏ TRIP có thập phân)
+  + `checkPlausible` (không lùi, không nhảy quá 2.000 km). Test trong npm run test:logbook
+
+## api/ (Vercel Serverless — KHÔNG chạy ở vite dev)
+- `admin-create-user.js` — tạo tài khoản (service_role)
+- `ocr-odo.js` — đọc số ODO: xác thực JWT + vai trò module, gửi ảnh tới Claude `claude-opus-5-5`
+  (@anthropic-ai/sdk, `client.beta.messages.create`, `output_config.format` JSON schema, effort `low`,
+  `fallbacks: "default"`). Cần env `ANTHROPIC_API_KEY`; thiếu -> 501 (client chuyển Tesseract).
+  `vercel.json` đặt maxDuration 30s. Test giả lập: npm run test:ocr
 - `signAgent.js` — gọi TRỢ LÝ KÝ SỐ chạy trên máy có USB token (`http://127.0.0.1:7878`):
   `probeAgent` (dò nhanh 2,5s), `listAgentCerts`, `signPdfViaAgent` (chờ tối đa 4 phút vì phải nhập PIN).
   Đổi địa chỉ không cần build lại: `localStorage.kySoAgentUrl`.
@@ -79,13 +90,15 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 - `VehicleLogView.jsx` — tab **Nhật trình xe** (chỉ lai_xe / van_phong_xe / quan_tri; là tab MẶC ĐỊNH
   và đứng đầu với lái xe — App.tab = tabSel ?? theo vai trò). Lái xe: chọn xe (mặc định
   profiles.vehicle_id) -> form ghi ODO HÔM NAY + "Đã ghi hôm nay" + lịch sử 30 ngày (mở xem từng lần).
+  Lái xe MƯỢN xe: nút "Mượn xe khác" -> chọn xe -> lần ghi tính cho xe đi (borrowed + ghi chú).
   HC-TC-QT / Quản trị: "Hôm nay x/7 xe đã ghi", tổng hợp các xe theo kỳ, sổ từng xe với mọi lần ghi +
   ảnh, "Ghi hộ lái xe", "Không tính" lần ghi nhầm (có lý do), xuất Excel. Realtime: tự nạp lại khi có
   lần ghi mới.
-- `OdoForm.jsx` — `OdoReadingForm`: MỘT lần ghi = loại (Xuất phát / Về / Ghi thêm) + SỐ ODO (bắt buộc)
-  + ẢNH đồng hồ (bắt buộc, chụp hoặc chọn; bucket riêng tư `nhat-trinh-xe`) + hành trình / nhiên liệu /
-  ghi chú. Lưu ngay, không sửa/xóa. Người quản lý ghi hộ: chọn ngày, giờ, lái xe. `OdoPhoto` = ảnh thu
-  nhỏ qua link có hạn.
+- `OdoForm.jsx` — `OdoReadingForm`: MỘT lần ghi = loại (CHỈ 2: Xuất phát — kèm hành trình, nhiên liệu,
+  ghi chú / Ghi thêm — chỉ ảnh) + CHỤP ẢNH đồng hồ (bắt buộc) -> TỰ ĐỌC SỐ (odoOcr); không đọc được hoặc
+  lái xe báo sai -> gõ tay (lưu `odo_source` nhap_tay/sua_so + `odo_ocr`); số máy đọc bất thường phải tick
+  "Đúng số này". `borrowed`/`ownerName` -> ghi chú mượn xe tự sinh. Lưu ngay, không sửa/xóa. Người quản
+  lý ghi hộ: chọn ngày, giờ, lái xe. `OdoPhoto` = ảnh thu nhỏ qua link có hạn.
 - `FilterBar.jsx` — điều hướng tuần/tháng/ngày + lọc Ban/lãnh đạo/trạng thái
 - `EntryCard.jsx` / `StatusBadge.jsx` — ô lịch + huy hiệu trạng thái dùng chung. EntryCard nhận
   `vehicles` (mảng xe của chuyến, đã lọc bỏ xe riêng) -> dòng "Xe:"; chế độ Gọn chỉ hiện dòng này

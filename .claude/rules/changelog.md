@@ -1,5 +1,26 @@
 # Nhật ký dự án
 
+## 2026-10-15 — Nhật trình xe: TỰ ĐỌC SỐ ODO TỪ ẢNH, mượn xe, chỉ 2 loại ghi
+- **Đọc số tự động:** lái xe chỉ CHỤP ẢNH đồng hồ, không gõ số. `api/ocr-odo.js` (Vercel) gửi ảnh tới
+  Claude `claude-opus-5-5` (@anthropic-ai/sdk 0.130, JSON schema {found, odo, unit, note}, effort low,
+  `fallbacks: "default"`), lời nhắc: chỉ lấy ODO tổng, bỏ TRIP/giờ/nhiệt độ/quãng đường còn lại, không
+  đoán. Cần env **ANTHROPIC_API_KEY** trên Vercel; chưa có -> trình duyệt tự dùng **Tesseract.js**
+  (dự phòng, chọn số hợp lý so với lần ghi trước). Không đọc được -> BẮT gõ tay; lái xe thấy số sai
+  -> "Gõ lại số". Số bất thường (lùi / nhảy >2.000 km) phải tick "Đúng số này".
+- **Lưu vết nguồn số:** cột mới `odo_source` (may_doc | nhap_tay | sua_so) + `odo_ocr`; sổ nhật trình
+  cảnh báo "lái xe sửa số máy đọc (máy đọc X → ghi Y)" và ghi chú "số nhập tay"; nhãn trên từng lần ghi;
+  Excel thêm cột Nguồn số ODO.
+- **Mượn xe:** nút "Mượn xe khác" -> chọn xe; lần ghi tính vào nhật trình XE ĐI, cột `borrowed` + ghi
+  chú tự sinh "Lái xe Chân mượn xe 36A-00342 (xe của lái xe Châu)"; thanh tiêu đề chuyển màu cam; nhãn
+  "Mượn xe" trong sổ + cột Mượn xe trong Excel.
+- **Chỉ 2 loại ghi:** Xuất phát (kèm nội dung hành trình, nhiên liệu, ghi chú) và Ghi thêm (chỉ ảnh).
+  Loại "Về" chỉ còn ở dữ liệu cũ. Cảnh báo mới: ngày đã qua mà lần ghi cuối vẫn là Xuất phát.
+- Kiểm chứng: test:logbook 60/60 (gồm chọn số ODO từ văn bản, mượn xe, nguồn số); test:ocr 17/17 (hàm
+  máy chủ với SDK + Supabase giả lập: xác thực, phân quyền, tham số gửi Claude, đọc kết quả, lỗi);
+  Tesseract thật đọc đúng 55.266 trên ảnh đồng hồ dựng sẵn (bỏ TRIP 123,4); PGlite: cột mới + check
+  nguồn số; ảnh giao diện 3 trạng thái (máy đọc được / không đọc được / mượn xe).
+- CHƯA gọi Claude thật (máy dev không có khóa API) — cần thử với ảnh đồng hồ thật sau khi đặt khóa.
+
 ## 2026-10-14 (chiều) — Nhật trình xe: BẮT BUỘC số ODO + ảnh, ghi nhận mọi lần, không chờ duyệt
 - Yêu cầu: lái xe vào thẳng module; mỗi lần cập nhật phải VỪA nhập ODO VỪA chụp ảnh; mọi dữ liệu
   trong ngày được ghi lại và hiển thị ngay không chờ phê duyệt; lái xe không xóa được cái đã ghi.

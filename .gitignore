@@ -28,3 +28,5 @@ scripts/.vehicleSlipData.cjs
 scripts/.stats.cjs
 scripts/.stats-core.cjs
 scripts/.logbook.cjs
+scripts/.ocr-api.cjs
+scripts/.mock/

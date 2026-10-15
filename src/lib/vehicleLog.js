@@ -10,10 +10,24 @@ import { addDays, parseISO, toISODate, fmtDM, fmtTime } from './dates';
 export const MAX_DAILY_KM = 800;
 
 export const READING_KINDS = {
-  xuat_phat: { label: 'Lúc xuất phát', short: 'Xuất phát', cls: 'bg-slate-100 text-slate-700 border-slate-300' },
-  ve: { label: 'Lúc về', short: 'Về', cls: 'bg-red-50 text-red-800 border-red-200' },
-  khac: { label: 'Ghi thêm (dọc đường, đổ nhiên liệu…)', short: 'Ghi thêm', cls: 'bg-sky-50 text-sky-800 border-sky-200' },
+  xuat_phat: { label: 'Xuất phát', short: 'Xuất phát', cls: 'bg-slate-100 text-slate-700 border-slate-300' },
+  khac: { label: 'Ghi thêm (khi về, dọc đường…)', short: 'Ghi thêm', cls: 'bg-sky-50 text-sky-800 border-sky-200' },
+  ve: { label: 'Lúc về (dữ liệu cũ)', short: 'Về', cls: 'bg-red-50 text-red-800 border-red-200' }, // chỉ còn ở dữ liệu cũ
 };
+// Loại lần ghi lái xe chọn khi nhập: CHỈ 2 loại — Xuất phát (kèm hành trình, nhiên liệu, ghi chú)
+// và Ghi thêm (chỉ ảnh đồng hồ; dùng khi về, dọc đường...).
+export const FORM_KINDS = ['xuat_phat', 'khac'];
+
+// Nguồn của số ODO (lái xe chỉ chụp ảnh, hệ thống tự đọc số)
+export const ODO_SOURCES = {
+  may_doc: { label: 'Máy đọc từ ảnh', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+  nhap_tay: { label: 'Nhập tay (máy không đọc được)', cls: 'bg-amber-50 text-amber-800 border-amber-300' },
+  sua_so: { label: 'Đã sửa số máy đọc', cls: 'bg-rose-50 text-rose-800 border-rose-300' },
+};
+
+// Ghi chú tự sinh khi lái xe MƯỢN xe của lái xe khác
+export const borrowNote = (driverName, plate, ownerName) =>
+  `Lái xe ${driverName || ''} mượn xe ${plate || ''}${ownerName ? ` (xe của lái xe ${ownerName})` : ''}`.replace(/\s+/g, ' ').trim();
 
 const WEEKDAY = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const num = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
@@ -34,9 +48,9 @@ export function lastCountedReading(readings, vehicleId) {
   return list.length ? list[list.length - 1] : null;
 }
 
-/** Loại lần ghi gợi ý: chưa có "xuất phát" hôm nay -> xuất phát, có rồi -> về */
+/** Loại lần ghi gợi ý: chưa có "Xuất phát" hôm nay -> Xuất phát, có rồi -> Ghi thêm */
 export function suggestKind(todayReadings) {
-  return (todayReadings || []).some((r) => r.kind === 'xuat_phat' && !r.voided) ? 've' : 'xuat_phat';
+  return (todayReadings || []).some((r) => r.kind === 'xuat_phat' && !r.voided) ? 'khac' : 'xuat_phat';
 }
 
 /** Chuyến công tác (theo lịch) được phân cho xe vehicleId, gom theo ngày -> [{ content, location, time }] */
@@ -118,7 +132,15 @@ export function buildLogbook({ readings = [], vehicles = [], entries = [], profi
         warnings.push({ level: 'info', text: `Không ghi lúc xuất phát — quãng đường tính gộp từ lần ghi ${fmtDM(parseISO(prev.date))}` });
       }
       if (km != null && km > MAX_DAILY_KM) warnings.push({ level: 'warn', text: `Quãng đường trong ngày lớn bất thường (${fmtKm(km)} km)` });
-      if (valid.length && date < today && !valid.some((r) => r.kind === 've')) warnings.push({ level: 'warn', text: 'Chưa ghi ODO lúc về' });
+      // Ngày đã qua mà lần ghi cuối vẫn là "Xuất phát" -> thiếu số ODO khi kết thúc chuyến
+      if (valid.length && date < today && valid[valid.length - 1].kind === 'xuat_phat') {
+        warnings.push({ level: 'warn', text: 'Sau lần xuất phát chưa ghi thêm số ODO khi kết thúc chuyến' });
+      }
+      // Số không do máy đọc từ ảnh -> người quản lý cần đối chiếu ảnh
+      for (const r of valid) {
+        if (r.odo_source === 'sua_so') warnings.push({ level: 'warn', text: `${fmtReadTime(r.read_at)}: lái xe sửa số máy đọc (máy đọc ${fmtKm(r.odo_ocr)} → ghi ${fmtKm(r.odo)}) — đối chiếu ảnh` });
+        else if (r.odo_source === 'nhap_tay') warnings.push({ level: 'info', text: `${fmtReadTime(r.read_at)}: số ${fmtKm(r.odo)} nhập tay (máy không đọc được ảnh) — đối chiếu ảnh` });
+      }
       const dayTrips = trips.get(date) || [];
       // Xe RIÊNG phục vụ lãnh đạo không điều qua lịch -> không đối chiếu chuyến
       if (km != null && km > 0 && !dayTrips.length && !isPrivateVehicle(v)) warnings.push({ level: 'info', text: 'Xe có chạy nhưng không có chuyến công tác được phân trên lịch' });
@@ -129,6 +151,7 @@ export function buildLogbook({ readings = [], vehicles = [], entries = [], profi
           start: dayStart, startInferred: !startR && !!prev && valid.length > 0,
           end: dayEnd, km, trips: dayTrips, warnings,
           drivers: [...new Set(valid.map((r) => nameOf(r.driver_id)).filter(Boolean))],
+          borrowers: [...new Set(valid.filter((r) => r.borrowed).map((r) => nameOf(r.driver_id) || nameOf(r.created_by)).filter(Boolean))],
           route: [...new Set(valid.map((r) => (r.route || '').trim()).filter(Boolean))].join('; '),
           notes: valid.map((r) => (r.note || '').trim()).filter(Boolean).join('; '),
           fuel: valid.reduce((n, r) => n + (num(r.fuel_liters) || 0), 0) || null,
@@ -235,14 +258,16 @@ export function buildLogbookWorkbook(books, XLSX, { unitName = '', periodLabel =
   }
 
   // Chi tiết TỪNG lần ghi (kể cả lần đã đánh dấu không tính) — bằng chứng đối chiếu
-  const dHdr = ['Ngày', 'Giờ ghi', 'Biển số', 'Loại', 'Số ODO', 'Km so với lần trước', 'Lái xe', 'Người ghi', 'Có ảnh', 'Hành trình', 'Nhiên liệu (lít)', 'Ghi chú', 'Không tính (lý do)'];
+  const dHdr = ['Ngày', 'Giờ ghi', 'Biển số', 'Loại', 'Số ODO', 'Km so với lần trước', 'Lái xe', 'Người ghi', 'Có ảnh', 'Nguồn số ODO', 'Mượn xe', 'Hành trình', 'Nhiên liệu (lít)', 'Ghi chú', 'Không tính (lý do)'];
   const dRows = books.flatMap((b) => b.rows.flatMap((r) => r.items.map((it) => [
     excelSerial(r.date), fmtReadTime(it.read_at), b.vehicle.plate, READING_KINDS[it.kind]?.short || it.kind, num(it.odo), it.delta,
-    it.driverName, it.byName, it.photo_path ? 'Có' : 'Không', it.route || '', num(it.fuel_liters), it.note || '', it.voided ? (it.void_reason || 'Không tính') : '',
+    it.driverName, it.byName, it.photo_path ? 'Có' : 'Không',
+    ODO_SOURCES[it.odo_source]?.label || '', it.borrowed ? 'Mượn xe' : '',
+    it.route || '', num(it.fuel_liters), it.note || '', it.voided ? (it.void_reason || 'Không tính') : '',
   ])));
   const wsD = U.aoa_to_sheet([...head('CHI TIẾT CÁC LẦN GHI ODO'), dHdr, ...dRows]);
   dateFmt(wsD, dRows.length);
-  wsD['!cols'] = [12, 8, 13, 11, 11, 12, 16, 16, 8, 36, 12, 30, 30].map((w) => ({ wch: w }));
+  wsD['!cols'] = [12, 8, 13, 11, 11, 12, 16, 16, 8, 22, 10, 36, 12, 30, 30].map((w) => ({ wch: w }));
   wsD['!merges'] = titleMerges(dHdr.length);
   if (dRows.length) wsD['!autofilter'] = { ref: U.encode_range({ s: { r: 5, c: 0 }, e: { r: 5 + dRows.length, c: dHdr.length - 1 } }) };
   U.book_append_sheet(wb, wsD, sheetName('Chi tiết các lần ghi', used));

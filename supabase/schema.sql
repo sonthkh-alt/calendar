@@ -305,6 +305,15 @@ create table if not exists vehicle_odo_readings (
   created_at timestamptz not null default now(),
   constraint odo_reading_required check ((odo is not null and photo_path is not null) or legacy_log_id is not null)
 );
+-- (15/10/2026) Lái xe MƯỢN xe của lái xe khác: lần ghi tính cho xe đi, đánh dấu borrowed.
+-- Số ODO do hệ thống ĐỌC TỪ ẢNH: odo_source = 'may_doc' (máy đọc, lái xe không gõ) |
+-- 'nhap_tay' (máy không đọc được -> lái xe gõ) | 'sua_so' (lái xe sửa số máy đọc; odo_ocr giữ số máy đọc)
+alter table vehicle_odo_readings add column if not exists borrowed boolean not null default false;
+alter table vehicle_odo_readings add column if not exists odo_source text;
+alter table vehicle_odo_readings add column if not exists odo_ocr integer;
+alter table vehicle_odo_readings drop constraint if exists vehicle_odo_readings_odo_source_check;
+alter table vehicle_odo_readings add constraint vehicle_odo_readings_odo_source_check
+  check (odo_source is null or odo_source in ('may_doc','nhap_tay','sua_so'));
 create index if not exists odo_readings_vehicle_idx on vehicle_odo_readings (vehicle_id, reading_date, read_at);
 create index if not exists odo_readings_date_idx on vehicle_odo_readings (reading_date);
 

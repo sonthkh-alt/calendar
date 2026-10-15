@@ -14,9 +14,11 @@
     "test:slip-data": "node scripts/test-slip-data.mjs",
     "test:rules": "node scripts/test-vehicle-rules.mjs",
     "test:stats": "node scripts/test-stats.mjs",
-    "test:logbook": "node scripts/test-logbook.mjs"
+    "test:logbook": "node scripts/test-logbook.mjs",
+    "test:ocr": "node scripts/test-ocr-api.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.130.0",
     "@supabase/supabase-js": "^2.106.2",
     "date-fns": "^4.1.0",
     "docx": "^9.0.2",
@@ -25,6 +27,7 @@
     "pdfmake": "^0.2.12",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tesseract.js": "^7.0.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Gauge, Loader2, RotateCcw, FileSpreadsheet, X, AlertTriangle, Info, Car, CalendarDays, ChevronLeft, ChevronRight, ChevronDown, PencilLine, Ban, Lock,
+  Gauge, Loader2, RotateCcw, FileSpreadsheet, X, AlertTriangle, Info, Car, CalendarDays, ChevronLeft, ChevronRight, ChevronDown, PencilLine, Ban, Lock, Repeat,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { fetchOdoReadings, fetchEntries, voidOdoReading } from '../lib/api';
 import { UNIT_NAME } from '../lib/constants';
 import { canManageVehicleLog, canVoidOdoReading } from '../lib/permissions';
 import { addDays, parseISO, toISODate, fmtDMY, fmtDM, startOfMonth, endOfMonth, addMonths } from '../lib/dates';
-import { buildLogbook, exportLogbookXlsx, fmtKm, fmtReadTime, READING_KINDS, tripsByDate } from '../lib/vehicleLog';
+import { buildLogbook, exportLogbookXlsx, fmtKm, fmtReadTime, READING_KINDS, ODO_SOURCES, tripsByDate } from '../lib/vehicleLog';
 import OdoReadingForm, { OdoPhoto } from './OdoForm';
 import DateField from './DateField';
 
@@ -74,6 +74,12 @@ function ReadingList({ items, onVoid, compact = false }) {
               <span className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded border ${READING_KINDS[it.kind]?.cls || ''}`}>{READING_KINDS[it.kind]?.short || it.kind}</span>
               <span className={`text-[15px] font-bold tabular-nums ${it.voided ? 'line-through text-slate-400' : 'text-slate-900'}`}>{it.odo != null ? `${fmtKm(it.odo)} km` : 'chưa có số'}</span>
               {it.delta != null && !it.voided && <span className={`text-[12px] font-semibold ${it.delta < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{it.delta >= 0 ? '+' : ''}{fmtKm(it.delta)} km</span>}
+              {it.odo_source && it.odo_source !== 'may_doc' && (
+                <span className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded border ${ODO_SOURCES[it.odo_source]?.cls || ''}`} title={it.odo_ocr != null ? `Máy đọc: ${fmtKm(it.odo_ocr)} km` : ''}>
+                  {ODO_SOURCES[it.odo_source]?.label}{it.odo_source === 'sua_so' && it.odo_ocr != null ? ` (máy đọc ${fmtKm(it.odo_ocr)})` : ''}
+                </span>
+              )}
+              {it.borrowed && <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-800 border-amber-300 inline-flex items-center gap-0.5"><Repeat className="w-3 h-3" />Mượn xe</span>}
             </div>
             <p className="text-[11.5px] text-slate-500">
               {it.driverName && <>Lái xe {it.driverName}</>}
@@ -109,8 +115,11 @@ function DriverPage({ profile, vehicles, profiles }) {
     || active.find((v) => (v.driver_name || '').trim().toLowerCase() === (profile.full_name || '').trim().toLowerCase())?.id
     || '';
   const [vehicleId, setVehicleId] = useState(defaultVehicle);
+  const [borrowOpen, setBorrowOpen] = useState(false);
   // Danh mục xe nạp SAU khi mở trang -> tự chọn xe phụ trách khi đã biết
   useEffect(() => { if (!vehicleId && defaultVehicle) setVehicleId(defaultVehicle); }, [vehicleId, defaultVehicle]);
+  // MƯỢN XE: đang ghi cho xe KHÁC xe phụ trách -> lần ghi tính cho xe đi + ghi chú mượn xe
+  const borrowing = !!defaultVehicle && !!vehicleId && vehicleId !== defaultVehicle;
   const [openDay, setOpenDay] = useState(null);
   const from = toISODate(addDays(parseISO(today), -30));
   const { readings, entries, loading, error, load } = useReadings(from, today, vehicleId);
@@ -122,16 +131,34 @@ function DriverPage({ profile, vehicles, profiles }) {
 
   return (
     <div className="max-w-2xl mx-auto space-y-3">
-      <div className="rounded-2xl bg-gradient-to-r from-red-800 to-red-700 text-white px-4 py-3 shadow">
+      <div className={`rounded-2xl text-white px-4 py-3 shadow ${borrowing ? 'bg-gradient-to-r from-amber-700 to-amber-600' : 'bg-gradient-to-r from-red-800 to-red-700'}`}>
         <p className="text-[12px] text-red-100">Nhật trình xe — lái xe {profile.full_name || ''} · {WEEKDAY[new Date().getDay()]} {fmtDMY(new Date())}</p>
-        <div className="flex flex-wrap items-center gap-2 mt-1">
-          <Car className="w-5 h-5 text-amber-300" />
-          <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className="bg-white/15 border border-white/30 rounded-lg px-2 py-1.5 text-[15px] font-bold outline-none">
-            <option value="" className="text-slate-800">— Chọn xe —</option>
-            {active.map((v) => <option key={v.id} value={v.id} className="text-slate-800">{v.plate}{v.driver_name ? ` (${v.driver_name})` : ''}</option>)}
-          </select>
-          {vehicleId && vehicleId !== defaultVehicle && <span className="text-[11.5px] text-amber-200">Đang ghi cho xe khác xe phụ trách</span>}
-        </div>
+        {defaultVehicle && !borrowOpen && !borrowing ? (
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <Car className="w-5 h-5 text-amber-300" />
+            <p className="text-[17px] font-extrabold">{vehicle?.plate || '…'}</p>
+            <span className="text-[11.5px] text-red-100">xe phụ trách</span>
+            <button onClick={() => setBorrowOpen(true)} className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-[12.5px] font-semibold">
+              <Repeat className="w-3.5 h-3.5" /> Mượn xe khác
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <Car className="w-5 h-5 text-amber-200" />
+            <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className="bg-white/15 border border-white/30 rounded-lg px-2 py-1.5 text-[15px] font-bold outline-none">
+              <option value="" className="text-slate-800">— {defaultVehicle ? 'Chọn xe mượn' : 'Chọn xe'} —</option>
+              {active.filter((v) => !defaultVehicle || borrowing || v.id !== defaultVehicle).map((v) => (
+                <option key={v.id} value={v.id} className="text-slate-800">{v.plate}{v.driver_name ? ` (lái xe ${v.driver_name})` : ''}</option>
+              ))}
+            </select>
+            {defaultVehicle && (
+              <button onClick={() => { setVehicleId(defaultVehicle); setBorrowOpen(false); }} className="ml-auto px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-[12.5px] font-semibold">
+                ← Về xe phụ trách
+              </button>
+            )}
+          </div>
+        )}
+        {borrowing && <p className="text-[12px] text-amber-50 mt-1">Đang MƯỢN xe {vehicle?.plate}{vehicle?.driver_name ? ` của lái xe ${vehicle.driver_name}` : ''} — các lần ghi tính vào nhật trình xe này, kèm ghi chú mượn xe.</p>}
       </div>
 
       {!vehicle ? (
@@ -140,7 +167,7 @@ function DriverPage({ profile, vehicles, profiles }) {
         <>
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
             <OdoReadingForm profile={profile} vehicle={vehicle} lastReading={book?.lastCounted} todayReadings={book?.today.readings || []}
-              trips={trips} onSaved={load} />
+              trips={trips} borrowed={borrowing} ownerName={borrowing ? (vehicle.driver_name || '') : ''} onSaved={load} />
             {error && <p className="mt-2 text-[12.5px] text-rose-700">{error}</p>}
           </div>
 
