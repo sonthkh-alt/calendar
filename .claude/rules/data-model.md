@@ -99,6 +99,10 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
   (lái xe sửa số máy đọc; `odo_ocr` giữ số máy đọc) -> sổ nhật trình cảnh báo để đối chiếu ảnh.
 - MƯỢN XE: lái xe chọn xe khác xe phụ trách -> lần ghi tính cho XE ĐI, `borrowed = true`, note tự sinh
   "Lái xe X mượn xe <biển số> (xe của lái xe Y)" (vehicleLog.borrowNote).
+- NHẮC THAY DẦU mỗi 5.000 km (vehicleLog.OIL_CHANGE_KM; nhắc "sắp đến hạn" từ 4.500): mốc = số ODO LỚN
+  HƠN giữa lần ghi `oil_change = true` (lái xe tick khi ghi ODO; bỏ lần "không tính") và
+  `vehicles.oil_change_odo` (mốc ban đầu, Quản trị nhập ở tab Xe công vụ). Km từ lần thay = lần ghi hợp lệ
+  mới nhất − mốc. Chỉ hiện khi sắp/đến hạn (lái xe: 1 dòng; quản lý: nhãn trên thẻ Hôm nay + cột bảng).
 - Đăng nhập bằng TÊN NGẮN: không có "@" -> thêm `@thanhhoa.gov.vn` (constants.toLoginEmail, auth.js).
 
 ## Trùng giờ (dates.js → sessionsOverlap)

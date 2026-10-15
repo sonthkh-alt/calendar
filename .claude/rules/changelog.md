@@ -1,5 +1,17 @@
 # Nhật ký dự án
 
+## 2026-10-15 (chiều) — Nhắc THAY DẦU mỗi 5.000 km (tính năng phụ, không làm rối màn hình)
+- Mốc thay dầu: lái xe tick **"Lần ghi này là lúc thay dầu"** ngay trong form ghi ODO (cột mới
+  `vehicle_odo_readings.oil_change`); mốc ban đầu do Quản trị nhập ở Quản trị → Xe công vụ (cột mới
+  `vehicles.oil_change_odo`). Mốc dùng = số ODO lớn hơn; lần ghi bị "Không tính" thì bỏ qua.
+- Hiển thị tối giản: dưới 4.500 km KHÔNG hiện gì. Từ 4.500 km: lái xe thấy 1 dòng vàng "Sắp đến hạn
+  thay dầu" + ô tick thay dầu nổi màu; từ 5.000 km: dòng đỏ "Đến hạn thay dầu". Phòng HC-TC-QT: nhãn nhỏ
+  trên thẻ xe ở ô "Hôm nay" + cột "Thay dầu" trong bảng tổng hợp; nhãn "Thay dầu" trên lần ghi; Excel
+  thêm cột ODO thay dầu / km từ lần thay dầu / Thay dầu (chi tiết).
+- Mốc cũ nằm ngoài khoảng ngày đang xem vẫn đúng nhờ `api.fetchOilChanges` (nạp riêng các lần thay dầu).
+- Kiểm chứng: test:logbook 73/73 (mốc, ngưỡng, mốc ngoài kỳ, lần không tính); PGlite: lái xe đánh dấu
+  được, chỉ Quản trị sửa mốc trên bảng xe; ảnh giao diện lái xe + quản lý.
+
 ## 2026-10-15 — Nhật trình xe: TỰ ĐỌC SỐ ODO TỪ ẢNH, mượn xe, chỉ 2 loại ghi
 - **Đọc số tự động:** lái xe chỉ CHỤP ẢNH đồng hồ, không gõ số. `api/ocr-odo.js` (Vercel) gửi ảnh tới
   Claude `claude-opus-5-5` (@anthropic-ai/sdk 0.130, JSON schema {found, odo, unit, note}, effort low,

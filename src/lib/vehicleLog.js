@@ -85,7 +85,36 @@ export function suggestRoute(trips, base = 'Trụ sở') {
  * @param vehicles  danh mục xe; entries: lịch công tác; profiles: hồ sơ (tên lái xe / người ghi)
  * @param from,to   kỳ xem (ISO); today (ISO); showPrivate: hiện xe riêng; vehicleIds: giới hạn xe
  */
-export function buildLogbook({ readings = [], vehicles = [], entries = [], profiles = [], from, to, today, showPrivate = true, vehicleIds = null }) {
+// ===================== NHẮC THAY DẦU =====================
+// Thay dầu mỗi OIL_CHANGE_KM; từ OIL_SOON_KM bắt đầu nhắc "sắp đến hạn".
+export const OIL_CHANGE_KM = 5000;
+export const OIL_SOON_KM = 4500;
+
+/**
+ * Mốc thay dầu gần nhất của xe = số ODO LỚN HƠN giữa: lần ghi đánh dấu thay dầu (oil_change, không bị
+ * "không tính") và mốc ban đầu Quản trị nhập (vehicles.oil_change_odo). Trả { odo, date, source } | null.
+ */
+export function lastOilChange(vehicle, oilReadings = []) {
+  let best = null;
+  for (const r of oilReadings) {
+    if (r.vehicle_id !== vehicle?.id || !r.oil_change || r.voided || num(r.odo) == null) continue;
+    if (!best || num(r.odo) > best.odo) best = { odo: num(r.odo), date: r.reading_date, source: 'reading' };
+  }
+  const base = num(vehicle?.oil_change_odo);
+  if (base != null && (!best || base > best.odo)) best = { odo: base, date: null, source: 'admin' };
+  return best;
+}
+
+/** Tình trạng thay dầu: level 'unknown' (chưa có mốc/số) | 'ok' | 'soon' (≥4.500 km) | 'due' (≥5.000 km) */
+export function oilStatus(currentOdo, oil) {
+  const cur = num(currentOdo);
+  if (cur == null || !oil || oil.odo == null || cur < oil.odo) return { level: 'unknown', oil: oil || null };
+  const since = cur - oil.odo;
+  const level = since >= OIL_CHANGE_KM ? 'due' : since >= OIL_SOON_KM ? 'soon' : 'ok';
+  return { level, since, remaining: OIL_CHANGE_KM - since, oil };
+}
+
+export function buildLogbook({ readings = [], vehicles = [], entries = [], profiles = [], from, to, today, showPrivate = true, vehicleIds = null, oilReadings = [] }) {
   const profById = Object.fromEntries(profiles.map((p) => [p.id, p]));
   const nameOf = (id) => (id && (profById[id]?.full_name || profById[id]?.email)) || '';
   const list = vehicles
@@ -204,6 +233,8 @@ export function buildLogbook({ readings = [], vehicles = [], entries = [], profi
       },
       todayTrips: trips.get(today) || [],
       lastCounted: all.filter(isCounted).pop() || null,
+      // Thay dầu: tính trên số ODO mới nhất (mốc thay dầu có thể nằm ngoài khoảng đã nạp -> oilReadings riêng)
+      oil: oilStatus(all.filter(isCounted).pop()?.odo, lastOilChange(v, [...oilReadings, ...all])),
     };
   });
 }
@@ -230,13 +261,14 @@ export function buildLogbookWorkbook(books, XLSX, { unitName = '', periodLabel =
   const titleMerges = (n) => [0, 1, 2, 3].map((r) => ({ s: { r, c: 0 }, e: { r, c: n - 1 } }));
   const dateFmt = (ws, rows, col = 0) => { for (let r = 6; r < 6 + rows; r++) { const c = ws[U.encode_cell({ r, c: col })]; if (c) c.z = 'dd/mm/yyyy'; } };
 
-  const sumHdr = ['STT', 'Biển số', 'Lái xe', 'ODO đầu kỳ', 'ODO cuối kỳ', 'Tổng km', 'Số ngày có ghi', 'Số ngày xe chạy', 'Số lần ghi', 'Số chuyến công tác', 'Nhiên liệu (lít)', 'Lít/100 km', 'Ngày thiếu nhật trình', 'Ngày có lỗi'];
+  const sumHdr = ['STT', 'Biển số', 'Lái xe', 'ODO đầu kỳ', 'ODO cuối kỳ', 'Tổng km', 'Số ngày có ghi', 'Số ngày xe chạy', 'Số lần ghi', 'Số chuyến công tác', 'Nhiên liệu (lít)', 'Lít/100 km', 'Ngày thiếu nhật trình', 'Ngày có lỗi', 'ODO lần thay dầu gần nhất', 'Km từ lần thay dầu'];
   const sumRows = books.map((b, i) => [i + 1, b.vehicle.plate, b.vehicle.driver_name || '', b.summary.odoFirst, b.summary.odoLast, b.summary.totalKm,
-    b.summary.daysLogged, b.summary.daysMoving, b.summary.readings, b.summary.trips, b.summary.fuel || null, b.summary.per100, b.summary.missing, b.summary.errors]);
+    b.summary.daysLogged, b.summary.daysMoving, b.summary.readings, b.summary.trips, b.summary.fuel || null, b.summary.per100, b.summary.missing, b.summary.errors,
+    b.oil?.oil?.odo ?? null, b.oil?.since ?? null]);
   const tot = (k) => books.reduce((n, b) => n + (b.summary[k] || 0), 0);
   const ws0 = U.aoa_to_sheet([...head('TỔNG HỢP NHẬT TRÌNH XE Ô TÔ CÔNG VỤ'), sumHdr, ...sumRows,
-    ['', 'Tổng cộng', '', null, null, tot('totalKm'), tot('daysLogged'), tot('daysMoving'), tot('readings'), tot('trips'), tot('fuel') || null, null, tot('missing'), tot('errors')]]);
-  ws0['!cols'] = [6, 14, 16, 13, 13, 11, 13, 14, 11, 16, 14, 11, 18, 12].map((w) => ({ wch: w }));
+    ['', 'Tổng cộng', '', null, null, tot('totalKm'), tot('daysLogged'), tot('daysMoving'), tot('readings'), tot('trips'), tot('fuel') || null, null, tot('missing'), tot('errors'), null, null]]);
+  ws0['!cols'] = [6, 14, 16, 13, 13, 11, 13, 14, 11, 16, 14, 11, 18, 12, 16, 14].map((w) => ({ wch: w }));
   ws0['!merges'] = titleMerges(sumHdr.length);
   for (let r = 6; r < 6 + sumRows.length; r++) { const c = ws0[U.encode_cell({ r, c: 11 })]; if (c && c.t === 'n') c.z = '0.0'; }
   U.book_append_sheet(wb, ws0, sheetName('Tổng hợp', used));
@@ -258,16 +290,16 @@ export function buildLogbookWorkbook(books, XLSX, { unitName = '', periodLabel =
   }
 
   // Chi tiết TỪNG lần ghi (kể cả lần đã đánh dấu không tính) — bằng chứng đối chiếu
-  const dHdr = ['Ngày', 'Giờ ghi', 'Biển số', 'Loại', 'Số ODO', 'Km so với lần trước', 'Lái xe', 'Người ghi', 'Có ảnh', 'Nguồn số ODO', 'Mượn xe', 'Hành trình', 'Nhiên liệu (lít)', 'Ghi chú', 'Không tính (lý do)'];
+  const dHdr = ['Ngày', 'Giờ ghi', 'Biển số', 'Loại', 'Số ODO', 'Km so với lần trước', 'Lái xe', 'Người ghi', 'Có ảnh', 'Nguồn số ODO', 'Mượn xe', 'Thay dầu', 'Hành trình', 'Nhiên liệu (lít)', 'Ghi chú', 'Không tính (lý do)'];
   const dRows = books.flatMap((b) => b.rows.flatMap((r) => r.items.map((it) => [
     excelSerial(r.date), fmtReadTime(it.read_at), b.vehicle.plate, READING_KINDS[it.kind]?.short || it.kind, num(it.odo), it.delta,
     it.driverName, it.byName, it.photo_path ? 'Có' : 'Không',
-    ODO_SOURCES[it.odo_source]?.label || '', it.borrowed ? 'Mượn xe' : '',
+    ODO_SOURCES[it.odo_source]?.label || '', it.borrowed ? 'Mượn xe' : '', it.oil_change ? 'Thay dầu' : '',
     it.route || '', num(it.fuel_liters), it.note || '', it.voided ? (it.void_reason || 'Không tính') : '',
   ])));
   const wsD = U.aoa_to_sheet([...head('CHI TIẾT CÁC LẦN GHI ODO'), dHdr, ...dRows]);
   dateFmt(wsD, dRows.length);
-  wsD['!cols'] = [12, 8, 13, 11, 11, 12, 16, 16, 8, 22, 10, 36, 12, 30, 30].map((w) => ({ wch: w }));
+  wsD['!cols'] = [12, 8, 13, 11, 11, 12, 16, 16, 8, 22, 10, 10, 36, 12, 30, 30].map((w) => ({ wch: w }));
   wsD['!merges'] = titleMerges(dHdr.length);
   if (dRows.length) wsD['!autofilter'] = { ref: U.encode_range({ s: { r: 5, c: 0 }, e: { r: 5 + dRows.length, c: dHdr.length - 1 } }) };
   U.book_append_sheet(wb, wsD, sheetName('Chi tiết các lần ghi', used));

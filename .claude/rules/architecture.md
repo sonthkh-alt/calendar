@@ -45,7 +45,8 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   `buildLogbook` gom theo xe/ngày, nối chuỗi ODO (không ghi xuất phát -> lấy lần ghi trước), km ngày,
   km từng lần ghi (`delta`), loại lần ghi "không tính" khỏi số liệu nhưng vẫn trả về để hiển thị,
   đối chiếu chuyến công tác (`tripsByDate`), cảnh báo (lùi số, chênh km, >800 km/ngày, quên ghi lúc
-  về, có chuyến mà chưa ghi); `suggestKind`; `buildLogbookWorkbook` (Excel: Tổng hợp + mỗi xe 1 sheet
+  về, có chuyến mà chưa ghi); `suggestKind`; nhắc thay dầu `lastOilChange` + `oilStatus` (book.oil;
+  buildLogbook nhận `oilReadings` = các lần thay dầu ngoài khoảng nạp, api.fetchOilChanges); `buildLogbookWorkbook` (Excel: Tổng hợp + mỗi xe 1 sheet
   + "Chi tiết các lần ghi"). Test: npm run test:logbook
 - `images.js` — `compressImage` (nén ảnh chụp đồng hồ ≤1600px JPEG trước khi tải lên)
 - `odoOcr.js` — ĐỌC SỐ ODO TỪ ẢNH: `recognizeOdo(blob, {lastOdo})` gọi `/api/ocr-odo` (Claude) -> máy chủ

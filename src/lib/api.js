@@ -285,6 +285,15 @@ export async function fetchOdoReadings(fromISO, toISO, vehicleId = null) {
   return { data: all, error: null };
 }
 
+// Các lần ghi đánh dấu THAY DẦU (mọi thời điểm — mốc có thể cũ hơn khoảng ngày đang xem)
+export async function fetchOilChanges(vehicleId = null) {
+  if (!supabase) return NO_DB;
+  let q = supabase.from('vehicle_odo_readings').select('id, vehicle_id, odo, reading_date, read_at, oil_change, voided')
+    .eq('oil_change', true).eq('voided', false).order('read_at', { ascending: false }).limit(500);
+  if (vehicleId) q = q.eq('vehicle_id', vehicleId);
+  return q;
+}
+
 // Ghi thêm 1 lần đọc ODO. Lái xe: KHÔNG gửi reading_date/read_at -> máy chủ tự lấy ngày/giờ hiện tại.
 export async function addOdoReading(row) {
   if (!supabase) return NO_DB;

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Gauge, Loader2, RotateCcw, FileSpreadsheet, X, AlertTriangle, Info, Car, CalendarDays, ChevronLeft, ChevronRight, ChevronDown, PencilLine, Ban, Lock, Repeat,
+  Gauge, Loader2, RotateCcw, FileSpreadsheet, X, AlertTriangle, Info, Car, CalendarDays, ChevronLeft, ChevronRight, ChevronDown, PencilLine, Ban, Lock, Repeat, Droplet,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { fetchOdoReadings, fetchEntries, voidOdoReading } from '../lib/api';
+import { fetchOdoReadings, fetchEntries, voidOdoReading, fetchOilChanges } from '../lib/api';
 import { UNIT_NAME } from '../lib/constants';
 import { canManageVehicleLog, canVoidOdoReading } from '../lib/permissions';
 import { addDays, parseISO, toISODate, fmtDMY, fmtDM, startOfMonth, endOfMonth, addMonths } from '../lib/dates';
-import { buildLogbook, exportLogbookXlsx, fmtKm, fmtReadTime, READING_KINDS, ODO_SOURCES, tripsByDate } from '../lib/vehicleLog';
+import { buildLogbook, exportLogbookXlsx, fmtKm, fmtReadTime, READING_KINDS, ODO_SOURCES, OIL_CHANGE_KM, tripsByDate } from '../lib/vehicleLog';
 import OdoReadingForm, { OdoPhoto } from './OdoForm';
 import DateField from './DateField';
 
@@ -34,6 +34,7 @@ export default function VehicleLogView({ profile, vehicles, profiles }) {
 function useReadings(from, to, vehicleId) {
   const [readings, setReadings] = useState([]);
   const [entries, setEntries] = useState([]);
+  const [oilReadings, setOilReadings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [at, setAt] = useState(null);
@@ -43,10 +44,10 @@ function useReadings(from, to, vehicleId) {
     const id = ++req.current;
     setLoading(true); setError('');
     const chainFrom = toISODate(addDays(parseISO(from), -CHAIN_DAYS));
-    const [r, e] = await Promise.all([fetchOdoReadings(chainFrom, to, vehicleId || null), fetchEntries(from, to)]);
+    const [r, e, o] = await Promise.all([fetchOdoReadings(chainFrom, to, vehicleId || null), fetchEntries(from, to), fetchOilChanges(vehicleId || null)]);
     if (id !== req.current) return;
     if (r.error || e.error) setError((r.error || e.error).message || 'Không tải được dữ liệu.');
-    setReadings(r.data || []); setEntries(e.data || []); setAt(new Date()); setLoading(false);
+    setReadings(r.data || []); setEntries(e.data || []); setOilReadings(o.data || []); setAt(new Date()); setLoading(false);
   }, [from, to, vehicleId]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -57,7 +58,7 @@ function useReadings(from, to, vehicleId) {
       .subscribe();
     return () => { clearTimeout(t); supabase.removeChannel(ch); };
   }, [load, vehicleId]);
-  return { readings, entries, loading, error, at, load };
+  return { readings, entries, oilReadings, loading, error, at, load };
 }
 
 // Danh sách các lần ghi trong ngày (chỉ xem; người quản lý có nút "Không tính")
@@ -80,6 +81,7 @@ function ReadingList({ items, onVoid, compact = false }) {
                 </span>
               )}
               {it.borrowed && <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-800 border-amber-300 inline-flex items-center gap-0.5"><Repeat className="w-3 h-3" />Mượn xe</span>}
+              {it.oil_change && <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded border bg-violet-50 text-violet-800 border-violet-200 inline-flex items-center gap-0.5"><Droplet className="w-3 h-3" />Thay dầu</span>}
             </div>
             <p className="text-[11.5px] text-slate-500">
               {it.driverName && <>Lái xe {it.driverName}</>}
@@ -122,10 +124,10 @@ function DriverPage({ profile, vehicles, profiles }) {
   const borrowing = !!defaultVehicle && !!vehicleId && vehicleId !== defaultVehicle;
   const [openDay, setOpenDay] = useState(null);
   const from = toISODate(addDays(parseISO(today), -30));
-  const { readings, entries, loading, error, load } = useReadings(from, today, vehicleId);
+  const { readings, entries, oilReadings, loading, error, load } = useReadings(from, today, vehicleId);
   const vehicle = (vehicles || []).find((v) => v.id === vehicleId);
-  const book = useMemo(() => (vehicle ? buildLogbook({ readings, vehicles: [vehicle], entries, profiles, from, to: today, today })[0] : null),
-    [readings, vehicle, entries, profiles, from, today]);
+  const book = useMemo(() => (vehicle ? buildLogbook({ readings, vehicles: [vehicle], entries, profiles, from, to: today, today, oilReadings })[0] : null),
+    [readings, vehicle, entries, profiles, from, today, oilReadings]);
   const todayRow = book?.rows.find((r) => r.date === today);
   const trips = useMemo(() => (vehicleId ? tripsByDate(entries, vehicleId).get(today) || [] : []), [entries, vehicleId, today]);
 
@@ -160,13 +162,14 @@ function DriverPage({ profile, vehicles, profiles }) {
         )}
         {borrowing && <p className="text-[12px] text-amber-50 mt-1">Đang MƯỢN xe {vehicle?.plate}{vehicle?.driver_name ? ` của lái xe ${vehicle.driver_name}` : ''} — các lần ghi tính vào nhật trình xe này, kèm ghi chú mượn xe.</p>}
       </div>
+      <OilReminder oil={book?.oil} plate={vehicle?.plate} />
 
       {!vehicle ? (
         <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-[13px] text-amber-900">Tài khoản chưa được gắn xe phụ trách — hãy chọn xe đang lái ở trên (hoặc báo Phòng HC-TC-QT gắn xe).</p>
       ) : (
         <>
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-            <OdoReadingForm profile={profile} vehicle={vehicle} lastReading={book?.lastCounted} todayReadings={book?.today.readings || []}
+            <OdoReadingForm profile={profile} vehicle={vehicle} lastReading={book?.lastCounted} todayReadings={book?.today.readings || []} oil={book?.oil}
               trips={trips} borrowed={borrowing} ownerName={borrowing ? (vehicle.driver_name || '') : ''} onSaved={load} />
             {error && <p className="mt-2 text-[12.5px] text-rose-700">{error}</p>}
           </div>
@@ -229,14 +232,14 @@ function ManagerBoard({ profile, vehicles, profiles }) {
   const [onlyIssues, setOnlyIssues] = useState(false);
   const [writing, setWriting] = useState(null); // vehicleId đang ghi hộ
   const [busy, setBusy] = useState('');
-  const { readings, entries, loading, error, at, load } = useReadings(minIso(from, today), maxIso(to, today), null);
+  const { readings, entries, oilReadings, loading, error, at, load } = useReadings(minIso(from, today), maxIso(to, today), null);
   const drivers = useMemo(() => (profiles || []).filter((p) => p.role === 'lai_xe'), [profiles]);
 
-  const books = useMemo(() => buildLogbook({ readings, vehicles, entries, profiles, from, to, today }),
-    [readings, vehicles, entries, profiles, from, to, today]);
+  const books = useMemo(() => buildLogbook({ readings, vehicles, entries, profiles, from, to, today, oilReadings }),
+    [readings, vehicles, entries, profiles, from, to, today, oilReadings]);
   // "Hôm nay" luôn tính theo ngày hiện tại, kể cả khi kỳ đang xem là tháng khác
-  const todayBooks = useMemo(() => buildLogbook({ readings, vehicles, entries, profiles, from: today, to: today, today }),
-    [readings, vehicles, entries, profiles, today]);
+  const todayBooks = useMemo(() => buildLogbook({ readings, vehicles, entries, profiles, from: today, to: today, today, oilReadings }),
+    [readings, vehicles, entries, profiles, today, oilReadings]);
   const cur = books.find((b) => b.vehicle.id === vehicleSel) || null;
   const periodLabel = `từ ${fmtDMY(parseISO(from))} đến ${fmtDMY(parseISO(to))}`;
 
@@ -296,6 +299,7 @@ function ManagerBoard({ profile, vehicles, profiles }) {
                   </p>
                 ) : <p className="text-[12.5px] text-slate-500">Chưa ghi ODO</p>}
                 {b.todayTrips.length > 0 && <p className="text-[11.5px] text-sky-700">{b.todayTrips.length} chuyến công tác hôm nay</p>}
+                {['soon', 'due'].includes(b.oil?.level) && <OilPill oil={b.oil} />}
               </button>
             );
           })}
@@ -341,7 +345,7 @@ function ManagerBoard({ profile, vehicles, profiles }) {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setWriting(null)}>
           <div className="bg-white w-full sm:max-w-xl max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-end -mb-2"><button onClick={() => setWriting(null)} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5" /></button></div>
-            <OdoReadingForm profile={profile} vehicle={writeVehicle} lastReading={writeBook?.lastCounted} todayReadings={writeBook?.today.readings || []}
+            <OdoReadingForm profile={profile} vehicle={writeVehicle} lastReading={writeBook?.lastCounted} todayReadings={writeBook?.today.readings || []} oil={writeBook?.oil}
               trips={writeBook?.todayTrips || []} drivers={drivers} onSaved={load} onClose={() => setWriting(null)} />
           </div>
         </div>
@@ -367,7 +371,7 @@ function SummaryTable({ books, periodLabel, onPick }) {
               <th className={th}>ODO đầu kỳ</th><th className={th}>ODO cuối kỳ</th><th className={th}>Tổng km</th>
               <th className={th}>Ngày có ghi</th><th className={th}>Ngày chạy</th><th className={th}>Số lần ghi</th><th className={th}>Chuyến CT</th>
               <th className={th}>Nhiên liệu (lít)</th><th className={th}>Lít/100km</th>
-              <th className={th}>Thiếu nhật trình</th><th className={th}>Có lỗi</th>
+              <th className={th}>Thiếu nhật trình</th><th className={th}>Có lỗi</th><th className={th}>Thay dầu</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-right tabular-nums">
@@ -386,6 +390,7 @@ function SummaryTable({ books, periodLabel, onPick }) {
                   <td className="px-2.5 py-2">{s.fuel ? s.fuel.toLocaleString('vi-VN') : ''}</td>
                   <td className="px-2.5 py-2">{s.per100 != null ? s.per100.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) : ''}</td>
                   <td className="px-2.5 py-2">{warn(s.missing, 'text-rose-700')}</td><td className="px-2.5 py-2">{warn(s.errors, 'text-rose-700')}</td>
+                  <td className="px-2.5 py-2 whitespace-nowrap">{b.oil?.level === 'unknown' ? <span className="text-slate-300" title="Chưa có mốc thay dầu (Quản trị → Xe công vụ, hoặc lần ghi đánh dấu thay dầu)">–</span> : <OilPill oil={b.oil} plain />}</td>
                 </tr>
               );
             })}
@@ -394,7 +399,7 @@ function SummaryTable({ books, periodLabel, onPick }) {
             <tr className="bg-slate-100 font-bold text-right tabular-nums border-t-2 border-slate-300">
               <td className="px-2.5 py-2 text-left" colSpan={4}>Tổng cộng</td>
               <td className="px-2.5 py-2">{fmtKm(totalKm)}</td>
-              <td colSpan={8} />
+              <td colSpan={9} />
             </tr>
           </tfoot>
         </table>
@@ -446,5 +451,35 @@ function VehicleBook({ book, onlyIssues, onVoid, onWrite }) {
         ))}
       </div>
     </section>
+  );
+}
+
+// ===================== NHẮC THAY DẦU (gọn: chỉ hiện khi sắp / đến hạn) =====================
+const oilText = (oil) => (oil.level === 'due'
+  ? `Quá hạn thay dầu ${fmtKm(oil.since - OIL_CHANGE_KM)} km`
+  : `Còn ${fmtKm(oil.remaining)} km đến hạn thay dầu`);
+
+function OilReminder({ oil, plate }) {
+  if (!oil || !['soon', 'due'].includes(oil.level)) return null;
+  const due = oil.level === 'due';
+  return (
+    <p className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-[13px] ${due ? 'bg-rose-50 border-rose-300 text-rose-800' : 'bg-amber-50 border-amber-300 text-amber-900'}`}>
+      <Droplet className="w-4 h-4 shrink-0" />
+      <span>
+        <b>{due ? 'Đến hạn thay dầu' : 'Sắp đến hạn thay dầu'}</b> xe {plate}: đã chạy {fmtKm(oil.since)} km từ lần thay dầu (ODO {fmtKm(oil.oil?.odo)}).
+        {due && ' Báo Phòng HC-TC-QT; khi thay xong tick "Lần ghi này là lúc thay dầu".'}
+      </span>
+    </p>
+  );
+}
+
+function OilPill({ oil, plain = false }) {
+  if (!oil || oil.level === 'unknown') return null;
+  const cls = oil.level === 'due' ? 'text-rose-700' : oil.level === 'soon' ? 'text-amber-700' : 'text-slate-500';
+  const text = oil.level === 'ok' ? `còn ${fmtKm(oil.remaining)} km` : oilText(oil);
+  return (
+    <span className={`inline-flex items-center gap-1 ${plain ? '' : 'mt-0.5'} text-[11.5px] font-semibold ${cls}`} title={`Đã chạy ${fmtKm(oil.since)} km từ lần thay dầu (ODO ${fmtKm(oil.oil?.odo)})`}>
+      <Droplet className="w-3.5 h-3.5" />{text}
+    </span>
   );
 }

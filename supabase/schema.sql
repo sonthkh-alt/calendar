@@ -314,6 +314,10 @@ alter table vehicle_odo_readings add column if not exists odo_ocr integer;
 alter table vehicle_odo_readings drop constraint if exists vehicle_odo_readings_odo_source_check;
 alter table vehicle_odo_readings add constraint vehicle_odo_readings_odo_source_check
   check (odo_source is null or odo_source in ('may_doc','nhap_tay','sua_so'));
+-- (15/10/2026) NHẮC THAY DẦU mỗi 5.000 km: lần ghi đánh dấu oil_change = lúc thay dầu (lái xe tick
+-- khi ghi ODO); vehicles.oil_change_odo = mốc ban đầu do Quản trị nhập. Mốc dùng = số ODO lớn hơn.
+alter table vehicle_odo_readings add column if not exists oil_change boolean not null default false;
+alter table vehicles add column if not exists oil_change_odo integer check (oil_change_odo is null or oil_change_odo >= 0);
 create index if not exists odo_readings_vehicle_idx on vehicle_odo_readings (vehicle_id, reading_date, read_at);
 create index if not exists odo_readings_date_idx on vehicle_odo_readings (reading_date);
 

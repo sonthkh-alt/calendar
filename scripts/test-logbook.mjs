@@ -112,7 +112,27 @@ eq(ws.A7?.t, 'n', 'Excel: cột Ngày là ngày thật');
 eq(ws.F7?.v, 120, 'Excel: số km ngày');
 const det = XLSX.utils.sheet_to_json(wb2.Sheets['Chi tiết các lần ghi'], { header: 1 }).slice(6);
 eq(det.length, readings.filter((r) => r.reading_date >= '2026-10-01').length, 'Excel: chi tiết có ĐỦ mọi lần ghi (kể cả lần không tính)');
-must(det.some((r) => r[14] === 'Ghi nhầm số'), 'Excel: ghi rõ lý do không tính');
+must(det.some((r) => r[15] === 'Ghi nhầm số'), 'Excel: ghi rõ lý do không tính');
+
+// ---------- Nhắc thay dầu (mỗi 5.000 km) ----------
+const veh = { id: 'v9', plate: '36A-999.99', oil_change_odo: 50000 };
+eq(L.lastOilChange(veh, []).odo, 50000, 'Mốc thay dầu = mốc Quản trị nhập khi chưa có lần ghi thay dầu');
+const oilR = [{ vehicle_id: 'v9', odo: 54800, reading_date: '2026-09-01', oil_change: true }, { vehicle_id: 'v9', odo: 59000, oil_change: true, voided: true }];
+eq(L.lastOilChange(veh, oilR).odo, 54800, 'Lần ghi đánh dấu thay dầu (mới hơn) được ưu tiên; lần bị "không tính" bỏ qua');
+eq(L.lastOilChange({ id: 'v9', oil_change_odo: 60000 }, oilR).odo, 60000, 'Lấy mốc có số ODO lớn hơn');
+eq(L.lastOilChange({ id: 'x' }, oilR), null, 'Chưa có mốc -> null');
+eq(L.oilStatus(54400, { odo: 50000 }).level, 'ok', 'Dưới 4.500 km: không nhắc');
+eq(L.oilStatus(54500, { odo: 50000 }).level, 'soon', 'Từ 4.500 km: sắp đến hạn');
+eq(L.oilStatus(54620, { odo: 50000 }).remaining, 380, 'Còn bao nhiêu km');
+eq(L.oilStatus(55000, { odo: 50000 }).level, 'due', 'Từ 5.000 km: đến hạn');
+eq(L.oilStatus(49000, { odo: 50000 }).level, 'unknown', 'Số hiện tại nhỏ hơn mốc (mốc sai) -> không nhắc');
+eq(L.oilStatus(null, { odo: 50000 }).level, 'unknown', 'Chưa có lần ghi -> không nhắc');
+const oilBooks = L.buildLogbook({ readings, vehicles: [{ ...vehicles[1], oil_change_odo: 46000 }], entries, profiles, from: '2026-10-01', to: '2026-10-31', today });
+must(oilBooks[0].oil.level === 'due' && oilBooks[0].oil.since === 51520 - 46000, 'Sổ nhật trình tính thay dầu theo số ODO mới nhất');
+const oilBooks2 = L.buildLogbook({ readings: readings.map((r) => (r.id === 'r014' ? { ...r, oil_change: true } : r)), vehicles: [{ ...vehicles[1], oil_change_odo: 46000 }], entries, profiles, from: '2026-10-01', to: '2026-10-31', today });
+must(oilBooks2[0].oil.oil.odo === 50500 && oilBooks2[0].oil.level === 'ok', 'Lần ghi đánh dấu thay dầu trong kỳ -> đặt lại mốc');
+const oilBooks3 = L.buildLogbook({ readings, vehicles: [vehicles[1]], entries, profiles, from: '2026-10-01', to: '2026-10-31', today, oilReadings: [{ vehicle_id: 'v2', odo: 48000, oil_change: true }] });
+eq(oilBooks3[0].oil.since, 51520 - 48000, 'Mốc thay dầu cũ ngoài kỳ (oilReadings riêng) vẫn được dùng');
 must(det.some((r) => r[9] === 'Đã sửa số máy đọc') && det.some((r) => r[10] === 'Mượn xe'), 'Excel: cột Nguồn số ODO + Mượn xe');
 
 // ---------- Mượn xe + nguồn số ODO ----------

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, ImagePlus, Loader2, Send, Gauge, Route, Fuel, CheckCircle2, AlertTriangle, Lock, ScanLine, PencilLine, RefreshCw, Repeat } from 'lucide-react';
+import { Camera, ImagePlus, Loader2, Send, Gauge, Route, Fuel, CheckCircle2, AlertTriangle, Lock, ScanLine, PencilLine, RefreshCw, Repeat, Droplet } from 'lucide-react';
 import { addOdoReading, uploadOdoPhoto, getOdoPhotoUrl } from '../lib/api';
 import { MAX_DAILY_KM, READING_KINDS, FORM_KINDS, borrowNote, fmtKm, fmtReadTime, suggestKind, suggestRoute } from '../lib/vehicleLog';
 import { recognizeOdo } from '../lib/odoOcr';
@@ -39,9 +39,9 @@ const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padSt
  * GHI MỘT LẦN ODO. Lái xe CHỈ CHỤP ẢNH đồng hồ — hệ thống tự đọc số; không đọc được thì mới
  * yêu cầu gõ tay. Lưu ngay (không chờ duyệt), không sửa/xóa.
  * props: profile, vehicle, lastReading, todayReadings, trips (chuyến hôm nay), drivers (ghi hộ),
- *        borrowed + ownerName (lái xe đang MƯỢN xe của lái xe khác), onSaved(), onClose
+ *        borrowed + ownerName (lái xe đang MƯỢN xe của lái xe khác), oil (tình trạng thay dầu), onSaved(), onClose
  */
-export default function OdoReadingForm({ profile, vehicle, lastReading, todayReadings = [], trips = [], drivers = [], borrowed = false, ownerName = '', onSaved, onClose }) {
+export default function OdoReadingForm({ profile, vehicle, lastReading, todayReadings = [], trips = [], drivers = [], borrowed = false, ownerName = '', oil = null, onSaved, onClose }) {
   const manager = canManageVehicleLog(profile);
   const [kind, setKind] = useState(() => suggestKind(todayReadings));
   const [photo, setPhoto] = useState(null);          // File gốc
@@ -53,6 +53,7 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
   const [route, setRoute] = useState('');
   const [fuel, setFuel] = useState('');
   const [note, setNote] = useState('');
+  const [oilChange, setOilChange] = useState(false); // lần ghi này là lúc THAY DẦU
   // Người quản lý GHI HỘ: chọn ngày, giờ, lái xe
   const [date, setDate] = useState(() => toISODate(new Date()));
   const [time, setTime] = useState(nowHM);
@@ -121,6 +122,7 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
         vehicle_id: vehicle.id, kind, odo: value, photo_path: up.data.path,
         odo_source: source, odo_ocr: ocrValue,
         borrowed: !!borrowed,
+        oil_change: oilChange,
         driver_id: manager ? (driverId || null) : profile.id,
         route: kind === 'xuat_phat' ? (route.trim() || null) : null,
         fuel_liters: fuelNum,
@@ -133,8 +135,8 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
       }
       const { error } = await addOdoReading(row);
       if (error) throw new Error(error.message);
-      setMsg({ ok: true, text: `Đã ghi nhận "${READING_KINDS[kind].short}" lúc ${nowHM()}: ${fmtKm(value)} km.` });
-      resetPhoto(); setRoute(''); setFuel(''); setNote('');
+      setMsg({ ok: true, text: `Đã ghi nhận "${READING_KINDS[kind].short}" lúc ${nowHM()}: ${fmtKm(value)} km${oilChange ? ' — đã ghi mốc THAY DẦU' : ''}.` });
+      resetPhoto(); setRoute(''); setFuel(''); setNote(''); setOilChange(false);
       onSaved?.();
     } catch (e) {
       setMsg({ ok: false, text: e.message || String(e) });
@@ -279,6 +281,13 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
           </div>
         </>
       )}
+
+      {/* Thay dầu: một dòng nhỏ; nổi màu khi xe sắp / đến hạn thay dầu */}
+      <label className={`flex items-center gap-2 cursor-pointer rounded-lg px-2.5 py-1.5 text-[12.5px] ${oilChange ? 'bg-violet-50 border border-violet-300 text-violet-900 font-semibold' : ['soon', 'due'].includes(oil?.level) ? 'bg-amber-50 border border-amber-200 text-amber-900' : 'text-slate-500'}`}>
+        <input type="checkbox" checked={oilChange} onChange={(e) => setOilChange(e.target.checked)} className="accent-violet-700 w-4 h-4" />
+        <Droplet className="w-3.5 h-3.5 shrink-0" /> Lần ghi này là lúc thay dầu
+        {['soon', 'due'].includes(oil?.level) && !oilChange && <span className="ml-auto text-[11.5px] font-semibold">đã chạy {fmtKm(oil.since)} km</span>}
+      </label>
 
       {msg && (
         <p className={`text-[13px] flex items-center gap-1.5 rounded-lg px-3 py-2 ${msg.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}`}>

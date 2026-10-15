@@ -4,7 +4,8 @@ import { upsertVehicle, deleteVehicle } from '../lib/api';
 import { VEHICLE_TYPES } from '../lib/constants';
 
 /**
- * Quản trị danh sách xe: biển số, lái xe, SĐT, loại (riêng/dùng chung), PCT gắn.
+ * Quản trị danh sách xe: biển số, lái xe, SĐT, loại (riêng/dùng chung), PCT gắn, mốc ODO thay dầu
+ * ban đầu (nhắc thay dầu mỗi 5.000 km — các lần thay sau lái xe tự đánh dấu khi ghi ODO).
  */
 export default function AdminVehicles({ vehicles, leaders, onChanged }) {
   const [editing, setEditing] = useState({});
@@ -22,7 +23,8 @@ export default function AdminVehicles({ vehicles, leaders, onChanged }) {
     const row = editing[v.id];
     if (!row) return;
     setBusy(v.id);
-    await upsertVehicle({ ...row, assigned_leader_id: row.vehicle_type === 'rieng' ? (row.assigned_leader_id || null) : null });
+    const oil = String(row.oil_change_odo ?? '').replace(/\D+/g, '');
+    await upsertVehicle({ ...row, oil_change_odo: oil ? parseInt(oil, 10) : null, assigned_leader_id: row.vehicle_type === 'rieng' ? (row.assigned_leader_id || null) : null });
     setBusy(null);
     setEditing((prev) => { const n = { ...prev }; delete n[v.id]; return n; });
     onChanged?.();
@@ -86,13 +88,14 @@ export default function AdminVehicles({ vehicles, leaders, onChanged }) {
       )}
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[760px]">
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr className="bg-red-800 text-white text-[12px]">
               <th className="px-3 py-2.5 text-left font-bold">Biển số</th>
               <th className="px-3 py-2.5 text-left font-bold">Lái xe</th>
               <th className="px-3 py-2.5 text-left font-bold">SĐT</th>
               <th className="px-3 py-2.5 text-left font-bold">Loại / Phục vụ</th>
+              <th className="px-3 py-2.5 text-left font-bold w-[150px]" title="Mốc ban đầu để nhắc thay dầu mỗi 5.000 km; các lần thay sau lái xe tự đánh dấu khi ghi ODO">ODO thay dầu gần nhất</th>
               <th className="px-3 py-2.5 text-center font-bold w-[110px]">Thao tác</th>
             </tr>
           </thead>
@@ -122,6 +125,9 @@ export default function AdminVehicles({ vehicles, leaders, onChanged }) {
                         </select>
                       )}
                     </div>
+                  </td>
+                  <td className="px-3 py-2">
+                    <input className={`${input} tabular-nums`} inputMode="numeric" placeholder="vd 50000" value={row.oil_change_odo ?? ''} onChange={(e) => change(v, 'oil_change_odo', e.target.value.replace(/\D+/g, ''))} />
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-center gap-1">
