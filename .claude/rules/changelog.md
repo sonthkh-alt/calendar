@@ -1,5 +1,29 @@
 # Nhật ký dự án
 
+## 2026-10-16 — Nhật trình xe: NHIÊN LIỆU & ĐỊNH MỨC, sửa/xóa có lưu vết, lái xe xuất sổ
+- **(1) Nhiên liệu & định mức** (thẻ con mới, chỉ Phòng HC-TC-QT / Quản trị): định mức lít/100 km + loại
+  nhiên liệu + dung tích bình cho từng xe (bảng `vehicle_fuel_norms`, sửa tại chỗ); TẢI HÓA ĐƠN ảnh/PDF
+  -> `api/ocr-invoice.js` (Claude) tự đọc số HĐ, ngày, đơn vị bán, loại, lít, đơn giá, thành tiền, biển số
+  -> người nhập kiểm tra -> lưu (`fuel_invoices`, tệp gốc trong kho, kết quả máy đọc giữ ở ocr_data);
+  chưa có ANTHROPIC_API_KEY thì nhập tay. Tổng hợp theo kỳ: km theo ĐỒNG HỒ ODO, lít theo định mức, lít
+  HĐ, lít lái xe khai, tiêu hao thực tế, % vượt, thành tiền, tiền vượt định mức. 11 loại cảnh báo (vượt
+  định mức 10%/20%, trùng số HĐ kể cả HĐ năm trước, vượt dung tích bình, nhiều HĐ/ngày vượt bình, sai
+  loại NL, đơn giá lệch >15% mức phổ biến, thành tiền ≠ lít × đơn giá, biển số trên HĐ khác xe (gợi ý xe
+  đúng), đổ NL ngày xe không ghi ODO, lái xe khai lệch HĐ, khai đổ NL nhưng chưa có HĐ / chạy nhiều
+  không có HĐ, chưa có định mức). Xuất Excel "Báo cáo nhiên liệu" (tổng hợp / hóa đơn / cảnh báo).
+- **(2) Sửa / xóa nhật trình có lưu vết:** người quản lý có nút Sửa / Xóa trên từng lần ghi (và trên hóa
+  đơn) — BẮT BUỘC lý do (rpc edit_* / delete_*). Trigger CSDL ghi mọi UPDATE/DELETE vào
+  `vehicle_log_audit` (nội dung cũ + mới, lý do, người, lúc) — không bỏ qua được, không ai xóa được lịch
+  sử; ảnh/tệp gốc giữ lại. Nhãn "Đã sửa" trên lần ghi; thẻ con "Lịch sử sửa/xóa" đối chiếu cũ → mới
+  từng trường + ảnh gốc.
+- **(3) Lái xe xuất sổ nhật trình:** nút "Xuất sổ" ở mục 30 ngày gần nhất -> chọn tháng -> Excel sổ của
+  xe đang chọn (cùng mẫu sổ quản lý).
+- Phát hiện khi test: km để tính nhiên liệu PHẢI là quãng đường theo đồng hồ ODO trong kỳ (gồm quãng
+  giữa các ngày), không phải tổng km ngày của nhật trình.
+- Kiểm chứng: test:fuel 31/31, test:ocr 23/23 (thêm đọc hóa đơn), các bộ cũ xanh; PGlite: lái xe/PCT bị
+  chặn sửa/xóa/định mức/hóa đơn, thiếu lý do bị chặn, lịch sử ghi đủ cũ/mới (cả sửa thẳng REST), không xóa
+  được lịch sử; ảnh giao diện 3 thẻ con.
+
 ## 2026-10-15 (tối) — "Ghi thêm" cũng có Hành trình, Nhiên liệu, Ghi chú
 - OdoForm: ba ô Hành trình / Nhiên liệu đổ / Ghi chú hiện cho CẢ "Xuất phát" lẫn "Ghi thêm" (trước chỉ
   Xuất phát); lưu route / fuel_liters / note cho mọi loại lần ghi. Sổ nhật trình vốn đã cộng nhiên liệu và

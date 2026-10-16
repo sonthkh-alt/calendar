@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Gauge, Loader2, RotateCcw, FileSpreadsheet, X, AlertTriangle, Info, Car, CalendarDays, ChevronLeft, ChevronRight, ChevronDown, PencilLine, Ban, Lock, Repeat, Droplet,
+  Gauge, Loader2, RotateCcw, FileSpreadsheet, X, AlertTriangle, Info, Car, CalendarDays, ChevronLeft, ChevronRight, ChevronDown, PencilLine, Ban, Lock, Repeat, Droplet, Trash2, Fuel, History, BookOpen, Download,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { fetchOdoReadings, fetchEntries, voidOdoReading, fetchOilChanges } from '../lib/api';
+import { fetchOdoReadings, fetchEntries, voidOdoReading, fetchOilChanges, deleteOdoReading } from '../lib/api';
 import { UNIT_NAME } from '../lib/constants';
 import { canManageVehicleLog, canVoidOdoReading } from '../lib/permissions';
 import { addDays, parseISO, toISODate, fmtDMY, fmtDM, startOfMonth, endOfMonth, addMonths } from '../lib/dates';
 import { buildLogbook, exportLogbookXlsx, fmtKm, fmtReadTime, READING_KINDS, ODO_SOURCES, OIL_CHANGE_KM, tripsByDate } from '../lib/vehicleLog';
 import OdoReadingForm, { OdoPhoto } from './OdoForm';
+import FuelPanel from './FuelPanel';
+import { VehicleLogAudit, ReadingEditForm } from './VehicleLogAudit';
 import DateField from './DateField';
 
 const CHAIN_DAYS = 92; // nạp thêm 3 tháng trước kỳ để nối chuỗi ODO (km ngày đầu kỳ)
@@ -21,7 +23,8 @@ const maxIso = (a, b) => (a > b ? a : b);
  * duyệt; lái xe không sửa/xóa được.
  *  - Lái xe: ghi ODO cho hôm nay, xem các lần đã ghi hôm nay + lịch sử 30 ngày.
  *  - Phòng HC-TC-QT / Quản trị: theo dõi hôm nay (cập nhật tức thời), sổ nhật trình từng xe theo
- *    kỳ, ghi hộ, đánh dấu "không tính" lần ghi nhầm (vẫn giữ + hiển thị), xuất sổ Excel.
+ *    kỳ, ghi hộ, đánh dấu "không tính", SỬA / XÓA có lý do (lưu vết), xuất sổ Excel; thẻ con
+ *    "Nhiên liệu & định mức" (hóa đơn, định mức, cảnh báo) và "Lịch sử sửa/xóa".
  */
 export default function VehicleLogView({ profile, vehicles, profiles }) {
   return canManageVehicleLog(profile)
@@ -62,7 +65,7 @@ function useReadings(from, to, vehicleId) {
 }
 
 // Danh sách các lần ghi trong ngày (chỉ xem; người quản lý có nút "Không tính")
-function ReadingList({ items, onVoid, compact = false }) {
+function ReadingList({ items, onVoid, onEdit, onDelete, compact = false }) {
   if (!items.length) return null;
   return (
     <ul className="space-y-1.5">
@@ -81,6 +84,7 @@ function ReadingList({ items, onVoid, compact = false }) {
                 </span>
               )}
               {it.borrowed && <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-800 border-amber-300 inline-flex items-center gap-0.5"><Repeat className="w-3 h-3" />Mượn xe</span>}
+              {it.edited_at && <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded border bg-sky-50 text-sky-700 border-sky-200" title={`Sửa lúc ${new Date(it.edited_at).toLocaleString('vi-VN')} — xem "Lịch sử sửa/xóa"`}>Đã sửa</span>}
               {it.oil_change && <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded border bg-violet-50 text-violet-800 border-violet-200 inline-flex items-center gap-0.5"><Droplet className="w-3 h-3" />Thay dầu</span>}
             </div>
             <p className="text-[11.5px] text-slate-500">
@@ -92,10 +96,12 @@ function ReadingList({ items, onVoid, compact = false }) {
             {it.note && <p className="text-[11.5px] text-slate-500 italic">{it.note}</p>}
             {it.voided && <p className="text-[11.5px] text-rose-700 font-semibold">Không tính: {it.void_reason || 'ghi nhầm'}</p>}
           </div>
-          {onVoid && !it.voided && (
-            <button onClick={() => onVoid(it)} title="Đánh dấu KHÔNG TÍNH lần ghi nhầm (vẫn lưu và hiển thị)" className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[11.5px] font-semibold text-slate-500 hover:text-rose-700 hover:bg-rose-50">
-              <Ban className="w-3.5 h-3.5" /> Không tính
-            </button>
+          {(onVoid || onEdit || onDelete) && (
+            <div className="shrink-0 flex flex-col items-end gap-0.5">
+              {onEdit && <button onClick={() => onEdit(it)} title="Sửa (bắt buộc lý do, lưu nội dung cũ)" className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11.5px] font-semibold text-slate-500 hover:text-red-700 hover:bg-red-50"><PencilLine className="w-3.5 h-3.5" /> Sửa</button>}
+              {onVoid && !it.voided && <button onClick={() => onVoid(it)} title="Đánh dấu KHÔNG TÍNH lần ghi nhầm (vẫn lưu và hiển thị)" className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11.5px] font-semibold text-slate-500 hover:text-amber-700 hover:bg-amber-50"><Ban className="w-3.5 h-3.5" /> Không tính</button>}
+              {onDelete && <button onClick={() => onDelete(it)} title="Xóa (bắt buộc lý do, lưu nội dung cũ + ảnh)" className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11.5px] font-semibold text-slate-500 hover:text-rose-700 hover:bg-rose-50"><Trash2 className="w-3.5 h-3.5" /> Xóa</button>}
+            </div>
           )}
         </li>
       ))}
@@ -190,9 +196,10 @@ function DriverPage({ profile, vehicles, profiles }) {
 
           {book && (
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
-                <p className="text-[14px] font-bold text-slate-800">30 ngày gần nhất</p>
+              <div className="px-4 py-2.5 border-b border-slate-100 flex flex-wrap items-center gap-2">
+                <p className="text-[14px] font-bold text-slate-800 mr-auto">30 ngày gần nhất</p>
                 <p className="text-[12.5px] text-slate-500">Tổng <b className="text-slate-800 tabular-nums">{fmtKm(book.summary.totalKm)} km</b></p>
+                <DriverExport vehicle={vehicle} profiles={profiles} />
               </div>
               <ul className="divide-y divide-slate-100">
                 {[...book.rows].reverse().filter((r) => r.date !== today).map((r) => (
@@ -231,6 +238,8 @@ function ManagerBoard({ profile, vehicles, profiles }) {
   const [vehicleSel, setVehicleSel] = useState(''); // '' = tất cả xe
   const [onlyIssues, setOnlyIssues] = useState(false);
   const [writing, setWriting] = useState(null); // vehicleId đang ghi hộ
+  const [view, setView] = useState('book'); // book | fuel | audit
+  const [editingReading, setEditingReading] = useState(null);
   const [busy, setBusy] = useState('');
   const { readings, entries, oilReadings, loading, error, at, load } = useReadings(minIso(from, today), maxIso(to, today), null);
   const drivers = useMemo(() => (profiles || []).filter((p) => p.role === 'lai_xe'), [profiles]);
@@ -257,6 +266,14 @@ function ManagerBoard({ profile, vehicles, profiles }) {
     } catch (e) { alert('Không xuất được: ' + (e?.message || e)); }
     setBusy('');
   };
+  const onDelete = async (it) => {
+    const reason = window.prompt(`XÓA lần ghi ${fmtKm(it.odo)} km lúc ${fmtReadTime(it.read_at)} ${fmtDM(parseISO(it.reading_date))}?\nNội dung cũ và ảnh đồng hồ vẫn được lưu trong "Lịch sử sửa/xóa" để đối chiếu. Nhập lý do xóa:`);
+    if (reason == null) return;
+    if (!reason.trim()) { alert('Bắt buộc nhập lý do.'); return; }
+    const { error: err } = await deleteOdoReading(it.id, reason.trim());
+    if (err) alert('Không xóa được: ' + err.message);
+    load();
+  };
   const onVoid = canVoidOdoReading(profile) ? async (it) => {
     const reason = window.prompt(`Đánh dấu KHÔNG TÍNH lần ghi ${fmtKm(it.odo)} km lúc ${fmtReadTime(it.read_at)} ${fmtDM(parseISO(it.reading_date))}?\nLần ghi vẫn được giữ và hiển thị (gạch ngang). Nhập lý do:`, 'Ghi nhầm số');
     if (reason == null) return;
@@ -272,8 +289,18 @@ function ManagerBoard({ profile, vehicles, profiles }) {
 
   return (
     <div className="space-y-3">
+      <div className="flex gap-1 overflow-x-auto">
+        {[{ k: 'book', label: 'Sổ nhật trình', icon: BookOpen }, { k: 'fuel', label: 'Nhiên liệu & định mức', icon: Fuel }, { k: 'audit', label: 'Lịch sử sửa/xóa', icon: History }].map((t) => (
+          <button key={t.k} onClick={() => setView(t.k)} className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-bold ${view === t.k ? 'bg-slate-800 text-white shadow' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+            <t.icon className="w-4 h-4" /> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'audit' && <VehicleLogAudit vehicles={vehicles} profiles={profiles} />}
+
       {/* ===== Hôm nay ===== */}
-      <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      {view === 'book' && <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
         <header className="px-4 py-2.5 border-b border-slate-100 flex flex-wrap items-center gap-2">
           <Gauge className="w-4 h-4 text-red-700" />
           <h3 className="text-[14px] font-bold text-slate-800">Hôm nay {fmtDMY(parseISO(today))}: <span className={updatedToday === todayBooks.length ? 'text-emerald-700' : 'text-amber-700'}>{updatedToday}/{todayBooks.length} xe đã ghi ODO</span></h3>
@@ -304,10 +331,10 @@ function ManagerBoard({ profile, vehicles, profiles }) {
             );
           })}
         </div>
-      </section>
+      </section>}
 
       {/* ===== Kỳ + xe ===== */}
-      <div className="no-print rounded-xl border border-slate-200 bg-white/95 shadow-sm p-3 flex flex-wrap items-center gap-2">
+      {view !== 'audit' && <div className="no-print rounded-xl border border-slate-200 bg-white/95 shadow-sm p-3 flex flex-wrap items-center gap-2">
         <CalendarDays className="w-4 h-4 text-slate-500" />
         <button onClick={() => setMonth(-1)} className="p-1.5 rounded-lg hover:bg-red-50" title="Tháng trước"><ChevronLeft className="w-4 h-4" /></button>
         <div className="w-[140px]"><DateField value={from} onChange={(v) => setFrom(v > to ? to : v)} /></div>
@@ -315,17 +342,19 @@ function ManagerBoard({ profile, vehicles, profiles }) {
         <div className="w-[140px]"><DateField value={to} onChange={(v) => setTo(v < from ? from : v)} /></div>
         <button onClick={() => setMonth(1)} className="p-1.5 rounded-lg hover:bg-red-50" title="Tháng sau"><ChevronRight className="w-4 h-4" /></button>
         <button onClick={() => { setFrom(toISODate(startOfMonth(new Date()))); setTo(toISODate(endOfMonth(new Date()))); }} className="px-2.5 py-1.5 rounded-lg text-[12.5px] font-semibold border border-slate-200 text-slate-600 hover:bg-red-50">Tháng này</button>
-        <label className="flex items-center gap-1.5 text-[13px] text-slate-600 ml-1 cursor-pointer">
+        {view === 'book' && <label className="flex items-center gap-1.5 text-[13px] text-slate-600 ml-1 cursor-pointer">
           <input type="checkbox" checked={onlyIssues} onChange={(e) => setOnlyIssues(e.target.checked)} className="accent-red-700 w-4 h-4" /> Chỉ ngày có cảnh báo
-        </label>
+        </label>}
         <div className="flex-1" />
-        <button onClick={doExport} disabled={!!busy || !books.length} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-50">
+        {view === 'book' && <button onClick={doExport} disabled={!!busy || !books.length} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-50">
           {busy === 'xlsx' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />} Xuất sổ nhật trình {cur ? `xe ${cur.vehicle.plate}` : '(tất cả xe)'}
-        </button>
-      </div>
+        </button>}
+      </div>}
       {error && <p className="rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[13px] px-3 py-2">{error}</p>}
 
-      <div className="flex gap-1 overflow-x-auto pb-0.5">
+      {view === 'fuel' && <FuelPanel profile={profile} vehicles={vehicles} profiles={profiles} books={books} from={from} to={to} today={today} periodLabel={periodLabel} />}
+
+      {view === 'book' && <div className="flex gap-1 overflow-x-auto pb-0.5">
         <button onClick={() => setVehicleSel('')} className={`shrink-0 px-3 py-1.5 rounded-lg text-[13px] font-semibold ${!vehicleSel ? 'bg-red-700 text-white shadow' : 'bg-white/90 border border-slate-200 text-slate-600 hover:bg-red-50'}`}>Tổng hợp các xe</button>
         {books.map((b) => {
           const n = b.summary.missing + b.summary.errors;
@@ -336,10 +365,15 @@ function ManagerBoard({ profile, vehicles, profiles }) {
             </button>
           );
         })}
-      </div>
+      </div>}
 
-      {!cur ? <SummaryTable books={books} periodLabel={periodLabel} onPick={setVehicleSel} />
-        : <VehicleBook book={cur} onlyIssues={onlyIssues} onVoid={onVoid} onWrite={() => setWriting(cur.vehicle.id)} />}
+      {view === 'book' && (!cur ? <SummaryTable books={books} periodLabel={periodLabel} onPick={setVehicleSel} />
+        : <VehicleBook book={cur} onlyIssues={onlyIssues} onVoid={onVoid} onEdit={setEditingReading} onDelete={onDelete} onWrite={() => setWriting(cur.vehicle.id)} />)}
+
+      {editingReading && (
+        <ReadingEditForm reading={editingReading} vehicles={vehicles} drivers={drivers}
+          onSaved={() => { setEditingReading(null); load(); }} onClose={() => setEditingReading(null)} />
+      )}
 
       {writeVehicle && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setWriting(null)}>
@@ -408,7 +442,7 @@ function SummaryTable({ books, periodLabel, onPick }) {
   );
 }
 
-function VehicleBook({ book, onlyIssues, onVoid, onWrite }) {
+function VehicleBook({ book, onlyIssues, onVoid, onEdit, onDelete, onWrite }) {
   const rows = [...book.rows].reverse().filter((r) => !onlyIssues || r.warnings.some((w) => w.level !== 'info'));
   const s = book.summary;
   return (
@@ -421,7 +455,7 @@ function VehicleBook({ book, onlyIssues, onVoid, onWrite }) {
         <button onClick={onWrite} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold border border-slate-200 text-slate-700 hover:bg-red-50"><PencilLine className="w-4 h-4" /> Ghi hộ lái xe</button>
       </header>
       <p className="px-4 py-1.5 text-[11.5px] text-slate-500 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5">
-        <Lock className="w-3.5 h-3.5" /> Các lần ghi không sửa/xóa được; ghi nhầm thì bấm "Không tính" (vẫn lưu, hiển thị gạch ngang, không cộng vào km).
+        <Lock className="w-3.5 h-3.5" /> Lái xe không sửa/xóa được. Sửa / Xóa ở đây bắt buộc lý do và được lưu nguyên nội dung cũ trong "Lịch sử sửa/xóa"; "Không tính" giữ lần ghi (gạch ngang) nhưng không cộng km.
       </p>
       <div className="divide-y divide-slate-100">
         {rows.length === 0 && <p className="px-3 py-6 text-center text-slate-400 italic text-[13px]">Không có ngày nào {onlyIssues ? 'có cảnh báo' : 'trong kỳ'}.</p>}
@@ -438,7 +472,7 @@ function VehicleBook({ book, onlyIssues, onVoid, onWrite }) {
               )}
             </div>
             <div className="min-w-0">
-              <ReadingList items={r.items} onVoid={onVoid} compact />
+              <ReadingList items={r.items} onVoid={onVoid} onEdit={onEdit} onDelete={onDelete} compact />
               {r.trips.length > 0 && (
                 <div className="mt-1.5">{r.trips.map((t) => <p key={t.id} className="text-[11.5px] text-sky-800">• Chuyến công tác: {t.time && `${t.time}: `}{t.content}{t.location && ` — ${t.location}`}</p>)}</div>
               )}
@@ -481,5 +515,53 @@ function OilPill({ oil, plain = false }) {
     <span className={`inline-flex items-center gap-1 ${plain ? '' : 'mt-0.5'} text-[11.5px] font-semibold ${cls}`} title={`Đã chạy ${fmtKm(oil.since)} km từ lần thay dầu (ODO ${fmtKm(oil.oil?.odo)})`}>
       <Droplet className="w-3.5 h-3.5" />{text}
     </span>
+  );
+}
+
+// ===================== LÁI XE XUẤT SỔ NHẬT TRÌNH (theo tháng) =====================
+// Xuất sổ của XE đang chọn (mặc định xe phụ trách; đang mượn xe thì là xe mượn) — đủ các lần ghi
+// trong tháng, kể cả lần lái xe khác mượn xe (có cột "Mượn xe").
+function DriverExport({ vehicle, profiles }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => startOfMonth(addMonths(new Date(), -i))), []);
+  const [month, setMonth] = useState(() => toISODate(months[0]));
+  const run = async () => {
+    setBusy(true);
+    try {
+      const from = month;
+      const to = toISODate(endOfMonth(parseISO(month)));
+      const today = toISODate(new Date());
+      const [r, e, o] = await Promise.all([
+        fetchOdoReadings(toISODate(addDays(parseISO(from), -CHAIN_DAYS)), to, vehicle.id), fetchEntries(from, to), fetchOilChanges(vehicle.id),
+      ]);
+      if (r.error) throw new Error(r.error.message);
+      const book = buildLogbook({ readings: r.data || [], vehicles: [vehicle], entries: e.data || [], profiles, from, to, today, oilReadings: o.data || [] })[0];
+      const label = `tháng ${parseISO(month).getMonth() + 1}/${parseISO(month).getFullYear()}`;
+      await exportLogbookXlsx([book], { unitName: UNIT_NAME, periodLabel: label, generatedText: new Date().toLocaleString('vi-VN'), fileTag: `${vehicle.plate}_${month.slice(0, 7)}` });
+      setOpen(false);
+    } catch (err) {
+      alert('Không xuất được sổ: ' + (err?.message || err));
+    }
+    setBusy(false);
+  };
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 text-[12.5px] font-semibold text-slate-600 hover:bg-emerald-50 hover:text-emerald-800">
+        <Download className="w-3.5 h-3.5" /> Xuất sổ
+      </button>
+    );
+  }
+  return (
+    <div className="basis-full flex flex-wrap items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-2">
+      <span className="text-[12.5px] text-emerald-900">Sổ nhật trình xe <b>{vehicle.plate}</b></span>
+      <select value={month} onChange={(e) => setMonth(e.target.value)} className="bg-white border border-emerald-300 rounded-lg px-2 py-1 text-[13px]">
+        {months.map((m) => <option key={toISODate(m)} value={toISODate(m)}>Tháng {m.getMonth() + 1}/{m.getFullYear()}</option>)}
+      </select>
+      <button onClick={run} disabled={busy} className="flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-700 text-white text-[12.5px] font-bold disabled:opacity-60">
+        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />} Tải Excel
+      </button>
+      <button onClick={() => setOpen(false)} className="ml-auto p-1 rounded hover:bg-emerald-100" title="Đóng"><X className="w-4 h-4" /></button>
+    </div>
   );
 }

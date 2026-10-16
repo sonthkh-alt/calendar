@@ -81,5 +81,36 @@ must((await call(auth('tokDriver'), img)).status === 429, 'Quá tải -> 429');
 globalThis.__reply = () => { throw new A.AuthenticationError(401, 'bad key'); };
 must((await call(auth('tokDriver'), img)).status === 501, 'Khóa sai -> 501 (chuyển dự phòng)');
 
+// ---------- api/ocr-invoice.js (đọc hóa đơn nhiên liệu) ----------
+await build({
+  entryPoints: ['api/ocr-invoice.js'], bundle: true, format: 'cjs', platform: 'node', outfile: 'scripts/.ocr-api.cjs', logLevel: 'silent',
+  plugins: [{ name: 'mock', setup(b) {
+    b.onResolve({ filter: /^@anthropic-ai\/sdk$/ }, () => ({ path: require.resolve('./.mock/anthropic.cjs') }));
+    b.onResolve({ filter: /^@supabase\/supabase-js$/ }, () => ({ path: require.resolve('./.mock/supabase.cjs') }));
+  } }],
+});
+delete require.cache[require.resolve('./.ocr-api.cjs')];
+const inv = require('./.ocr-api.cjs').default;
+const callInv = async (headers, body) => {
+  const out = {};
+  const res = { status(st) { out.status = st; return this; }, json(j) { out.json = j; return this; } };
+  await inv({ method: 'POST', headers, body }, res);
+  return out;
+};
+globalThis.__users.tokHc = { id: 'u3', email: 'hctcqt@thanhhoa.gov.vn' };
+globalThis.__roles.u3 = 'van_phong_xe';
+const pdf = { file: Buffer.from('%PDF-1.4').toString('base64'), media_type: 'application/pdf' };
+must((await callInv(auth('tokDriver'), pdf)).status === 403, 'Hóa đơn: lái xe KHÔNG được gọi (chỉ HC-TC-QT / Quản trị)');
+must((await callInv(auth('tokHc'), { file: 'abc', media_type: 'text/plain' })).status === 415, 'Hóa đơn: tệp không phải ảnh/PDF -> 415');
+globalThis.__reply = () => ({ stop_reason: 'end_turn', model: 'claude-opus-5-5', content: [{ type: 'text', text: JSON.stringify({ found: true, invoice_no: '0001234', invoice_date: '2026-10-15', seller: 'CHXD Số 1', fuel_type: 'dau', liters: 45.5, unit_price: 20500, amount: 932750, plate: '36A-123.68', note: '' }) }] });
+const ok2 = await callInv(auth('tokHc'), pdf);
+must(ok2.status === 200 && ok2.json.found && ok2.json.liters === 45.5 && ok2.json.plate === '36A-123.68', 'Hóa đơn: trả đủ số lít, biển số...');
+const q2 = globalThis.__lastReq;
+must(q2.messages[0].content[0].type === 'document' && q2.messages[0].content[0].source.media_type === 'application/pdf', 'Hóa đơn PDF gửi dạng document');
+must(q2.output_config.format.schema.required.includes('liters') && q2.fallbacks === 'default', 'Hóa đơn: JSON schema + fallback');
+globalThis.__reply = () => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ found: true, invoice_no: '', invoice_date: '15/10/2026', seller: '', fuel_type: '', liters: 0, unit_price: 0, amount: 0, plate: '', note: '' }) }] });
+const bad = await callInv(auth('tokHc'), { file: 'aGk=', media_type: 'image/jpeg' });
+must(bad.json.found === false && bad.json.invoice_date === '', 'Hóa đơn: 0 lít -> found=false; ngày sai định dạng -> bỏ');
+
 console.log(pass ? '\nTẤT CẢ ĐẠT' : '\nCÓ LỖI');
 process.exit(pass ? 0 : 1);

@@ -30,3 +30,4 @@ scripts/.stats-core.cjs
 scripts/.logbook.cjs
 scripts/.ocr-api.cjs
 scripts/.mock/
+scripts/.fuel.cjs

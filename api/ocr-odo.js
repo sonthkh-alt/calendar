@@ -9,11 +9,10 @@
 //   - VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY (đã có) — để xác thực người gọi.
 // Bảo mật: chỉ tài khoản lái xe / Phòng HC-TC-QT / Quản trị (đã đăng nhập) được gọi.
 import Anthropic from '@anthropic-ai/sdk';
-import { createClient } from '@supabase/supabase-js';
+import { authorize, readBody } from './_auth.js';
 
 const MODEL = 'claude-opus-5-5';
 const ALLOWED_ROLES = ['lai_xe', 'van_phong_xe', 'quan_tri'];
-const BOOTSTRAP_ADMIN_EMAILS = ['sonthkh@gmail.com'];
 const MAX_IMAGE_B64 = 4_000_000; // ~3 MB ảnh (ảnh đã được nén ≤1600px ở trình duyệt)
 
 const SYSTEM = `Bạn đọc số trên ảnh chụp bảng đồng hồ xe ô tô để ghi nhật trình xe công vụ.
@@ -43,27 +42,11 @@ export default async function handler(req, res) {
   }
 
   // 1) Xác thực người gọi + quyền dùng module Nhật trình xe
-  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-  const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-  if (!url || !key) return res.status(500).json({ error: 'Máy chủ chưa cấu hình Supabase.' });
-  if (!token) return res.status(401).json({ error: 'Thiếu phiên đăng nhập.' });
-  const sb = createClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-  const { data: who, error: whoErr } = await sb.auth.getUser(token);
-  if (whoErr || !who?.user) return res.status(401).json({ error: 'Phiên đăng nhập không hợp lệ.' });
-  let allowed = BOOTSTRAP_ADMIN_EMAILS.includes((who.user.email || '').toLowerCase());
-  if (!allowed) {
-    const { data: prof } = await sb.from('profiles').select('role').eq('id', who.user.id).single();
-    allowed = ALLOWED_ROLES.includes(prof?.role);
-  }
-  if (!allowed) return res.status(403).json({ error: 'Tài khoản không có quyền dùng Nhật trình xe.' });
+  const auth = await authorize(req, ALLOWED_ROLES);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
 
   // 2) Ảnh
-  let body = req.body;
-  if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
+  const body = readBody(req);
   const data = String(body?.image || '').replace(/^data:[^,]+,/, '');
   const mediaType = ['image/jpeg', 'image/png', 'image/webp'].includes(body?.media_type) ? body.media_type : 'image/jpeg';
   if (!data) return res.status(400).json({ error: 'Thiếu ảnh.' });

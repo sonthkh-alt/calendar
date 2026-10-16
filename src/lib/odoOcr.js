@@ -103,3 +103,33 @@ export async function recognizeOdo(blob, { lastOdo = null } = {}) {
     return { value: null, engine: null, note: '', plausible: { ok: false, reason: 'none' } };
   }
 }
+
+/**
+ * ĐỌC HÓA ĐƠN NHIÊN LIỆU (ảnh đã nén hoặc PDF) qua /api/ocr-invoice. Trả { ok: true, data } hoặc
+ * { ok: false, message } — không đọc được thì giao diện cho nhập tay (không ném lỗi).
+ */
+export async function readInvoice(blob) {
+  try {
+    if (!supabase) return { ok: false, message: 'Chưa cấu hình máy chủ.' };
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return { ok: false, message: 'Chưa đăng nhập.' };
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 55000);
+    try {
+      const res = await fetch('/api/ocr-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ file: await toBase64(blob), media_type: blob.type || 'image/jpeg' }),
+        signal: ctrl.signal,
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) return { ok: false, message: json?.error || `Không đọc được hóa đơn (${res.status}) — vui lòng nhập tay.` };
+      if (!json?.found) return { ok: false, message: json?.note ? `Không đọc được: ${json.note}` : 'Không nhận dạng được hóa đơn — vui lòng nhập tay.', data: json };
+      return { ok: true, data: json };
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return { ok: false, message: 'Không kết nối được máy chủ đọc hóa đơn — vui lòng nhập tay.' };
+  }
+}

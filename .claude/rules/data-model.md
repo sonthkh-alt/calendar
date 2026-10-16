@@ -103,7 +103,22 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
   HƠN giữa lần ghi `oil_change = true` (lái xe tick khi ghi ODO; bỏ lần "không tính") và
   `vehicles.oil_change_odo` (mốc ban đầu, Quản trị nhập ở tab Xe công vụ). Km từ lần thay = lần ghi hợp lệ
   mới nhất − mốc. Chỉ hiện khi sắp/đến hạn (lái xe: 1 dòng; quản lý: nhãn trên thẻ Hôm nay + cột bảng).
+- SỬA / XÓA (chỉ người quản lý): qua rpc `edit_odo_reading` / `delete_odo_reading` (và
+  `edit_fuel_invoice` / `delete_fuel_invoice`) — BẮT BUỘC lý do. Trigger `vehicle_log_audit_fn` ghi MỌI
+  UPDATE/DELETE (kể cả gọi thẳng REST, khi đó lý do để trống) vào `vehicle_log_audit` (old_data/new_data
+  jsonb, reason, actor) — lỗi ghi lịch sử thì thao tác cũng hỏng; không ai ghi/xóa được bảng lịch sử.
+  Trigger `vehicle_log_mark_edit_fn` đặt `edited_at/_by` khi NỘI DUNG đổi (đánh dấu "Không tính" thì
+  không). Xóa KHÔNG xóa ảnh/tệp gốc trong kho. Lái xe vẫn không sửa/xóa được.
+- Lái xe XUẤT SỔ nhật trình của xe đang chọn theo tháng (Excel, cùng mẫu sổ của quản lý).
 - Đăng nhập bằng TÊN NGẮN: không có "@" -> thêm `@thanhhoa.gov.vn` (constants.toLoginEmail, auth.js).
+
+## Nhiên liệu & định mức (bảng `vehicle_fuel_norms`, `fuel_invoices` — CHỈ người quản lý)
+- `vehicle_fuel_norms` (1 dòng/xe): `norm_l100` (lít/100 km), `fuel_type` xang|dau, `tank_liters`.
+  Bảng riêng (không phải `vehicles`) để Phòng HC-TC-QT tự sửa được (RLS is_vehicle_log_manager).
+- `fuel_invoices`: ngày, số HĐ, đơn vị bán, loại, lít (>0), đơn giá, thành tiền, ODO, lái xe, tệp ảnh/PDF
+  (bucket `nhat-trinh-xe`, thư mục hoa-don/), `ocr_data` (kết quả máy đọc để đối chiếu), edited_at/_by.
+- Tiêu hao thực tế = lít HĐ trong kỳ ÷ km theo đồng hồ ODO trong kỳ × 100; vượt ≥10% cảnh báo, ≥20%
+  nghiêm trọng; xe chạy < 100 km không kết luận. Tiền vượt = lít vượt × đơn giá bình quân.
 
 ## Trùng giờ (dates.js → sessionsOverlap)
 - ca_ngay giao mọi buổi; gio×gio so khoảng; gio×buổi: trước 12:00 = sáng

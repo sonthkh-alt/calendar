@@ -383,6 +383,182 @@ begin
   end if;
 end $$;
 
+-- ---------------------------------------------------------------------
+-- 5c) NHIÊN LIỆU & ĐỊNH MỨC (16/10/2026) — Phòng HC-TC-QT / Quản trị tải hóa đơn nhiên liệu, đặt định
+--     mức lít/100 km cho từng xe; hệ thống tổng hợp, so với km trong nhật trình và cảnh báo.
+--     CHỈ người quản lý nhật trình (is_vehicle_log_manager) đọc/ghi.
+-- ---------------------------------------------------------------------
+create table if not exists vehicle_fuel_norms (
+  vehicle_id uuid primary key references vehicles(id) on delete cascade,
+  norm_l100 numeric(5,2) check (norm_l100 is null or norm_l100 > 0),      -- định mức lít/100 km
+  fuel_type text check (fuel_type is null or fuel_type in ('xang','dau')),  -- xăng | dầu diesel
+  tank_liters numeric(6,1) check (tank_liters is null or tank_liters > 0), -- dung tích bình (lít)
+  note text,
+  updated_by uuid references profiles(id) on delete set null default auth.uid(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists fuel_invoices (
+  id uuid primary key default gen_random_uuid(),
+  vehicle_id uuid not null references vehicles(id) on delete cascade,
+  invoice_date date not null,
+  invoice_no text,                     -- số hóa đơn
+  seller text,                         -- đơn vị bán (cửa hàng xăng dầu)
+  fuel_type text check (fuel_type is null or fuel_type in ('xang','dau')),
+  liters numeric(8,2) not null check (liters > 0),
+  unit_price numeric(12,2) check (unit_price is null or unit_price >= 0),  -- đơn giá (đồng/lít)
+  amount numeric(14,0) check (amount is null or amount >= 0),               -- thành tiền (đồng)
+  odo integer check (odo is null or odo >= 0),                              -- ODO lúc đổ (nếu có)
+  driver_id uuid references profiles(id) on delete set null,
+  file_path text,                      -- ảnh / PDF hóa đơn (bucket 'nhat-trinh-xe', thư mục hoa-don/)
+  file_name text,
+  ocr_data jsonb,                      -- kết quả máy đọc hóa đơn (giữ để đối chiếu)
+  note text,
+  created_by uuid references profiles(id) on delete set null default auth.uid(),
+  created_at timestamptz not null default now(),
+  edited_by uuid references profiles(id) on delete set null,
+  edited_at timestamptz
+);
+create index if not exists fuel_invoices_vehicle_idx on fuel_invoices (vehicle_id, invoice_date);
+create index if not exists fuel_invoices_date_idx on fuel_invoices (invoice_date);
+
+alter table vehicle_fuel_norms enable row level security;
+alter table fuel_invoices enable row level security;
+drop policy if exists "fuel_norm_all" on vehicle_fuel_norms;
+drop policy if exists "fuel_inv_all" on fuel_invoices;
+create policy "fuel_norm_all" on vehicle_fuel_norms for all using (is_vehicle_log_manager()) with check (is_vehicle_log_manager());
+create policy "fuel_inv_all" on fuel_invoices for all using (is_vehicle_log_manager()) with check (is_vehicle_log_manager());
+grant select, insert, update, delete on vehicle_fuel_norms, fuel_invoices to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 5d) LỊCH SỬ SỬA / XÓA NHẬT TRÌNH + HÓA ĐƠN (bắt buộc lưu vết, giữ nội dung cũ)
+--     Trigger ghi MỌI lần UPDATE / DELETE trên vehicle_odo_readings và fuel_invoices (kể cả gọi thẳng
+--     REST) -> không ai bỏ qua được. Lý do lấy từ app.edit_reason (hàm edit_* / delete_* đặt). Lỗi ghi
+--     lịch sử thì thao tác sửa/xóa cũng THẤT BẠI (không có sửa mà không có vết).
+-- ---------------------------------------------------------------------
+alter table vehicle_odo_readings add column if not exists edited_by uuid references profiles(id) on delete set null;
+alter table vehicle_odo_readings add column if not exists edited_at timestamptz;
+
+create table if not exists vehicle_log_audit (
+  id bigserial primary key,
+  at timestamptz not null default now(),
+  table_name text not null,
+  record_id uuid,
+  action text not null check (action in ('update','delete')),
+  old_data jsonb,
+  new_data jsonb,
+  reason text,
+  actor_id uuid,
+  actor_email text
+);
+create index if not exists vehicle_log_audit_at_idx on vehicle_log_audit (at desc);
+create index if not exists vehicle_log_audit_rec_idx on vehicle_log_audit (record_id);
+alter table vehicle_log_audit enable row level security;
+drop policy if exists "vlaudit_sel" on vehicle_log_audit;
+create policy "vlaudit_sel" on vehicle_log_audit for select using (is_vehicle_log_manager());
+grant select on vehicle_log_audit to authenticated;
+revoke insert, update, delete on vehicle_log_audit from authenticated, anon;
+
+create or replace function vehicle_log_audit_fn() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into vehicle_log_audit (table_name, record_id, action, old_data, new_data, reason, actor_id, actor_email)
+  values (TG_TABLE_NAME, OLD.id, lower(TG_OP),
+          to_jsonb(OLD), case when TG_OP = 'UPDATE' then to_jsonb(NEW) else null end,
+          nullif(current_setting('app.edit_reason', true), ''),
+          auth.uid(), coalesce(auth.jwt() ->> 'email', ''));
+  if TG_OP = 'DELETE' then return OLD; end if;
+  return NEW;
+end; $$;
+
+-- Đánh dấu "đã sửa" khi NỘI DUNG thay đổi (đánh dấu "Không tính" không tính là sửa nội dung)
+create or replace function vehicle_log_mark_edit_fn() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if TG_TABLE_NAME = 'vehicle_odo_readings' then
+    if (NEW.vehicle_id, NEW.reading_date, NEW.read_at, NEW.kind, NEW.odo, NEW.route, NEW.fuel_liters, NEW.note,
+        NEW.driver_id, NEW.oil_change, NEW.borrowed, NEW.photo_path)
+       is distinct from
+       (OLD.vehicle_id, OLD.reading_date, OLD.read_at, OLD.kind, OLD.odo, OLD.route, OLD.fuel_liters, OLD.note,
+        OLD.driver_id, OLD.oil_change, OLD.borrowed, OLD.photo_path) then
+      NEW.edited_at := now(); NEW.edited_by := auth.uid();
+    end if;
+  else
+    NEW.edited_at := now(); NEW.edited_by := auth.uid();
+  end if;
+  return NEW;
+end; $$;
+
+drop trigger if exists odo_readings_audit on vehicle_odo_readings;
+create trigger odo_readings_audit after update or delete on vehicle_odo_readings
+  for each row execute function vehicle_log_audit_fn();
+drop trigger if exists odo_readings_mark_edit on vehicle_odo_readings;
+create trigger odo_readings_mark_edit before update on vehicle_odo_readings
+  for each row execute function vehicle_log_mark_edit_fn();
+drop trigger if exists fuel_invoices_audit on fuel_invoices;
+create trigger fuel_invoices_audit after update or delete on fuel_invoices
+  for each row execute function vehicle_log_audit_fn();
+drop trigger if exists fuel_invoices_mark_edit on fuel_invoices;
+create trigger fuel_invoices_mark_edit before update on fuel_invoices
+  for each row execute function vehicle_log_mark_edit_fn();
+
+-- SỬA / XÓA có LÝ DO BẮT BUỘC (chạy với quyền người gọi -> RLS vẫn áp dụng: chỉ người quản lý)
+create or replace function edit_odo_reading(p_id uuid, p_patch jsonb, p_reason text) returns void
+language plpgsql set search_path = public as $$
+declare rec vehicle_odo_readings;
+begin
+  if not is_vehicle_log_manager() then raise exception 'Chỉ Phòng HC-TC-QT / Quản trị được sửa nhật trình'; end if;
+  if coalesce(btrim(p_reason), '') = '' then raise exception 'Bắt buộc nhập lý do sửa'; end if;
+  select * into rec from vehicle_odo_readings where id = p_id for update;
+  if not found then raise exception 'Không tìm thấy lần ghi'; end if;
+  rec := jsonb_populate_record(rec, p_patch);  -- chỉ đổi các trường có trong p_patch
+  perform set_config('app.edit_reason', btrim(p_reason), true);
+  update vehicle_odo_readings set
+    vehicle_id = rec.vehicle_id, reading_date = rec.reading_date, read_at = rec.read_at, kind = rec.kind,
+    odo = rec.odo, route = rec.route, fuel_liters = rec.fuel_liters, note = rec.note, driver_id = rec.driver_id,
+    oil_change = rec.oil_change, borrowed = rec.borrowed
+  where id = p_id;
+end; $$;
+
+create or replace function delete_odo_reading(p_id uuid, p_reason text) returns void
+language plpgsql set search_path = public as $$
+begin
+  if not is_vehicle_log_manager() then raise exception 'Chỉ Phòng HC-TC-QT / Quản trị được xóa nhật trình'; end if;
+  if coalesce(btrim(p_reason), '') = '' then raise exception 'Bắt buộc nhập lý do xóa'; end if;
+  perform set_config('app.edit_reason', btrim(p_reason), true);
+  delete from vehicle_odo_readings where id = p_id;  -- ảnh đồng hồ GIỮ LẠI trong kho để đối chiếu
+  if not found then raise exception 'Không tìm thấy lần ghi'; end if;
+end; $$;
+
+create or replace function edit_fuel_invoice(p_id uuid, p_patch jsonb, p_reason text) returns void
+language plpgsql set search_path = public as $$
+declare rec fuel_invoices;
+begin
+  if not is_vehicle_log_manager() then raise exception 'Chỉ Phòng HC-TC-QT / Quản trị được sửa hóa đơn'; end if;
+  if coalesce(btrim(p_reason), '') = '' then raise exception 'Bắt buộc nhập lý do sửa'; end if;
+  select * into rec from fuel_invoices where id = p_id for update;
+  if not found then raise exception 'Không tìm thấy hóa đơn'; end if;
+  rec := jsonb_populate_record(rec, p_patch);
+  perform set_config('app.edit_reason', btrim(p_reason), true);
+  update fuel_invoices set
+    vehicle_id = rec.vehicle_id, invoice_date = rec.invoice_date, invoice_no = rec.invoice_no, seller = rec.seller,
+    fuel_type = rec.fuel_type, liters = rec.liters, unit_price = rec.unit_price, amount = rec.amount, odo = rec.odo,
+    driver_id = rec.driver_id, note = rec.note
+  where id = p_id;
+end; $$;
+
+create or replace function delete_fuel_invoice(p_id uuid, p_reason text) returns void
+language plpgsql set search_path = public as $$
+begin
+  if not is_vehicle_log_manager() then raise exception 'Chỉ Phòng HC-TC-QT / Quản trị được xóa hóa đơn'; end if;
+  if coalesce(btrim(p_reason), '') = '' then raise exception 'Bắt buộc nhập lý do xóa'; end if;
+  perform set_config('app.edit_reason', btrim(p_reason), true);
+  delete from fuel_invoices where id = p_id;  -- tệp hóa đơn GIỮ LẠI trong kho để đối chiếu
+  if not found then raise exception 'Không tìm thấy hóa đơn'; end if;
+end; $$;
+grant execute on function edit_odo_reading(uuid, jsonb, text), delete_odo_reading(uuid, text),
+  edit_fuel_invoice(uuid, jsonb, text), delete_fuel_invoice(uuid, text) to authenticated;
+
 -- 6) RLS: chỉ người ĐÃ ĐĂNG NHẬP mới đọc/ghi; phân quyền chi tiết do app xử lý.
 do $$ declare t text;
 begin
@@ -405,7 +581,7 @@ begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
     create publication supabase_realtime;
   end if;
-  foreach t in array array['schedule_entries','leaders','vehicles','participant_groups','bans','locations','vehicle_logs','vehicle_odo_readings'] loop
+  foreach t in array array['schedule_entries','leaders','vehicles','participant_groups','bans','locations','vehicle_logs','vehicle_odo_readings','fuel_invoices'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t

@@ -308,6 +308,66 @@ export async function voidOdoReading(id, reason, byId) {
     .eq('id', id);
 }
 
+// ===== SỬA / XÓA NHẬT TRÌNH (người quản lý) — BẮT BUỘC lý do; CSDL tự lưu nội dung cũ (vehicle_log_audit)
+export async function editOdoReading(id, patch, reason) {
+  if (!supabase) return NO_DB;
+  return supabase.rpc('edit_odo_reading', { p_id: id, p_patch: patch, p_reason: reason });
+}
+export async function deleteOdoReading(id, reason) {
+  if (!supabase) return NO_DB;
+  return supabase.rpc('delete_odo_reading', { p_id: id, p_reason: reason });
+}
+// Lịch sử sửa / xóa (nhật trình + hóa đơn nhiên liệu), mới nhất trước
+export async function fetchVehicleLogAudit(limit = 300) {
+  if (!supabase) return NO_DB;
+  return supabase.from('vehicle_log_audit').select('*').order('at', { ascending: false }).limit(limit);
+}
+
+// ===== NHIÊN LIỆU & ĐỊNH MỨC (chỉ Phòng HC-TC-QT / Quản trị) =====
+export async function fetchFuelNorms() {
+  if (!supabase) return NO_DB;
+  return supabase.from('vehicle_fuel_norms').select('*');
+}
+export async function saveFuelNorm(row) {
+  if (!supabase) return NO_DB;
+  return supabase.from('vehicle_fuel_norms').upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: 'vehicle_id' });
+}
+export async function fetchFuelInvoices(fromISO, toISO) {
+  if (!supabase) return NO_DB;
+  const all = [];
+  for (let from = 0; ; ) {
+    const { data, error } = await supabase.from('fuel_invoices').select('*')
+      .gte('invoice_date', fromISO).lte('invoice_date', toISO)
+      .order('invoice_date').order('created_at').range(from, from + 999);
+    if (error) return { data: all.length ? all : null, error };
+    if (!data?.length) break;
+    all.push(...data);
+    from += data.length;
+    if (all.length >= 20000) break;
+  }
+  return { data: all, error: null };
+}
+export async function addFuelInvoice(row) {
+  if (!supabase) return NO_DB;
+  return supabase.from('fuel_invoices').insert(row).select().single();
+}
+export async function editFuelInvoice(id, patch, reason) {
+  if (!supabase) return NO_DB;
+  return supabase.rpc('edit_fuel_invoice', { p_id: id, p_patch: patch, p_reason: reason });
+}
+export async function deleteFuelInvoice(id, reason) {
+  if (!supabase) return NO_DB;
+  return supabase.rpc('delete_fuel_invoice', { p_id: id, p_reason: reason });
+}
+// Tệp hóa đơn (ảnh đã nén hoặc PDF) — cùng kho riêng tư với ảnh đồng hồ, thư mục hoa-don/
+export async function uploadInvoiceFile(vehicleId, blob, ext) {
+  if (!supabase) return NO_DB;
+  const path = `hoa-don/${vehicleId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from(ODO_BUCKET)
+    .upload(path, blob, { contentType: blob?.type || 'application/octet-stream', upsert: false });
+  return error ? { data: null, error } : { data: { path }, error: null };
+}
+
 // Tải ảnh đồng hồ ODO (đã nén ở trình duyệt). kind: 'start' | 'end'
 export async function uploadOdoPhoto(vehicleId, dateISO, kind, blob) {
   if (!supabase) return NO_DB;

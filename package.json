@@ -15,7 +15,8 @@
     "test:rules": "node scripts/test-vehicle-rules.mjs",
     "test:stats": "node scripts/test-stats.mjs",
     "test:logbook": "node scripts/test-logbook.mjs",
-    "test:ocr": "node scripts/test-ocr-api.mjs"
+    "test:ocr": "node scripts/test-ocr-api.mjs",
+    "test:fuel": "node scripts/test-fuel.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.130.0",

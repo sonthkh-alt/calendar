@@ -48,6 +48,11 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   về, có chuyến mà chưa ghi); `suggestKind`; nhắc thay dầu `lastOilChange` + `oilStatus` (book.oil;
   buildLogbook nhận `oilReadings` = các lần thay dầu ngoài khoảng nạp, api.fetchOilChanges); `buildLogbookWorkbook` (Excel: Tổng hợp + mỗi xe 1 sheet
   + "Chi tiết các lần ghi"). Test: npm run test:logbook
+- `fuel.js` — NHIÊN LIỆU & ĐỊNH MỨC (HÀM THUẦN): `buildFuelReport` (km = quãng đường theo ĐỒNG HỒ ODO
+  trong kỳ = odoLast − odoFirst của sổ nhật trình, KHÔNG phải tổng km ngày; lít hóa đơn, lít theo định
+  mức, tiêu hao thực tế, % vượt, tiền vượt; cảnh báo trùng số HĐ, vượt bình, sai loại, đơn giá lệch,
+  thành tiền sai, biển số khác, đổ ngày không chạy, lái xe khai lệch HĐ...) + `buildFuelWorkbook`
+  (Excel 3 sheet). Test: npm run test:fuel
 - `images.js` — `compressImage` (nén ảnh chụp đồng hồ ≤1600px JPEG trước khi tải lên)
 - `odoOcr.js` — ĐỌC SỐ ODO TỪ ẢNH: `recognizeOdo(blob, {lastOdo})` gọi `/api/ocr-odo` (Claude) -> máy chủ
   chưa cấu hình/lỗi thì dự phòng Tesseract.js trong trình duyệt (nạp động) -> không ra số thì value=null
@@ -56,6 +61,10 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 
 ## api/ (Vercel Serverless — KHÔNG chạy ở vite dev)
 - `admin-create-user.js` — tạo tài khoản (service_role)
+- `_auth.js` — dùng chung: xác thực JWT + vai trò (tệp "_" không thành endpoint)
+- `ocr-invoice.js` — đọc HÓA ĐƠN NHIÊN LIỆU (ảnh hoặc PDF -> content block `document`), chỉ
+  van_phong_xe/quan_tri; JSON schema {invoice_no, invoice_date, seller, fuel_type, liters, unit_price,
+  amount, plate}. maxDuration 60s (vercel.json). Test giả lập trong npm run test:ocr
 - `ocr-odo.js` — đọc số ODO: xác thực JWT + vai trò module, gửi ảnh tới Claude `claude-opus-5-5`
   (@anthropic-ai/sdk, `client.beta.messages.create`, `output_config.format` JSON schema, effort `low`,
   `fallbacks: "default"`). Cần env `ANTHROPIC_API_KEY`; thiếu -> 501 (client chuyển Tesseract).
@@ -100,6 +109,11 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   lái xe báo sai -> gõ tay (lưu `odo_source` nhap_tay/sua_so + `odo_ocr`); số máy đọc bất thường phải tick
   "Đúng số này". `borrowed`/`ownerName` -> ghi chú mượn xe tự sinh. Lưu ngay, không sửa/xóa. Người quản
   lý ghi hộ: chọn ngày, giờ, lái xe. `OdoPhoto` = ảnh thu nhỏ qua link có hạn.
+- `FuelPanel.jsx` — thẻ con "Nhiên liệu & định mức" của Nhật trình xe (người quản lý): ô chỉ tiêu, bảng
+  từng xe + SỬA ĐỊNH MỨC tại chỗ (vehicle_fuel_norms), cảnh báo, danh sách hóa đơn (xem tệp, Sửa/Xóa
+  có lý do), `InvoiceForm` (tải ảnh/PDF -> máy đọc -> kiểm tra -> lưu; chặn trùng số HĐ), xuất Excel.
+- `VehicleLogAudit.jsx` — `VehicleLogAudit` (thẻ con "Lịch sử sửa/xóa": cũ -> mới từng trường, lý do,
+  ảnh gốc) + `ReadingEditForm` (sửa 1 lần ghi ODO, bắt buộc lý do -> rpc edit_odo_reading).
 - `FilterBar.jsx` — điều hướng tuần/tháng/ngày + lọc Ban/lãnh đạo/trạng thái
 - `EntryCard.jsx` / `StatusBadge.jsx` — ô lịch + huy hiệu trạng thái dùng chung. EntryCard nhận
   `vehicles` (mảng xe của chuyến, đã lọc bỏ xe riêng) -> dòng "Xe:"; chế độ Gọn chỉ hiện dòng này
