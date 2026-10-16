@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, ImagePlus, Loader2, Send, Gauge, Route, Fuel, CheckCircle2, AlertTriangle, Lock, ScanLine, PencilLine, RefreshCw, Repeat, Droplet } from 'lucide-react';
+import { Camera, ImagePlus, Loader2, Send, Gauge, Route, Fuel, CheckCircle2, AlertTriangle, Lock, ScanLine, PencilLine, RefreshCw, Repeat, Droplet, Crop, X } from 'lucide-react';
 import { addOdoReading, uploadOdoPhoto, getOdoPhotoUrl } from '../lib/api';
 import { MAX_DAILY_KM, READING_KINDS, FORM_KINDS, borrowNote, fmtKm, fmtReadTime, suggestKind, suggestRoute } from '../lib/vehicleLog';
-import { recognizeOdo } from '../lib/odoOcr';
+import { recognizeOdo, loadOdoRect, saveOdoRect } from '../lib/odoOcr';
 import { canManageVehicleLog } from '../lib/permissions';
 import { compressImage } from '../lib/images';
 import { fmtDMY, parseISO, toISODate } from '../lib/dates';
@@ -33,6 +33,57 @@ export function OdoPhoto({ path, className = 'w-16 h-16', label }) {
 const digits = (s) => (s == null ? '' : String(s).replace(/\D+/g, ''));
 const toInt = (s) => { const d = digits(s); return d ? parseInt(d, 10) : null; };
 const fmtInput = (s) => { const d = digits(s); return d ? Number(d).toLocaleString('vi-VN') : ''; };
+/**
+ * KHOANH VÙNG SỐ ODO trên ảnh vừa chụp: kéo ngón tay / chuột thành khung quanh DÃY SỐ ODO -> máy chỉ đọc
+ * trong khung (chính xác hơn nhiều). Vùng được nhớ theo xe để lần sau máy tự thử trước.
+ */
+function OdoCropper({ src, initial, onCancel, onConfirm }) {
+  const boxRef = useRef(null);
+  const [rect, setRect] = useState(initial || null);
+  const start = useRef(null);
+  const pos = (e) => {
+    const b = boxRef.current.getBoundingClientRect();
+    return { x: Math.min(1, Math.max(0, (e.clientX - b.left) / b.width)), y: Math.min(1, Math.max(0, (e.clientY - b.top) / b.height)) };
+  };
+  const down = (e) => {
+    e.preventDefault();
+    try { boxRef.current.setPointerCapture?.(e.pointerId); } catch { /* không bắt được con trỏ: vẫn kéo được */ }
+    start.current = pos(e); setRect({ ...start.current, w: 0, h: 0 });
+  };
+  const move = (e) => {
+    if (!start.current) return;
+    const p = pos(e), s0 = start.current;
+    setRect({ x: Math.min(s0.x, p.x), y: Math.min(s0.y, p.y), w: Math.abs(p.x - s0.x), h: Math.abs(p.y - s0.y) });
+  };
+  const up = () => { start.current = null; };
+  const okRect = rect && rect.w > 0.03 && rect.h > 0.02;
+  return (
+    <div className="fixed inset-0 z-[70] bg-slate-950 flex flex-col p-3 gap-2" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-between text-white">
+        <p className="text-[14px] font-bold flex items-center gap-1.5"><Crop className="w-4 h-4" /> Kéo khung quanh DÃY SỐ ODO</p>
+        <button type="button" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/10" aria-label="Đóng"><X className="w-5 h-5" /></button>
+      </div>
+      <p className="text-[12px] text-white/70 -mt-1">Chỉ khoanh các chữ số của ODO (không lấy TRIP, giờ, nhiệt độ). Khung vừa khít là máy đọc chính xác nhất.</p>
+      <div className="flex-1 min-h-0 flex items-center justify-center">
+        <div ref={boxRef} className="relative select-none touch-none max-h-full"
+          onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+          <img src={src} alt="Ảnh đồng hồ" draggable={false} className="block max-w-full max-h-[70vh] object-contain pointer-events-none" />
+          {rect && (
+            <div className="absolute border-2 border-amber-400 bg-amber-300/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] pointer-events-none"
+              style={{ left: `${rect.x * 100}%`, top: `${rect.y * 100}%`, width: `${rect.w * 100}%`, height: `${rect.h * 100}%` }} />
+          )}
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button type="button" disabled={!okRect} onClick={() => onConfirm(rect)} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-400 text-slate-900 text-[15px] font-bold disabled:opacity-50">
+          <ScanLine className="w-5 h-5" /> Đọc số trong khung
+        </button>
+        <button type="button" onClick={onCancel} className="px-4 py-3 rounded-xl bg-white/10 text-white text-[14px] font-semibold">Hủy</button>
+      </div>
+    </div>
+  );
+}
+
 const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
 /**
@@ -50,6 +101,7 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
   const [manual, setManual] = useState('');          // số gõ tay
   const [manualMode, setManualMode] = useState(false);
   const [confirmOdd, setConfirmOdd] = useState(false); // xác nhận số máy đọc dù bất thường
+  const [cropping, setCropping] = useState(false);     // đang khoanh vùng số ODO trên ảnh
   const [route, setRoute] = useState('');
   const [fuel, setFuel] = useState('');
   const [note, setNote] = useState('');
@@ -81,12 +133,24 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
     const small = await compressImage(file);
     if (run !== runRef.current) return;
     setBlob(small);
-    const r = await recognizeOdo(small, { lastOdo: lastValue });
+    const r = await recognizeOdo(small, { lastOdo: lastValue, saved: loadOdoRect(vehicle.id) });
     if (run !== runRef.current) return;
+    if (r.engine === 'device' && r.rect && r.plausible?.ok) saveOdoRect(vehicle.id, r.rect);
     setOcr({ status: 'done', ...r });
-    if (r.value == null) setManualMode(true); // không đọc được -> bắt buộc gõ tay
+    if (r.value == null) setManualMode(true); // không đọc được -> khoanh vùng hoặc gõ tay
   };
-  const resetPhoto = () => { runRef.current += 1; setPhoto(null); setBlob(null); setOcr({ status: 'idle' }); setManual(''); setManualMode(false); setConfirmOdd(false); };
+  // Lái xe khoanh vùng số -> máy đọc lại CHỈ trong khung (trên máy, không gọi máy chủ)
+  const readCrop = async (rect) => {
+    setCropping(false);
+    if (!blob) return;
+    const run = ++runRef.current;
+    setOcr({ status: 'reading' }); setConfirmOdd(false);
+    const r = await recognizeOdo(blob, { lastOdo: lastValue, rect, useServer: false });
+    if (run !== runRef.current) return;
+    if (r.value != null) { saveOdoRect(vehicle.id, rect); setManualMode(false); setManual(''); } else setManualMode(true);
+    setOcr({ status: 'done', ...r, cropped: true });
+  };
+  const resetPhoto = () => { runRef.current += 1; setPhoto(null); setBlob(null); setOcr({ status: 'idle' }); setManual(''); setManualMode(false); setConfirmOdd(false); setCropping(false); };
 
   // Số ODO sẽ ghi + nguồn
   const ocrValue = ocr.status === 'done' ? ocr.value : null;
@@ -146,7 +210,14 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
 
   const field = 'w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[14px] outline-none focus:border-red-500';
   const routeHint = suggestRoute(trips);
-  const engineLabel = ocr.engine === 'ai' ? 'AI đọc ảnh' : ocr.engine === 'tesseract' ? 'nhận dạng chữ số' : '';
+  const engineLabel = ocr.engine === 'ai' ? 'AI đọc ảnh' : ocr.engine === 'device' ? (ocr.cropped ? 'đọc trong khung, trên máy' : 'đọc trên máy') : '';
+  const cropBtn = (strong) => (
+    <button type="button" onClick={() => setCropping(true)} className={strong
+      ? 'w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-amber-400 text-slate-900 text-[13px] font-bold'
+      : 'flex items-center gap-1 text-[12.5px] font-semibold text-amber-700 hover:underline'}>
+      <Crop className="w-3.5 h-3.5" /> {strong ? 'Khoanh vùng dãy số để máy đọc lại' : 'Khoanh vùng số để máy đọc lại'}
+    </button>
+  );
 
   return (
     <div className="space-y-3">
@@ -218,7 +289,7 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
           <img src={preview} alt="Ảnh đồng hồ vừa chụp" className="w-24 h-24 rounded-lg object-cover border border-slate-300 shrink-0" />
           <div className="flex-1 min-w-0 space-y-1.5">
             {ocr.status === 'reading' && (
-              <p className="flex items-center gap-2 text-[14px] font-semibold text-slate-700 pt-2"><Loader2 className="w-5 h-5 animate-spin text-red-700" /> Đang đọc số ODO trên ảnh…</p>
+              <p className="flex items-center gap-2 text-[14px] font-semibold text-slate-700 pt-2"><Loader2 className="w-5 h-5 animate-spin text-red-700 shrink-0" /> Đang đọc số ODO trên máy…</p>
             )}
             {ocr.status === 'done' && !manualMode && ocrValue != null && (
               <>
@@ -234,12 +305,14 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
                 <button type="button" onClick={() => { setManualMode(true); setManual(''); }} className="flex items-center gap-1 text-[12.5px] font-semibold text-sky-700 hover:underline">
                   <PencilLine className="w-3.5 h-3.5" /> Số không đúng? Gõ lại số
                 </button>
+                {cropBtn(false)}
               </>
             )}
             {ocr.status === 'done' && manualMode && (
               <>
+                {ocrValue == null && cropBtn(true)}
                 <p className={`text-[12.5px] font-semibold ${ocrValue == null ? 'text-amber-800' : 'text-slate-600'}`}>
-                  {ocrValue == null ? 'Hệ thống không nhận dạng được số trên ảnh — vui lòng gõ số ODO:' : `Gõ số đúng (máy đọc ${fmtKm(ocrValue)} km):`}
+                  {ocrValue == null ? 'Máy chưa đọc được số — khoanh vùng dãy số ở trên, hoặc gõ số ODO:' : `Gõ số đúng (máy đọc ${fmtKm(ocrValue)} km):`}
                 </p>
                 <div className="flex items-center gap-2 bg-white border-2 border-amber-400 rounded-xl px-3 focus-within:border-red-500">
                   <Gauge className="w-5 h-5 text-slate-400 shrink-0" />
@@ -257,6 +330,7 @@ export default function OdoReadingForm({ profile, vehicle, lastReading, todayRea
           </div>
         </div>
       )}
+      {cropping && preview && <OdoCropper src={preview} initial={loadOdoRect(vehicle.id)} onCancel={() => setCropping(false)} onConfirm={readCrop} />}
       <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { takePhoto(e.target.files?.[0]); e.target.value = ''; }} />
       <input ref={pickRef} type="file" accept="image/*" className="hidden" onChange={(e) => { takePhoto(e.target.files?.[0]); e.target.value = ''; }} />
 

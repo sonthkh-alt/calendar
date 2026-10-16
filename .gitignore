@@ -31,3 +31,5 @@ scripts/.logbook.cjs
 scripts/.ocr-api.cjs
 scripts/.mock/
 scripts/.fuel.cjs
+scripts/.device-ocr.cjs
+scripts/.tess-cache/

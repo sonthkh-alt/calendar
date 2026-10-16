@@ -1,5 +1,25 @@
 # Nhật ký dự án
 
+## 2026-10-16 (chiều) — ĐỌC SỐ ODO + HÓA ĐƠN MIỄN PHÍ, NGAY TRÊN ĐIỆN THOẠI / MÁY TÍNH
+- Yêu cầu: không dùng khóa API trả phí; xử lý bằng tài nguyên thiết bị. Khóa AI giờ chỉ là TÙY CHỌN (chỉ gọi
+  khi máy không ra số hợp lý); không đặt `ANTHROPIC_API_KEY` thì không tốn gì.
+- **ODO:** `deviceOcr.readOdoOnDevice` — vùng lái xe khoanh | vùng đã nhớ của xe -> TỰ DÒ dãy chữ số
+  (`ocrImage.findDigitRows`) -> cả ảnh; mỗi vùng: GIẢI MÃ 7 ĐOẠN không mô hình (`decodeSevenSegment`, kiểu ssocr)
+  + Tesseract mô hình chữ số 7 đoạn `ssd_int` (public/tessdata, Apache-2.0) + mô hình 'eng', ảnh xám / nhị phân
+  (tự đảo chiều, xóa viền); dừng sớm khi số hợp lý so với lần ghi trước, không thì bỏ phiếu. `pickOdoCandidate`
+  dò chuỗi con khi viền dính vào số. Giao diện: nút **"Khoanh vùng số để máy đọc lại"** (kéo khung trên ảnh) —
+  vùng được NHỚ theo xe (localStorage) nên lần sau máy tự đọc đúng; nhãn "đọc trên máy".
+- **Hóa đơn:** nhận thêm tệp **XML hóa đơn điện tử** (TT78 — đọc chính xác tuyệt đối, tức thì); PDF -> pdf.js lấy
+  chữ trong tệp (cả XML đính kèm; PDF scan thì vẽ trang rồi nhận dạng); ảnh -> Tesseract tiếng Việt. Số lít /
+  đơn giá / thành tiền tìm bằng GIẢI BỘ BA lít × đơn giá (×VAT) ≈ thành tiền (xử lý số mơ hồ "45,500"). Đọc được
+  một phần vẫn điền sẵn phần đã đọc.
+- Đo trên 16 ảnh đồng hồ mô phỏng (LCD 7 đoạn, LCD cam, TFT; cả bảng / chụp gần; nhiễu, mờ, nghiêng, lóa):
+  KHÔNG khoanh vùng tự đọc đúng 13/16 lượt (Tesseract nguyên bản trước đây: 0/8 với ảnh cả bảng đồng hồ);
+  khoanh vùng: đúng 4/4 ảnh khi có lần ghi trước. Số sai vẫn bị chặn bởi đối chiếu lần ghi trước (bắt xác nhận / gõ tay).
+- Kiểm chứng: `npm run test:device-ocr` (chọn số, tiền xử lý, XML, văn bản, PDF thật qua pdf.js, Tesseract
+  THẬT trên ảnh mô phỏng); chạy THẬT trong Chrome: ảnh đồng hồ -> tự đọc 55.330 (~2 giây), khoanh vùng -> đọc
+  đúng, chụp lại -> dùng vùng đã nhớ; hóa đơn XML 12 ms / PDF 1,1 s / ảnh phiếu in 2 s đều đúng mọi trường.
+
 ## 2026-10-16 — Nhật trình xe: NHIÊN LIỆU & ĐỊNH MỨC, sửa/xóa có lưu vết, lái xe xuất sổ
 - **(1) Nhiên liệu & định mức** (thẻ con mới, chỉ Phòng HC-TC-QT / Quản trị): định mức lít/100 km + loại
   nhiên liệu + dung tích bình cho từng xe (bảng `vehicle_fuel_norms`, sửa tại chỗ); TẢI HÓA ĐƠN ảnh/PDF

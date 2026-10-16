@@ -170,12 +170,13 @@ Toàn bộ nhật ký chi tiết: **`.claude/rules/changelog.md`**. Tóm tắt c
   `nhat-trinh-xe` — nếu log báo không tạo được bucket thì tạo tay: Supabase → Storage → New bucket,
   Private, rồi chạy lại workflow để gắn policy).
   Nhắc 7 lái xe ĐỔI MẬT KHẨU (123 quá yếu; mật khẩu mới tối thiểu 6 ký tự).
-- [ ] **Đọc số ODO bằng AI (15/10):** Vercel → Settings → Environment Variables thêm `ANTHROPIC_API_KEY`
-  (tạo ở console.anthropic.com) rồi Redeploy. Chưa có khóa thì app vẫn chạy nhưng đọc số bằng Tesseract
-  (kém chính xác hơn, lái xe phải gõ tay nhiều hơn). Thử chụp đồng hồ thật của cả 7 xe để kiểm tra.
+- [ ] **Đọc số ODO / hóa đơn (16/10): MIỄN PHÍ, xử lý ngay trên điện thoại / máy tính** — KHÔNG cần khóa
+  API. Thử chụp đồng hồ thật của cả 7 xe: lần đầu nếu máy chưa đọc đúng thì bấm "Khoanh vùng số" kéo khung
+  quanh dãy ODO một lần — máy nhớ vùng đó cho xe này (theo từng điện thoại). Hóa đơn: ưu tiên tải tệp XML
+  của hóa đơn điện tử (đọc chính xác 100%). (Tùy chọn, có phí) `ANTHROPIC_API_KEY` trên Vercel chỉ được
+  dùng khi máy không đọc được — không đặt thì không tốn gì.
 - [ ] **Nhiên liệu (16/10):** vào Nhật trình xe → "Nhiên liệu & định mức", bấm "Định mức" từng xe để
-  nhập lít/100 km, loại nhiên liệu, dung tích bình (chưa nhập thì chưa so được định mức). Đọc hóa đơn tự
-  động cần ANTHROPIC_API_KEY như đọc ODO.
+  nhập lít/100 km, loại nhiên liệu, dung tích bình (chưa nhập thì chưa so được định mức).
 - [ ] Cấu hình **Site URL + Redirect URLs** trong Supabase Auth nếu email xác thực còn trỏ về `localhost`.
 - [ ] (Tùy chọn) ApprovalQueue: duyệt 1 dòng = duyệt cả nhóm cho đồng bộ với lịch tuần.
 - [ ] (Ghi thêm yêu cầu mới phát sinh vào đây.)

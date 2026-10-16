@@ -256,13 +256,17 @@ function InvoiceForm({ profile, vehicles, drivers, invoice, existing, onSaved, o
   const pick = async (fl) => {
     if (!fl) return;
     const isPdf = fl.type === 'application/pdf' || /\.pdf$/i.test(fl.name);
-    const blob = isPdf ? fl : await compressImage(fl);
-    setFile({ blob, name: fl.name, ext: isPdf ? 'pdf' : 'jpg', isPdf });
-    setOcr({ status: 'reading' }); setMsg('');
-    const r = await readInvoice(blob);
-    if (!r.ok) { setOcr({ status: 'failed', message: r.message }); return; }
+    const isXml = /xml/i.test(fl.type) || /\.xml$/i.test(fl.name);
+    // Lưu chứng từ: ảnh nén cho nhẹ; PDF / XML giữ nguyên. Máy đọc trên TỆP GỐC (ảnh nét hơn).
+    const blob = isPdf || isXml ? fl : await compressImage(fl);
+    setFile({ blob, name: fl.name, ext: isPdf ? 'pdf' : isXml ? 'xml' : 'jpg', isPdf });
+    setOcr({ status: 'reading', isXml }); setMsg('');
+    const r = await readInvoice(fl);
     const d = r.data;
-    setOcr({ status: 'done', data: d });
+    if (!r.ok) {
+      setOcr({ status: 'failed', message: r.message, data: d || null });
+      if (!d) return;
+    } else setOcr({ status: 'done', data: d });
     const plateMatch = d.plate ? vehicles.find((v) => normPlate(v.plate) === normPlate(d.plate)) : null;
     setF((x) => ({
       ...x,
@@ -271,6 +275,7 @@ function InvoiceForm({ profile, vehicles, drivers, invoice, existing, onSaved, o
       fuel_type: d.fuel_type || x.fuel_type, liters: d.liters || x.liters, unit_price: d.unit_price || x.unit_price, amount: d.amount || x.amount,
     }));
   };
+  const engineText = { xml: 'đọc tệp XML hóa đơn điện tử', pdf: 'đọc chữ trong tệp PDF', ocr: 'nhận dạng ảnh trên máy', ai: 'AI đọc' }[ocr.data?.engine] || '';
 
   const L = num(f.liters), P = num(f.unit_price), A = num(f.amount);
   const calc = L != null && P != null ? Math.round(L * P) : null;
@@ -316,11 +321,12 @@ function InvoiceForm({ profile, vehicles, drivers, invoice, existing, onSaved, o
         {!edit && (
           <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-3">
             <label className="flex items-center justify-center gap-2 cursor-pointer text-[14px] font-semibold text-slate-700">
-              <Upload className="w-5 h-5" /> {file ? `Đã chọn: ${file.name}` : 'Chọn ảnh hoặc PDF hóa đơn (hóa đơn điện tử, phiếu in)'}
-              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }} />
+              <Upload className="w-5 h-5" /> {file ? `Đã chọn: ${file.name}` : 'Chọn tệp hóa đơn: XML / PDF hóa đơn điện tử, hoặc ảnh chụp'}
+              <input type="file" accept="image/*,application/pdf,.pdf,.xml,text/xml,application/xml" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
-            {ocr.status === 'reading' && <p className="mt-2 text-[13px] text-slate-600 flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin text-red-700" /> Đang đọc hóa đơn…</p>}
-            {ocr.status === 'done' && <p className="mt-2 text-[12.5px] text-emerald-700 flex items-center justify-center gap-1.5"><ScanLine className="w-4 h-4" /> Đã tự điền từ hóa đơn — kiểm tra lại trước khi lưu.{ocr.data?.plate && ` Biển số trên HĐ: ${ocr.data.plate}.`}</p>}
+            {!file && <p className="mt-1 text-[11.5px] text-slate-500 text-center">Ưu tiên tệp <b>XML</b> của hóa đơn điện tử (đọc chính xác 100%); PDF đọc chữ trong tệp; ảnh chụp nhận dạng trên máy — đều miễn phí.</p>}
+            {ocr.status === 'reading' && <p className="mt-2 text-[13px] text-slate-600 flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin text-red-700" /> Đang đọc hóa đơn trên máy…{!ocr.isXml && ' (lần đầu tải bộ nhận dạng, chờ ít giây)'}</p>}
+            {ocr.status === 'done' && <p className="mt-2 text-[12.5px] text-emerald-700 flex items-center justify-center gap-1.5 text-center"><ScanLine className="w-4 h-4 shrink-0" /> Đã tự điền ({engineText}) — kiểm tra lại trước khi lưu.{ocr.data?.plate && ` Biển số trên HĐ: ${ocr.data.plate}.`}</p>}
             {ocr.status === 'failed' && <p className="mt-2 text-[12.5px] text-amber-800 text-center">{ocr.message}</p>}
           </div>
         )}

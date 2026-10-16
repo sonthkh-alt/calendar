@@ -53,11 +53,27 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   mức, tiêu hao thực tế, % vượt, tiền vượt; cảnh báo trùng số HĐ, vượt bình, sai loại, đơn giá lệch,
   thành tiền sai, biển số khác, đổ ngày không chạy, lái xe khai lệch HĐ...) + `buildFuelWorkbook`
   (Excel 3 sheet). Test: npm run test:fuel
+- `ocrImage.js` — TIỀN XỬ LÝ ẢNH (HÀM THUẦN trên RGBA): `toGray`/`stretch`/`otsu`/`binarize` (tự đảo chiều chữ
+  sáng nền tối)/`cleanBinary` (xóa viền khung chạm ≥2 mép, đốm nhỏ)/`findDigitRows` (TỰ DÒ dãy chữ số: ngưỡng thích
+  nghi, 3 cách nới điểm, nối mảng cao bằng nhau thẳng hàng ≥4 ký tự, gộp vùng chồng nhau)/`decodeSevenSegment`
+  (GIẢI MÃ CHỮ SỐ 7 ĐOẠN không cần mô hình, kiểu ssocr)/`rectToPixels`/`scaleFor`. Test: npm run test:device-ocr
+- `deviceOcr.js` — ĐỌC TRÊN THIẾT BỊ (nạp động, chỉ trình duyệt): worker Tesseract.js dùng lại + tự giải phóng
+  sau 2 phút ('eng', 'vie' từ CDN jsDelivr; 'ssd_int' = chữ số 7 đoạn tự host ở public/tessdata, Apache-2.0);
+  `readOdoOnDevice` (vùng khoanh | vùng đã nhớ -> vùng tự dò -> cả ảnh; mỗi vùng nhiều lượt odoPassPlan, dừng
+  sớm khi hợp lý so với lần ghi trước, không thì bỏ phiếu); `readInvoiceOnDevice` (XML -> parseInvoiceXml;
+  PDF -> pdf.js legacy lấy chữ (`pdfTextFromData`, gom theo dòng) / XML đính kèm / PDF scan vẽ trang 1 rồi
+  nhận dạng; ảnh -> Tesseract 'vie')
+- `invoiceParse.js` — ĐỌC HÓA ĐƠN (HÀM THUẦN): `parseInvoiceXml` (XML hóa đơn điện tử TT78: SHDon, NLap, NBan/Ten,
+  HHDVu nhiên liệu, TgTTTBSo, biển số), `parseInvoiceText` (văn bản PDF/ảnh: số HĐ, ngày, đơn vị bán, loại, biển
+  số), `solveFuelTriple` (GIẢI BỘ BA lít × đơn giá (×VAT) ≈ thành tiền — xử lý số VN mơ hồ "45,500"; ưu tiên
+  nhãn, thứ tự cột), `vnNumberReadings`, `findPlate`, `detectFuelType`. Test: npm run test:device-ocr
 - `images.js` — `compressImage` (nén ảnh chụp đồng hồ ≤1600px JPEG trước khi tải lên)
-- `odoOcr.js` — ĐỌC SỐ ODO TỪ ẢNH: `recognizeOdo(blob, {lastOdo})` gọi `/api/ocr-odo` (Claude) -> máy chủ
-  chưa cấu hình/lỗi thì dự phòng Tesseract.js trong trình duyệt (nạp động) -> không ra số thì value=null
-  (giao diện bắt gõ tay). Hàm thuần `pickOdoCandidate` (chọn số hợp lý từ văn bản, bỏ TRIP có thập phân)
-  + `checkPlausible` (không lùi, không nhảy quá 2.000 km). Test trong npm run test:logbook
+- `odoOcr.js` — ĐỌC SỐ ODO / HÓA ĐƠN, ƯU TIÊN TRÊN MÁY (miễn phí): `recognizeOdo(blob, {lastOdo, rect, saved})`
+  -> deviceOcr; CHỈ khi máy không ra số hợp lý mới hỏi `/api/ocr-odo` (Claude, tùy chọn — không có khóa thì 501,
+  bỏ qua); trả `rect` vùng đọc ra số để nhớ. `readInvoice(file)` tương tự (XML không bao giờ gọi máy chủ).
+  Hàm thuần `pickOdoCandidate` (bỏ TRIP; dò CHUỖI CON hợp lý khi viền dính số; dãy 7 số bỏ mép trái),
+  `voteOdo`, `odoPassPlan`, `odoRegions`, `padDetected`, `checkPlausible`; vùng ODO nhớ theo xe trong
+  localStorage (`loadOdoRect`/`saveOdoRect`). Test: npm run test:logbook + test:device-ocr
 
 ## api/ (Vercel Serverless — KHÔNG chạy ở vite dev)
 - `admin-create-user.js` — tạo tài khoản (service_role)
@@ -65,7 +81,7 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
 - `ocr-invoice.js` — đọc HÓA ĐƠN NHIÊN LIỆU (ảnh hoặc PDF -> content block `document`), chỉ
   van_phong_xe/quan_tri; JSON schema {invoice_no, invoice_date, seller, fuel_type, liters, unit_price,
   amount, plate}. maxDuration 60s (vercel.json). Test giả lập trong npm run test:ocr
-- `ocr-odo.js` — đọc số ODO: xác thực JWT + vai trò module, gửi ảnh tới Claude `claude-opus-5-5`
+- `ocr-odo.js` — (TÙY CHỌN, chỉ dùng khi máy không đọc được) đọc số ODO: xác thực JWT + vai trò module, gửi ảnh tới Claude `claude-opus-5-5`
   (@anthropic-ai/sdk, `client.beta.messages.create`, `output_config.format` JSON schema, effort `low`,
   `fallbacks: "default"`). Cần env `ANTHROPIC_API_KEY`; thiếu -> 501 (client chuyển Tesseract).
   `vercel.json` đặt maxDuration 30s. Test giả lập: npm run test:ocr
@@ -105,13 +121,15 @@ Một trang (SPA), tabs bằng state trong `src/App.jsx` (không react-router).
   ảnh, "Ghi hộ lái xe", "Không tính" lần ghi nhầm (có lý do), xuất Excel. Realtime: tự nạp lại khi có
   lần ghi mới.
 - `OdoForm.jsx` — `OdoReadingForm`: MỘT lần ghi = loại (CHỈ 2: Xuất phát — kèm hành trình, nhiên liệu,
-  ghi chú / Ghi thêm — cũng có hành trình, nhiên liệu, ghi chú) + CHỤP ẢNH đồng hồ (bắt buộc) -> TỰ ĐỌC SỐ (odoOcr); không đọc được hoặc
+  ghi chú / Ghi thêm — cũng có hành trình, nhiên liệu, ghi chú) + CHỤP ẢNH đồng hồ (bắt buộc) -> TỰ ĐỌC SỐ TRÊN MÁY (odoOcr); `OdoCropper` = KHOANH VÙNG dãy số
+  trên ảnh (kéo khung, máy đọc lại trong khung + nhớ vùng theo xe); không đọc được hoặc
   lái xe báo sai -> gõ tay (lưu `odo_source` nhap_tay/sua_so + `odo_ocr`); số máy đọc bất thường phải tick
   "Đúng số này". `borrowed`/`ownerName` -> ghi chú mượn xe tự sinh. Lưu ngay, không sửa/xóa. Người quản
   lý ghi hộ: chọn ngày, giờ, lái xe. `OdoPhoto` = ảnh thu nhỏ qua link có hạn.
 - `FuelPanel.jsx` — thẻ con "Nhiên liệu & định mức" của Nhật trình xe (người quản lý): ô chỉ tiêu, bảng
   từng xe + SỬA ĐỊNH MỨC tại chỗ (vehicle_fuel_norms), cảnh báo, danh sách hóa đơn (xem tệp, Sửa/Xóa
-  có lý do), `InvoiceForm` (tải ảnh/PDF -> máy đọc -> kiểm tra -> lưu; chặn trùng số HĐ), xuất Excel.
+  có lý do), `InvoiceForm` (tải XML / PDF / ảnh -> máy đọc trên thiết bị (tệp gốc) -> kiểm tra -> lưu; chặn trùng
+  số HĐ), xuất Excel.
 - `VehicleLogAudit.jsx` — `VehicleLogAudit` (thẻ con "Lịch sử sửa/xóa": cũ -> mới từng trường, lý do,
   ảnh gốc) + `ReadingEditForm` (sửa 1 lần ghi ODO, bắt buộc lý do -> rpc edit_odo_reading).
 - `FilterBar.jsx` — điều hướng tuần/tháng/ngày + lọc Ban/lãnh đạo/trạng thái

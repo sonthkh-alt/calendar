@@ -117,6 +117,8 @@ permissions.js: `canReview` = ai là người duyệt (pct/quan_tri/pho_truong_d
   Bảng riêng (không phải `vehicles`) để Phòng HC-TC-QT tự sửa được (RLS is_vehicle_log_manager).
 - `fuel_invoices`: ngày, số HĐ, đơn vị bán, loại, lít (>0), đơn giá, thành tiền, ODO, lái xe, tệp ảnh/PDF
   (bucket `nhat-trinh-xe`, thư mục hoa-don/), `ocr_data` (kết quả máy đọc để đối chiếu), edited_at/_by.
+- Đọc hóa đơn trên máy: tệp XML hóa đơn điện tử (chính xác), PDF (chữ trong tệp), ảnh (Tesseract tiếng Việt);
+  `ocr_data.engine` = xml | pdf | ocr | ai cho biết nguồn đọc.
 - Tiêu hao thực tế = lít HĐ trong kỳ ÷ km theo đồng hồ ODO trong kỳ × 100; vượt ≥10% cảnh báo, ≥20%
   nghiêm trọng; xe chạy < 100 km không kết luận. Tiền vượt = lít vượt × đơn giá bình quân.
 
